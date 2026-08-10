@@ -18,54 +18,67 @@
 
 BEGIN;
 
+ALTER TABLE messaging_notification ADD COLUMN IF NOT EXISTS organization_id BIGINT NOT NULL DEFAULT 0;
 UPDATE messaging_notification SET organization_id = 0 WHERE organization_id IS NULL;
 ALTER TABLE messaging_notification ALTER COLUMN organization_id SET DEFAULT 0;
 ALTER TABLE messaging_notification ALTER COLUMN organization_id SET NOT NULL;
 
+ALTER TABLE messaging_notification_recipient ADD COLUMN IF NOT EXISTS organization_id BIGINT NOT NULL DEFAULT 0;
 UPDATE messaging_notification_recipient SET organization_id = 0 WHERE organization_id IS NULL;
 ALTER TABLE messaging_notification_recipient ALTER COLUMN organization_id SET DEFAULT 0;
 ALTER TABLE messaging_notification_recipient ALTER COLUMN organization_id SET NOT NULL;
 
+ALTER TABLE messaging_announcement ADD COLUMN IF NOT EXISTS organization_id BIGINT NOT NULL DEFAULT 0;
 UPDATE messaging_announcement SET organization_id = 0 WHERE organization_id IS NULL;
 ALTER TABLE messaging_announcement ALTER COLUMN organization_id SET DEFAULT 0;
 ALTER TABLE messaging_announcement ALTER COLUMN organization_id SET NOT NULL;
 
+ALTER TABLE messaging_announcement_audience ADD COLUMN IF NOT EXISTS organization_id BIGINT NOT NULL DEFAULT 0;
 UPDATE messaging_announcement_audience SET organization_id = 0 WHERE organization_id IS NULL;
 ALTER TABLE messaging_announcement_audience ALTER COLUMN organization_id SET DEFAULT 0;
 ALTER TABLE messaging_announcement_audience ALTER COLUMN organization_id SET NOT NULL;
 
+ALTER TABLE messaging_announcement_receipt ADD COLUMN IF NOT EXISTS organization_id BIGINT NOT NULL DEFAULT 0;
 UPDATE messaging_announcement_receipt SET organization_id = 0 WHERE organization_id IS NULL;
 ALTER TABLE messaging_announcement_receipt ALTER COLUMN organization_id SET DEFAULT 0;
 ALTER TABLE messaging_announcement_receipt ALTER COLUMN organization_id SET NOT NULL;
 
+ALTER TABLE messaging_push_device ADD COLUMN IF NOT EXISTS organization_id BIGINT NOT NULL DEFAULT 0;
 UPDATE messaging_push_device SET organization_id = 0 WHERE organization_id IS NULL;
 ALTER TABLE messaging_push_device ALTER COLUMN organization_id SET DEFAULT 0;
 ALTER TABLE messaging_push_device ALTER COLUMN organization_id SET NOT NULL;
 
+ALTER TABLE messaging_push_message ADD COLUMN IF NOT EXISTS organization_id BIGINT NOT NULL DEFAULT 0;
 UPDATE messaging_push_message SET organization_id = 0 WHERE organization_id IS NULL;
 ALTER TABLE messaging_push_message ALTER COLUMN organization_id SET DEFAULT 0;
 ALTER TABLE messaging_push_message ALTER COLUMN organization_id SET NOT NULL;
 
+ALTER TABLE messaging_push_delivery ADD COLUMN IF NOT EXISTS organization_id BIGINT NOT NULL DEFAULT 0;
 UPDATE messaging_push_delivery SET organization_id = 0 WHERE organization_id IS NULL;
 ALTER TABLE messaging_push_delivery ALTER COLUMN organization_id SET DEFAULT 0;
 ALTER TABLE messaging_push_delivery ALTER COLUMN organization_id SET NOT NULL;
 
+ALTER TABLE messaging_outbound_message ADD COLUMN IF NOT EXISTS organization_id BIGINT NOT NULL DEFAULT 0;
 UPDATE messaging_outbound_message SET organization_id = 0 WHERE organization_id IS NULL;
 ALTER TABLE messaging_outbound_message ALTER COLUMN organization_id SET DEFAULT 0;
 ALTER TABLE messaging_outbound_message ALTER COLUMN organization_id SET NOT NULL;
 
+ALTER TABLE messaging_outbound_delivery ADD COLUMN IF NOT EXISTS organization_id BIGINT NOT NULL DEFAULT 0;
 UPDATE messaging_outbound_delivery SET organization_id = 0 WHERE organization_id IS NULL;
 ALTER TABLE messaging_outbound_delivery ALTER COLUMN organization_id SET DEFAULT 0;
 ALTER TABLE messaging_outbound_delivery ALTER COLUMN organization_id SET NOT NULL;
 
+ALTER TABLE messaging_verification_policy ADD COLUMN IF NOT EXISTS organization_id BIGINT NOT NULL DEFAULT 0;
 UPDATE messaging_verification_policy SET organization_id = 0 WHERE organization_id IS NULL;
 ALTER TABLE messaging_verification_policy ALTER COLUMN organization_id SET DEFAULT 0;
 ALTER TABLE messaging_verification_policy ALTER COLUMN organization_id SET NOT NULL;
 
+ALTER TABLE messaging_verification_challenge ADD COLUMN IF NOT EXISTS organization_id BIGINT NOT NULL DEFAULT 0;
 UPDATE messaging_verification_challenge SET organization_id = 0 WHERE organization_id IS NULL;
 ALTER TABLE messaging_verification_challenge ALTER COLUMN organization_id SET DEFAULT 0;
 ALTER TABLE messaging_verification_challenge ALTER COLUMN organization_id SET NOT NULL;
 
+ALTER TABLE messaging_verification_attempt ADD COLUMN IF NOT EXISTS organization_id BIGINT NOT NULL DEFAULT 0;
 UPDATE messaging_verification_attempt SET organization_id = 0 WHERE organization_id IS NULL;
 ALTER TABLE messaging_verification_attempt ALTER COLUMN organization_id SET DEFAULT 0;
 ALTER TABLE messaging_verification_attempt ALTER COLUMN organization_id SET NOT NULL;
