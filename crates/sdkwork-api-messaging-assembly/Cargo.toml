@@ -1,0 +1,18 @@
+[package]
+name = "sdkwork-api-messaging-assembly"
+edition.workspace = true
+version.workspace = true
+description = "Generated API assembly for sdkwork-messaging application HTTP plane."
+
+[lib]
+name = "sdkwork_api_messaging_assembly"
+path = "src/lib.rs"
+
+[dependencies]
+axum.workspace = true
+tokio.workspace = true
+sdkwork-web-bootstrap.workspace = true
+sdkwork-web-core.workspace = true
+sdkwork-database-sqlx.workspace = true
+sdkwork-messaging-database-host.workspace = true
+sdkwork-routes-messaging-backend-api.workspace = true

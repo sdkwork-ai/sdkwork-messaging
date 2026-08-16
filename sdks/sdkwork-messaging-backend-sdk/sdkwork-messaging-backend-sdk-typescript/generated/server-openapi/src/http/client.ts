@@ -1,22 +1,34 @@
-﻿import type { SdkworkBackendConfig } from '../types/common';
+import type { SdkworkBackendConfig } from '../types/common';
 import type { RequestOptions, QueryParams } from '@sdkwork/sdk-common';
 import type { AuthTokenManager } from '@sdkwork/sdk-common';
-import { BaseHttpClient, withRetry } from '@sdkwork/sdk-common';
+import { BaseHttpClient, buildAuthHeaders, withRetry } from '@sdkwork/sdk-common';
+import { sha256Hash } from '@sdkwork/utils';
 
-type HttpRequestOptions = RequestOptions & {
+type SdkworkV3UnwrapKind = 'item' | 'page' | 'command' | 'data' | 'void';
+
+export type HttpRequestOptions = RequestOptions & {
   method?: string;
   body?: unknown;
   headers?: Record<string, string>;
   contentType?: string;
+  accessTokenOnly?: boolean;
+  sdkworkUnwrapKind?: SdkworkV3UnwrapKind;
 };
 
+export type ApiRequestOptions = Pick<HttpRequestOptions, 'signal' | 'timeout'>;
+
 export class HttpClient extends BaseHttpClient {
-  private static readonly API_KEY_HEADER: string = 'Access-Token';
   private static readonly ACCESS_TOKEN_HEADER: string = 'Access-Token';
-  private static readonly API_KEY_USE_BEARER = false;
+  private static readonly SDKWORK_V3_UNWRAP = true;
+  private static readonly SDKWORK_V3_REQUEST_FINGERPRINTS = true;
+  private static readonly REQUIRES_SDKWORK_ACCESS_TOKEN = true;
 
   constructor(config: SdkworkBackendConfig) {
     super(config as any);
+  }
+
+  private static normalizeCredential(value: unknown): string | undefined {
+    return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
   }
 
   private getInternalAuthConfig(): any {
@@ -45,6 +57,145 @@ export class HttpClient extends BaseHttpClient {
     }
 
     return Object.keys(mergedHeaders).length > 0 ? mergedHeaders : undefined;
+  }
+
+  private async applySdkworkRequestBodyFingerprint(
+    headers: Record<string, string> | undefined,
+    body: unknown,
+  ): Promise<Record<string, string> | undefined> {
+    if (
+      !HttpClient.SDKWORK_V3_REQUEST_FINGERPRINTS
+      || body == null
+      || !this.hasNonEmptyHeader(headers, 'Idempotency-Key')
+      || this.hasNonEmptyHeader(headers, 'X-Content-SHA256')
+      || this.hasNonEmptyHeader(headers, 'X-Idempotency-Fingerprint')
+    ) {
+      return headers;
+    }
+
+    const fingerprint = await this.createSdkworkRequestBodyFingerprint(body);
+    if (!fingerprint) {
+      return headers;
+    }
+
+    const normalizedFingerprintHeader = fingerprint.header.toLowerCase();
+    const preparedHeaders = Object.fromEntries(
+      Object.entries(headers ?? {}).filter(
+        ([headerName]) => headerName.toLowerCase() !== normalizedFingerprintHeader,
+      ),
+    );
+    return {
+      ...preparedHeaders,
+      [fingerprint.header]: fingerprint.value,
+    };
+  }
+
+  private hasNonEmptyHeader(headers: Record<string, string> | undefined, name: string): boolean {
+    const normalizedName = name.toLowerCase();
+    return Object.entries(headers ?? {}).some(
+      ([headerName, value]) => headerName.toLowerCase() === normalizedName && value.trim().length > 0,
+    );
+  }
+
+  private async createSdkworkRequestBodyFingerprint(
+    body: unknown,
+  ): Promise<{ header: 'X-Content-SHA256' | 'X-Idempotency-Fingerprint'; value: string } | undefined> {
+    if (typeof FormData !== 'undefined' && body instanceof FormData) {
+      const canonicalForm = await this.serializeSdkworkFormData(body);
+      return {
+        header: 'X-Idempotency-Fingerprint',
+        value: await this.sha256Hex(new TextEncoder().encode(canonicalForm)),
+      };
+    }
+
+    const bytes = await this.serializeSdkworkRequestBodyBytes(body);
+    if (!bytes) {
+      return undefined;
+    }
+    return {
+      header: 'X-Content-SHA256',
+      value: await this.sha256Hex(bytes),
+    };
+  }
+
+  private async serializeSdkworkRequestBodyBytes(body: unknown): Promise<Uint8Array | undefined> {
+    if (typeof URLSearchParams !== 'undefined' && body instanceof URLSearchParams) {
+      return new TextEncoder().encode(body.toString());
+    }
+    if (typeof Blob !== 'undefined' && body instanceof Blob) {
+      return new Uint8Array(await body.arrayBuffer());
+    }
+    if (typeof ArrayBuffer !== 'undefined' && body instanceof ArrayBuffer) {
+      return new Uint8Array(body.slice(0));
+    }
+    if (typeof ArrayBuffer !== 'undefined' && ArrayBuffer.isView(body)) {
+      return new Uint8Array(new Uint8Array(body.buffer, body.byteOffset, body.byteLength));
+    }
+    if (typeof body === 'string') {
+      return new TextEncoder().encode(body);
+    }
+
+    const serialized = JSON.stringify(body);
+    return serialized === undefined ? undefined : new TextEncoder().encode(serialized);
+  }
+
+  private async serializeSdkworkFormData(body: FormData): Promise<string> {
+    const parts: Array<Record<string, unknown>> = [];
+    for (const [name, value] of body.entries()) {
+      if (typeof value === 'string') {
+        parts.push({ kind: 'field', name, value });
+        continue;
+      }
+
+      const bytes = new Uint8Array(await value.arrayBuffer());
+      parts.push({
+        kind: 'file',
+        name,
+        fileName: 'name' in value ? String(value.name) : '',
+        contentType: value.type,
+        size: value.size,
+        contentSha256: await this.sha256Hex(bytes),
+      });
+    }
+    return JSON.stringify(parts);
+  }
+
+  private async sha256Hex(bytes: Uint8Array): Promise<string> {
+    return sha256Hash(bytes);
+  }
+
+  protected buildHeaders(config: any, skipAuth = false): Record<string, string> {
+    const headers = super.buildHeaders(config, skipAuth);
+    if (config?.accessTokenOnly) {
+      this.stripCredentialHeaders(headers, true);
+      return headers;
+    }
+    if (!skipAuth && !config?.skipAuth) {
+      return headers;
+    }
+
+    this.stripCredentialHeaders(headers, false);
+    return headers;
+  }
+
+  private stripCredentialHeaders(
+    headers: Record<string, string>,
+    preserveAccessToken: boolean,
+  ): void {
+    [
+      ...(preserveAccessToken ? [] : [HttpClient.ACCESS_TOKEN_HEADER, 'Access-Token']),
+      'Authorization',
+      ['X', 'API', 'Key'].join('-'),
+      'X-Tenant-Id',
+      'X-Organization-Id',
+      'X-Platform',
+      'X-User-Id',
+      'X-Sdkwork-Tenant-Id',
+      'X-Sdkwork-Organization-Id',
+      'X-Sdkwork-User-Id',
+    ].forEach((key) => {
+      delete headers[key];
+    });
   }
 
   private buildRequestBody(body: unknown, contentType?: string): unknown {
@@ -177,36 +328,9 @@ export class HttpClient extends BaseHttpClient {
     }
     params.append(key, String(value));
   }
-
-  setApiKey(apiKey: string): void {
-    const authConfig = this.getInternalAuthConfig();
-    const headers = this.getInternalHeaders();
-    authConfig.apiKey = apiKey;
-    authConfig.tokenManager?.clearTokens?.();
-
-    if (HttpClient.API_KEY_HEADER === 'Authorization' && HttpClient.API_KEY_USE_BEARER) {
-      authConfig.authMode = 'apikey';
-      return;
-    }
-
-    authConfig.authMode = 'dual-token';
-    headers[HttpClient.API_KEY_HEADER] = HttpClient.API_KEY_USE_BEARER
-      ? `Bearer ${apiKey}`
-      : apiKey;
-
-    if (HttpClient.API_KEY_HEADER.toLowerCase() !== 'authorization') {
-      delete headers['Authorization'];
-    }
-  }
-
   setAuthToken(token: string): void {
-    const headers = this.getInternalHeaders();
-    if (HttpClient.API_KEY_HEADER.toLowerCase() !== 'authorization') {
-      delete headers[HttpClient.API_KEY_HEADER];
-    }
     super.setAuthToken(token);
   }
-
   setAccessToken(token: string): void {
     const headers = this.getInternalHeaders();
     headers[HttpClient.ACCESS_TOKEN_HEADER] = token;
@@ -222,18 +346,70 @@ export class HttpClient extends BaseHttpClient {
     this.getInternalAuthConfig().tokenManager = manager;
   }
 
-  private applySdkworkAuthHeaders(headers?: Record<string, string>): Record<string, string> | undefined {
+  private applyAccessTokenOnlyHeaders(
+    headers?: Record<string, string>,
+  ): Record<string, string> {
     const authConfig = this.getInternalAuthConfig();
     const tokenManager = authConfig.tokenManager;
     const accessToken = tokenManager?.getAccessToken?.();
-    if (!accessToken) {
+    if (typeof accessToken !== 'string' || accessToken.trim().length === 0) {
+      throw new Error(
+        'access-token-only request requires Access-Token before request dispatch',
+      );
+    }
+
+    const result = { ...(headers ?? {}) };
+    this.stripCredentialHeaders(result, false);
+    result[HttpClient.ACCESS_TOKEN_HEADER] = accessToken.trim();
+    return result;
+  }
+
+  private applySdkworkAuthHeaders(headers?: Record<string, string>): Record<string, string> | undefined {
+    const authConfig = this.getInternalAuthConfig();
+    const tokenManager = authConfig.tokenManager;
+    const accessToken = HttpClient.normalizeCredential(tokenManager?.getAccessToken?.());
+    const authToken = HttpClient.normalizeCredential(tokenManager?.getAuthToken?.());
+    if (HttpClient.REQUIRES_SDKWORK_ACCESS_TOKEN
+      && (typeof accessToken !== 'string' || accessToken.trim().length === 0)) {
+      throw new Error('non-open-api request requires Access-Token before request dispatch');
+    }
+    if (!accessToken && !authToken) {
       return headers;
     }
 
-    return {
-      ...(headers ?? {}),
-      [HttpClient.ACCESS_TOKEN_HEADER]: accessToken,
-    };
+    const authHeaders = buildAuthHeaders('dual-token', undefined, tokenManager);
+    return Object.keys(authHeaders).length > 0
+      ? { ...(headers ?? {}), ...authHeaders }
+      : headers;
+  }
+
+  private unwrapSdkworkV3Payload<T>(payload: unknown, unwrapKind: SdkworkV3UnwrapKind = 'data'): T {
+    if (!HttpClient.SDKWORK_V3_UNWRAP || payload == null || typeof payload !== 'object') {
+      return payload as T;
+    }
+
+    const record = payload as Record<string, unknown>;
+    if (record.code !== 0 || !('data' in record)) {
+      return this.unwrapSdkworkV3Data<T>(record, unwrapKind);
+    }
+
+    const data = record.data;
+    if (!data || typeof data !== 'object') {
+      return data as T;
+    }
+
+    return this.unwrapSdkworkV3Data<T>(data as Record<string, unknown>, unwrapKind);
+  }
+
+  private unwrapSdkworkV3Data<T>(data: Record<string, unknown>, unwrapKind: SdkworkV3UnwrapKind): T {
+    if (unwrapKind === 'void') {
+      return undefined as T;
+    }
+    if (unwrapKind === 'item' && 'item' in data) {
+      return data.item as T;
+    }
+
+    return data as T;
   }
 
   async request<T>(path: string, options: HttpRequestOptions = {}): Promise<T> {
@@ -241,18 +417,42 @@ export class HttpClient extends BaseHttpClient {
     if (typeof execute !== 'function') {
       throw new Error('BaseHttpClient execute method is not available');
     }
-    const { body, headers, contentType, method = 'GET', ...rest } = options;
-    const requestHeaders = this.applySdkworkAuthHeaders(headers);
-    return withRetry(
+    const {
+      body,
+      headers,
+      contentType,
+      method = 'GET',
+      skipAuth,
+      accessTokenOnly,
+      sdkworkUnwrapKind = 'data',
+      ...rest
+    } = options;
+    const requestHeaders = accessTokenOnly
+      ? this.applyAccessTokenOnlyHeaders(headers)
+      : skipAuth
+        ? headers
+        : this.applySdkworkAuthHeaders(headers);
+    const requestBody = this.buildRequestBody(body, contentType);
+    const preparedHeaders = await this.applySdkworkRequestBodyFingerprint(
+      this.buildRequestHeaders(requestHeaders, body == null ? undefined : contentType),
+      requestBody,
+    );
+    const payload = await withRetry(
       () => execute.call(this, {
         url: path,
         method,
         ...rest,
-        body: this.buildRequestBody(body, contentType),
-        headers: this.buildRequestHeaders(requestHeaders, body == null ? undefined : contentType),
+        skipAuth,
+        accessTokenOnly,
+        body: requestBody,
+        headers: preparedHeaders,
       }),
-      { maxRetries: 3 }
+      // Per-request retry overrides (e.g. disabling 5xx retries for
+      // idempotent-terminal operations like turn execution) flow through
+      // options.retry; the default keeps maxRetries: 3.
+      { maxRetries: 3, ...options.retry }
     );
+    return this.unwrapSdkworkV3Payload<T>(payload, sdkworkUnwrapKind);
   }
 
   async *streamJson<T>(path: string, options: HttpRequestOptions = {}): AsyncIterable<T> {
@@ -260,17 +460,35 @@ export class HttpClient extends BaseHttpClient {
     if (typeof stream !== 'function') {
       throw new Error('BaseHttpClient stream method is not available');
     }
-    const { body, headers, contentType, method = 'GET', ...rest } = options;
-    const authHeaders = this.applySdkworkAuthHeaders(headers);
-    const requestHeaders = this.buildRequestHeaders(
-      { Accept: 'text/event-stream', ...(authHeaders ?? {}) },
-      body == null ? undefined : contentType,
+    const {
+      body,
+      headers,
+      contentType,
+      method = 'GET',
+      skipAuth,
+      accessTokenOnly,
+      ...rest
+    } = options;
+    const authHeaders = accessTokenOnly
+      ? this.applyAccessTokenOnlyHeaders(headers)
+      : skipAuth
+        ? headers
+        : this.applySdkworkAuthHeaders(headers);
+    const requestBody = this.buildRequestBody(body, contentType);
+    const requestHeaders = await this.applySdkworkRequestBodyFingerprint(
+      this.buildRequestHeaders(
+        { Accept: 'text/event-stream', ...(authHeaders ?? {}) },
+        body == null ? undefined : contentType,
+      ),
+      requestBody,
     );
 
     for await (const data of stream.call(this, path, {
       method,
       ...rest,
-      body: this.buildRequestBody(body, contentType),
+      skipAuth,
+      accessTokenOnly,
+      body: requestBody,
       headers: requestHeaders,
     })) {
       if (data === '[DONE]') {

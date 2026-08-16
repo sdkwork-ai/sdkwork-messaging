@@ -60,7 +60,7 @@
       },
       "handler": {
         "module": "crate::handlers",
-        "name": "messaging_notifications_markRead"
+        "name": "messaging_notifications_read"
       },
       "schemas": {
         "request": null,
@@ -159,7 +159,7 @@
       },
       "handler": {
         "module": "crate::handlers",
-        "name": "messaging_pushDevices_register"
+        "name": "messaging_pushDevices_create"
       },
       "schemas": {
         "request": "MessagingPushDeviceRegisterRequest",
@@ -192,7 +192,7 @@
       },
       "handler": {
         "module": "crate::handlers",
-        "name": "messaging_pushDevices_unregister"
+        "name": "messaging_pushDevices_delete"
       },
       "schemas": {
         "request": null,

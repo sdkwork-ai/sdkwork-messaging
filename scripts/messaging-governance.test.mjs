@@ -44,7 +44,6 @@ const forbiddenLegacyTextPatterns = [
   /sdkwork-routes-im-open-api/u,
   /\/im\/v3\/api/u,
   /\bmessaging_provider_[a-z0-9_]+/iu,
-  /\bmessaging_template[a-z0-9_]*\b/iu,
   /\bmessaging_route_rule[a-z0-9_]*\b/iu,
   /\biam_verification_[a-z0-9_]+/iu,
   /\bproviderAccounts\b/u,
@@ -52,7 +51,6 @@ const forbiddenLegacyTextPatterns = [
   /\brouteRules\b/u,
   /\bsuppressions\b/u,
   /\brateLimitBuckets\b/u,
-  /\btemplates\b/u,
   /\bchatSessions\b/u,
   /\bchatSession\b/u,
 ];

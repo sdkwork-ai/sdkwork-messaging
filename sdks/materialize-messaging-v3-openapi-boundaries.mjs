@@ -37,7 +37,7 @@ const FAMILIES = [
   {
     family: "sdkwork-messaging-backend-sdk",
     title: "SDKWork Messaging Backend API",
-    description: "Backend/admin contract for notification creation, announcement publishing, app push delivery, SMS/email sends, and verification policies.",
+    description: "Backend/admin contract for notification creation, announcement publishing, app push delivery, SMS/email sends, verification policies, channel configuration, and message templates.",
     apiAuthority: "sdkwork-messaging-backend-api",
     surface: "backend-api",
     sdkType: "backend",
@@ -58,6 +58,17 @@ const FAMILIES = [
       route("POST", "/backend/v3/api/messaging/outbound_messages", "messaging.outboundMessages.send", "messaging.outboundMessages", "messaging.outbound_messages.send", "MessagingOutboundMessageSendRequest", "MessagingOutboundMessageResponse", true),
       route("GET", "/backend/v3/api/messaging/verification_policies", "messaging.verificationPolicies.list", "messaging.verificationPolicies", "messaging.verification_policies.list", null, "MessagingVerificationPolicyListResponse", false),
       route("PUT", "/backend/v3/api/messaging/verification_policies/{policyId}", "messaging.verificationPolicies.update", "messaging.verificationPolicies", "messaging.verification_policies.update", "MessagingVerificationPolicyUpdateRequest", "MessagingVerificationPolicyResponse", true, [pathParameter("policyId")]),
+      route("GET", "/backend/v3/api/messaging/channels/{channel}", "messaging.channels.retrieve", "messaging.channels", "messaging.channels.retrieve", null, "MessagingChannelResponse", false, [channelParameter()]),
+      route("PUT", "/backend/v3/api/messaging/channels/{channel}", "messaging.channels.update", "messaging.channels", "messaging.channels.update", "MessagingChannelUpdateRequest", "MessagingChannelResponse", true, [channelParameter()]),
+      route("GET", "/backend/v3/api/messaging/templates", "messaging.templates.list", "messaging.templates", "messaging.templates.list", null, "MessagingTemplateListResponse", false, [
+        queryParameter("channel", { type: "string", enum: ["sms", "email"] }),
+        queryParameter("status", { type: "string", enum: ["draft", "active", "disabled"] }),
+        queryParameter("keyword", { type: "string", maxLength: 128 }),
+      ]),
+      route("POST", "/backend/v3/api/messaging/templates", "messaging.templates.create", "messaging.templates", "messaging.templates.create", "MessagingTemplateCreateRequest", "MessagingTemplateResponse", true),
+      route("GET", "/backend/v3/api/messaging/templates/{templateId}", "messaging.templates.retrieve", "messaging.templates", "messaging.templates.retrieve", null, "MessagingTemplateResponse", false, [pathParameter("templateId")]),
+      route("PUT", "/backend/v3/api/messaging/templates/{templateId}", "messaging.templates.update", "messaging.templates", "messaging.templates.update", "MessagingTemplateUpdateRequest", "MessagingTemplateResponse", true, [pathParameter("templateId")]),
+      route("DELETE", "/backend/v3/api/messaging/templates/{templateId}", "messaging.templates.delete", "messaging.templates", "messaging.templates.delete", null, "MessagingTemplateDeleteResponse", true, [pathParameter("templateId")]),
     ],
   },
 ];
@@ -96,6 +107,24 @@ function pathParameter(name) {
     in: "path",
     required: true,
     schema: { type: "string", minLength: 1 },
+  };
+}
+
+function channelParameter() {
+  return {
+    name: "channel",
+    in: "path",
+    required: true,
+    schema: { type: "string", enum: ["sms", "email"] },
+  };
+}
+
+function queryParameter(name, schema) {
+  return {
+    name,
+    in: "query",
+    required: false,
+    schema,
   };
 }
 
@@ -422,6 +451,72 @@ function schemas() {
       requestId,
     }),
     MessagingVerificationPolicyListResponse: envelope("MessagingVerificationPolicyListResponse", "MessagingVerificationPolicy"),
+    MessagingChannel: object(["id", "channel", "provider", "hasSecret", "enabled"], {
+      id,
+      channel: directChannel,
+      provider: { type: "string", enum: ["smtp", "aliyun", "tencent", "generic_http"] },
+      config: { type: "object", additionalProperties: true },
+      hasSecret: { type: "boolean" },
+      keyDisplayMasked: { type: "string", readOnly: true },
+      enabled: { type: "boolean" },
+      createdAt: { type: "string", format: "date-time" },
+      updatedAt: { type: "string", format: "date-time" },
+    }),
+    MessagingChannelUpdateRequest: object(["provider", "config", "enabled"], {
+      provider: { type: "string", enum: ["smtp", "aliyun", "tencent", "generic_http"] },
+      config: { type: "object", additionalProperties: true },
+      secret: { type: "string", writeOnly: true, "x-sensitive": true },
+      enabled: { type: "boolean" },
+    }),
+    MessagingChannelResponse: object(["item", "requestId"], {
+      item: { $ref: "#/components/schemas/MessagingChannel" },
+      requestId,
+    }),
+    MessagingTemplate: object(["id", "channel", "templateCode", "name", "content", "approvalStatus", "status"], {
+      id,
+      channel: directChannel,
+      templateCode: { type: "string", minLength: 1, maxLength: 128 },
+      name: { type: "string", minLength: 1, maxLength: 192 },
+      subject: { type: "string" },
+      content: { type: "string", minLength: 1 },
+      variables: { type: "array", items: { type: "string" } },
+      approvalStatus: { type: "string", enum: ["not_applicable", "pending", "approved", "rejected"] },
+      approvalNote: { type: "string" },
+      status: { type: "string", enum: ["draft", "active", "disabled"] },
+      createdAt: { type: "string", format: "date-time" },
+      updatedAt: { type: "string", format: "date-time" },
+      createdBy: { type: "string" },
+    }),
+    MessagingTemplateCreateRequest: object(["channel", "templateCode", "name", "content"], {
+      channel: directChannel,
+      templateCode: { type: "string", minLength: 1, maxLength: 128 },
+      name: { type: "string", minLength: 1, maxLength: 192 },
+      subject: { type: "string" },
+      content: { type: "string", minLength: 1 },
+      variables: { type: "array", items: { type: "string" } },
+      approvalStatus: { type: "string", enum: ["not_applicable", "pending", "approved", "rejected"] },
+      approvalNote: { type: "string" },
+      status: { type: "string", enum: ["draft", "active", "disabled"] },
+    }),
+    MessagingTemplateUpdateRequest: object(["name", "content"], {
+      name: { type: "string", minLength: 1, maxLength: 192 },
+      subject: { type: "string" },
+      content: { type: "string", minLength: 1 },
+      variables: { type: "array", items: { type: "string" } },
+      approvalStatus: { type: "string", enum: ["not_applicable", "pending", "approved", "rejected"] },
+      approvalNote: { type: "string" },
+      status: { type: "string", enum: ["draft", "active", "disabled"] },
+    }),
+    MessagingTemplateResponse: object(["item", "requestId"], {
+      item: { $ref: "#/components/schemas/MessagingTemplate" },
+      requestId,
+    }),
+    MessagingTemplateListResponse: envelope("MessagingTemplateListResponse", "MessagingTemplate"),
+    MessagingTemplateDeleteResponse: object(["templateId", "deleted", "requestId"], {
+      templateId: id,
+      deleted: { type: "boolean" },
+      requestId,
+    }),
   };
 }
 

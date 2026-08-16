@@ -4,6 +4,4 @@ import type { PageInfo } from './page-info';
 export interface MessagingPushMessageListResponse {
   items: MessagingPushMessage[];
   pageInfo: PageInfo;
-  /** Server-owned request correlation id. */
-  requestId: string;
 }

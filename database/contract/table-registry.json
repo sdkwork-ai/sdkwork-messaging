@@ -79,6 +79,18 @@
       "owner": "messaging-platform",
       "compliance_level": "L2",
       "lifecycle_status": "active"
+    },
+    {
+      "table_name": "messaging_channel",
+      "owner": "messaging-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "messaging_template",
+      "owner": "messaging-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
     }
   ]
 }

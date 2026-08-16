@@ -8,3 +8,6 @@ description = "SDKWork messaging domain contracts for external SMS and email del
 [lib]
 name = "sdkwork_messaging_delivery_service"
 path = "src/lib.rs"
+
+[dependencies]
+serde_json = { version = "1", features = ["preserve_order"] }

@@ -306,6 +306,55 @@ CREATE TABLE IF NOT EXISTS messaging_verification_attempt (
     CONSTRAINT uk_messaging_verification_attempt_idempotency UNIQUE (tenant_id, organization_id, challenge_id, idempotency_key)
 );
 
+CREATE TABLE IF NOT EXISTS messaging_channel (
+    id BIGINT PRIMARY KEY,
+    uuid VARCHAR(64) NOT NULL UNIQUE,
+    tenant_id BIGINT NOT NULL DEFAULT 0,
+    organization_id BIGINT NOT NULL DEFAULT 0,
+    channel VARCHAR(32) NOT NULL,
+    provider VARCHAR(64) NOT NULL,
+    config_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    secret_ciphertext VARCHAR,
+    secret_key_id VARCHAR,
+    secret_fingerprint VARCHAR,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by BIGINT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT NOT NULL DEFAULT 0,
+    deleted_at TIMESTAMPTZ,
+    deleted_by BIGINT,
+    CONSTRAINT ck_messaging_channel_channel CHECK (channel IN ('sms', 'email')),
+    CONSTRAINT ck_messaging_channel_provider CHECK (provider IN ('smtp', 'aliyun', 'tencent', 'generic_http')),
+    CONSTRAINT uk_messaging_channel_scope UNIQUE (tenant_id, organization_id, channel)
+);
+
+CREATE TABLE IF NOT EXISTS messaging_template (
+    id BIGINT PRIMARY KEY,
+    uuid VARCHAR(64) NOT NULL UNIQUE,
+    tenant_id BIGINT NOT NULL DEFAULT 0,
+    organization_id BIGINT NOT NULL DEFAULT 0,
+    channel VARCHAR(32) NOT NULL,
+    template_code VARCHAR(128) NOT NULL,
+    name VARCHAR(192) NOT NULL,
+    subject TEXT,
+    content TEXT NOT NULL,
+    variables_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    approval_status VARCHAR(32) NOT NULL DEFAULT 'not_applicable',
+    approval_note VARCHAR(512),
+    status VARCHAR(32) NOT NULL DEFAULT 'draft',
+    created_by BIGINT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT NOT NULL DEFAULT 0,
+    deleted_at TIMESTAMPTZ,
+    deleted_by BIGINT,
+    CONSTRAINT ck_messaging_template_channel CHECK (channel IN ('sms', 'email')),
+    CONSTRAINT ck_messaging_template_approval_status CHECK (approval_status IN ('not_applicable', 'pending', 'approved', 'rejected')),
+    CONSTRAINT ck_messaging_template_status CHECK (status IN ('draft', 'active', 'disabled')),
+    CONSTRAINT uk_messaging_template_scope_code UNIQUE (tenant_id, organization_id, channel, template_code)
+);
+
 CREATE INDEX IF NOT EXISTS idx_messaging_notification_recipient_inbox
     ON messaging_notification_recipient (tenant_id, organization_id, recipient_user_id, status, created_at);
 
@@ -341,3 +390,9 @@ CREATE INDEX IF NOT EXISTS idx_messaging_verification_challenge_scene_target
 
 CREATE INDEX IF NOT EXISTS idx_messaging_verification_challenge_expiry
     ON messaging_verification_challenge (tenant_id, organization_id, status, expires_at);
+
+CREATE INDEX IF NOT EXISTS idx_messaging_channel_scope
+    ON messaging_channel (tenant_id, organization_id, channel, enabled);
+
+CREATE INDEX IF NOT EXISTS idx_messaging_template_channel_status
+    ON messaging_template (tenant_id, organization_id, channel, status, updated_at);

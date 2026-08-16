@@ -4,6 +4,4 @@ import type { PageInfo } from './page-info';
 export interface MessagingVerificationPolicyListResponse {
   items: MessagingVerificationPolicy[];
   pageInfo: PageInfo;
-  /** Server-owned request correlation id. */
-  requestId: string;
 }

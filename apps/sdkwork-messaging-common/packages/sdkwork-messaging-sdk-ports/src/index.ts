@@ -53,6 +53,17 @@ export const BACKEND_MESSAGING_METHOD_TREE = {
     list: true,
     update: true,
   },
+  channels: {
+    retrieve: true,
+    update: true,
+  },
+  templates: {
+    list: true,
+    create: true,
+    retrieve: true,
+    update: true,
+    delete: true,
+  },
 } as const;
 
 export interface MessagingAppSdkClient {
@@ -89,9 +100,16 @@ export function assertMessagingBackendSdkClient(client: unknown): asserts client
     !hasMethod(client, ["messaging", "outboundMessages", "list"]) ||
     !hasMethod(client, ["messaging", "outboundMessages", "send"]) ||
     !hasMethod(client, ["messaging", "verificationPolicies", "list"]) ||
-    !hasMethod(client, ["messaging", "verificationPolicies", "update"])
+    !hasMethod(client, ["messaging", "verificationPolicies", "update"]) ||
+    !hasMethod(client, ["messaging", "channels", "retrieve"]) ||
+    !hasMethod(client, ["messaging", "channels", "update"]) ||
+    !hasMethod(client, ["messaging", "templates", "list"]) ||
+    !hasMethod(client, ["messaging", "templates", "create"]) ||
+    !hasMethod(client, ["messaging", "templates", "retrieve"]) ||
+    !hasMethod(client, ["messaging", "templates", "update"]) ||
+    !hasMethod(client, ["messaging", "templates", "delete"])
   ) {
-    throw new Error("Messaging backend SDK client must expose messaging notification, announcement, app push, SMS/email, and verification administration methods.");
+    throw new Error("Messaging backend SDK client must expose messaging notification, announcement, app push, SMS/email, verification, channel, and template administration methods.");
   }
 }
 

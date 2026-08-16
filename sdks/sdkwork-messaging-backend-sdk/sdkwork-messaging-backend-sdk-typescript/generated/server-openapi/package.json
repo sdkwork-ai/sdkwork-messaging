@@ -1,6 +1,8 @@
 {
   "name": "sdkwork-messaging-backend-sdk-generated-typescript",
   "version": "1.0.0",
+  "private": true,
+  "sdkworkRole": "transport",
   "description": "Generator-owned TypeScript transport SDK for sdkwork-messaging-backend-sdk.",
   "author": "SDKWork Team",
   "license": "MIT",
@@ -24,7 +26,8 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@sdkwork/sdk-common": "^1.0.2"
+    "@sdkwork/sdk-common": "^1.0.4",
+    "@sdkwork/utils": "^0.11.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -36,11 +39,5 @@
     "api",
     "backend",
     "sdkwork"
-  ],
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "private": true,
-  "sdkworkRole": "transport"
+  ]
 }

@@ -1,7 +1,7 @@
 use sdkwork_messaging_delivery_repository_sqlx::{
-    messaging_announcement_tables, messaging_initial_migration_sql, messaging_notification_tables,
-    messaging_outbound_tables, messaging_push_tables, messaging_storage_capability_manifest,
-    messaging_verification_tables,
+    messaging_announcement_tables, messaging_channel_tables, messaging_initial_migration_sql,
+    messaging_notification_tables, messaging_outbound_tables, messaging_push_tables,
+    messaging_storage_capability_manifest, messaging_template_tables, messaging_verification_tables,
 };
 
 #[test]
@@ -38,6 +38,8 @@ fn splits_messaging_tables_by_product_capability() {
             "messaging_verification_attempt",
         ],
     );
+    assert_eq!(messaging_channel_tables(), vec!["messaging_channel"]);
+    assert_eq!(messaging_template_tables(), vec!["messaging_template"]);
 }
 
 #[test]
@@ -189,6 +191,8 @@ fn manifest_declares_messaging_storage_contract() {
         manifest.verification_tables,
         messaging_verification_tables()
     );
+    assert_eq!(manifest.channel_tables, messaging_channel_tables());
+    assert_eq!(manifest.template_tables, messaging_template_tables());
     assert!(manifest
         .repository_bindings
         .iter()
@@ -209,4 +213,12 @@ fn manifest_declares_messaging_storage_contract() {
         .repository_bindings
         .iter()
         .any(|binding| binding.repository_name == "MessagingVerificationRepository"));
+    assert!(manifest
+        .repository_bindings
+        .iter()
+        .any(|binding| binding.repository_name == "MessagingChannelRepository"));
+    assert!(manifest
+        .repository_bindings
+        .iter()
+        .any(|binding| binding.repository_name == "MessagingTemplateRepository"));
 }
