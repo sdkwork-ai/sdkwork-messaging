@@ -4,15 +4,15 @@
 //! `@sdkwork/messaging-backend-sdk` client at startup; this package never
 //! constructs transport clients or issues raw HTTP.
 
-import type { SdkworkBackendClient } from "@sdkwork/messaging-backend-sdk";
+import type { MessagingBackendSdkClient } from "@sdkwork/messaging-pc-core";
 
-let messagingBackendClient: SdkworkBackendClient | undefined;
+let messagingBackendClient: MessagingBackendSdkClient | undefined;
 
-export function configureMessagingBackendSdkClient(client: SdkworkBackendClient): void {
+export function configureMessagingBackendSdkClient(client: MessagingBackendSdkClient): void {
   messagingBackendClient = client;
 }
 
-export function messagingBackendSdkClient(): SdkworkBackendClient {
+export function messagingBackendSdkClient(): MessagingBackendSdkClient {
   if (!messagingBackendClient) {
     throw new Error(
       "messaging backend SDK client is not configured; the embedding host must call configureMessagingBackendSdkClient() before rendering admin pages",

@@ -7,7 +7,7 @@ import type {
   MessagingTemplate,
   MessagingTemplateCreateRequest,
   MessagingTemplateUpdateRequest,
-} from "@sdkwork/messaging-backend-sdk";
+} from "@sdkwork/messaging-pc-core";
 
 import { messagingBackendSdkClient } from "./sdk-client";
 

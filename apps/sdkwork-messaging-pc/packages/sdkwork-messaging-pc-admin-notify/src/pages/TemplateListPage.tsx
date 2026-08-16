@@ -21,7 +21,7 @@ import {
   type MessagingTemplateStatus,
   type NotifyAdminService,
 } from "../notifyAdminService";
-import type { MessagingTemplate } from "@sdkwork/messaging-backend-sdk";
+import type { MessagingTemplate } from "@sdkwork/messaging-pc-core";
 
 export interface SdkworkMessagingTemplateListPageProps {
   channel: "email" | "sms";

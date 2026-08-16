@@ -32,7 +32,8 @@
     "@sdkwork/messaging-backend-sdk": "workspace:*",
     "lucide-react": "catalog:",
     "react": "catalog:",
-    "react-i18next": "catalog:"
+    "react-i18next": "catalog:",
+    "@sdkwork/messaging-pc-core": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "catalog:",

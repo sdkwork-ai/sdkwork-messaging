@@ -17,3 +17,15 @@ export function createMessagingPcSdkClients(
   return { messaging };
 }
 
+
+// Admin notify surface types are re-exported from the messaging backend SDK
+// through this core package so feature packages never import generated SDK
+// modules directly (verify-repo SDK ownership rule).
+export type {
+  SdkworkBackendClient as MessagingBackendSdkClient,
+  MessagingChannel,
+  MessagingChannelUpdateRequest,
+  MessagingTemplate,
+  MessagingTemplateCreateRequest,
+  MessagingTemplateUpdateRequest,
+} from "@sdkwork/messaging-backend-sdk";

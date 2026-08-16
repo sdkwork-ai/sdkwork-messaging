@@ -725,6 +725,9 @@ importers:
       '@sdkwork/messaging-backend-sdk':
         specifier: workspace:*
         version: link:../../../../sdks/sdkwork-messaging-backend-sdk/sdkwork-messaging-backend-sdk-typescript
+      '@sdkwork/messaging-pc-core':
+        specifier: workspace:*
+        version: link:../sdkwork-messaging-pc-core
       lucide-react:
         specifier: 'catalog:'
         version: 1.7.0(react@19.2.4)
@@ -753,6 +756,9 @@ importers:
       '@sdkwork/messaging-app-sdk':
         specifier: workspace:*
         version: link:../../../../sdks/sdkwork-messaging-app-sdk/sdkwork-messaging-app-sdk-typescript
+      '@sdkwork/messaging-backend-sdk':
+        specifier: workspace:*
+        version: link:../../../../sdks/sdkwork-messaging-backend-sdk/sdkwork-messaging-backend-sdk-typescript
       '@sdkwork/sdk-common':
         specifier: workspace:*
         version: link:../../../../../sdkwork-sdk-commons/sdkwork-sdk-common-typescript
