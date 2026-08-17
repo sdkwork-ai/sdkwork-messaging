@@ -36,5 +36,15 @@
   "metadata": {
     "managedBy": "sdks/materialize-messaging-v3-openapi-boundaries.mjs",
     "standardVersion": "2026-06-06"
+  },
+  "sdkFamily": "sdkwork-messaging-backend-sdk",
+  "sdkName": "sdkwork-messaging-backend-sdk",
+  "packageName": "@sdkwork/messaging-backend-sdk",
+  "transportPackageName": "sdkwork-messaging-backend-sdk-generated-typescript",
+  "typescript": {
+    "composedRoot": "sdkwork-messaging-backend-sdk-typescript",
+    "composedEntry": "sdkwork-messaging-backend-sdk-typescript/src/index.ts",
+    "transportRoot": "sdkwork-messaging-backend-sdk-typescript/generated/server-openapi",
+    "transportEntry": "sdkwork-messaging-backend-sdk-typescript/generated/server-openapi/src/index.ts"
   }
 }
