@@ -20,6 +20,9 @@ pub async fn assemble_backend_api_contribution() -> Result<ApiAssemblyContributi
 
     let admin_store: Arc<dyn MessagingAdminStore + Send + Sync> = match pool {
         DatabasePool::Postgres(pool, _) => Arc::new(PostgresMessagingAdminStore::new(pool.clone())),
+        _ => unreachable!(
+            "messaging server assembly requires a PostgreSQL pool (DATABASE_SPEC: authoritative-server persistence is PostgreSQL only)"
+        ),
     };
     let router = gateway_mount(admin_store);
     let route_manifest = gateway_route_manifest();

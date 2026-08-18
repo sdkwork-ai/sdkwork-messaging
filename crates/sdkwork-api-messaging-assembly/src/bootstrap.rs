@@ -19,6 +19,9 @@ pub type ApiAssembly = ApiAssemblyContribution;
 pub(crate) fn readiness_check(pool: &DatabasePool) -> Arc<dyn ReadinessCheck> {
     match pool {
         DatabasePool::Postgres(pool, _) => Arc::new(PgPoolReadinessCheck::new(pool.clone())),
+        _ => unreachable!(
+            "messaging server assembly requires a PostgreSQL pool (DATABASE_SPEC: authoritative-server persistence is PostgreSQL only)"
+        ),
     }
 }
 
@@ -30,6 +33,9 @@ pub async fn assemble_business_routes() -> Result<ApiAssembly, String> {
 
     let admin_store: Arc<dyn MessagingAdminStore + Send + Sync> = match pool {
         DatabasePool::Postgres(pool, _) => Arc::new(PostgresMessagingAdminStore::new(pool.clone())),
+        _ => unreachable!(
+            "messaging server assembly requires a PostgreSQL pool (DATABASE_SPEC: authoritative-server persistence is PostgreSQL only)"
+        ),
     };
 
     let router = wrap_router_with_web_framework_from_env(gateway_mount(admin_store)).await;
