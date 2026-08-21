@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 3,
+  "kind": "sdkwork.app",
+  "app": {
+    "key": "sdkwork-messaging",
+    "name": "Messaging",
+    "displayName": "SDKWork Messaging",
+    "description": "SDKWork Messaging application (bootstrap deploy layout).",
+    "appType": "SDK"
+  },
+  "backend": {
+    "primaryLanguage": "rust",
+    "framework": "axum",
+    "appId": "sdkwork-messaging",
+    "serviceId": "sdkwork-messaging",
+    "owner": "sdkwork-messaging",
+    "domain": "messaging"
+  },
+  "runtime": {
+    "family": "server",
+    "framework": "rust-axum",
+    "supportedDeploymentProfiles": [
+      "standalone",
+      "cloud"
+    ],
+    "defaultDeploymentProfile": "standalone"
+  }
+}

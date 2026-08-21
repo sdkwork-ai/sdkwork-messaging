@@ -4,8 +4,8 @@
   "appId": "sdkwork-messaging",
   "applicationCode": "messaging",
   "archetype": "client-application",
-  "profileRoot": "apps/sdkwork-messaging-pc/etc/browser",
-  "profilePattern": "runtime-env.{deploymentProfile}.{environment}.json",
+  "profileRoot": "etc/topology",
+  "profilePattern": "{deploymentProfile}.{environment}.env",
   "vocabulary": {
     "deploymentProfile": { "allowed": ["standalone", "cloud"] },
     "environment": { "allowed": ["development", "test", "staging", "production"] }
@@ -15,43 +15,42 @@
     "productionProfileId": "cloud.production"
   },
   "profileFiles": {
-    "standalone.development": "apps/sdkwork-messaging-pc/etc/browser/runtime-env.development.json",
-    "standalone.test": "apps/sdkwork-messaging-pc/etc/browser/runtime-env.test.json",
-    "standalone.production": "apps/sdkwork-messaging-pc/etc/browser/runtime-env.standalone.production.json",
-    "cloud.development": "apps/sdkwork-messaging-pc/etc/browser/runtime-env.cloud.development.json",
-    "cloud.staging": "apps/sdkwork-messaging-pc/etc/browser/runtime-env.staging.json",
-    "cloud.production": "apps/sdkwork-messaging-pc/etc/browser/runtime-env.production.json"
+    "standalone.development": "etc/topology/standalone.development.env",
+    "standalone.test": "etc/topology/standalone.test.env",
+    "standalone.staging": "etc/topology/standalone.staging.env",
+    "standalone.production": "etc/topology/standalone.production.env",
+    "cloud.development": "etc/topology/cloud.development.env",
+    "cloud.test": "etc/topology/cloud.test.env",
+    "cloud.staging": "etc/topology/cloud.staging.env",
+    "cloud.production": "etc/topology/cloud.production.env"
+  },
+  "envKeys": {
+    "deploymentProfile": "SDKWORK_MESSAGING_DEPLOYMENT_PROFILE",
+    "environment": "SDKWORK_MESSAGING_ENVIRONMENT",
+    "profileId": "SDKWORK_MESSAGING_PROFILE_ID",
+    "clientApiGatewayBaseUrl": "VITE_SDKWORK_MESSAGING_PLATFORM_API_GATEWAY_HTTP_URL",
+    "apiGatewayBaseUrl": "SDKWORK_MESSAGING_PLATFORM_API_GATEWAY_HTTP_URL"
   },
   "surfaces": {
-    "messaging-pc-browser": {
+    "application.public-ingress": {
       "connectivityPlane": "application",
-      "protocols": ["http"]
+      "protocols": ["http"],
+      "httpUrlEnv": "SDKWORK_MESSAGING_APPLICATION_PUBLIC_HTTP_URL",
+      "clientHttpEnv": "VITE_SDKWORK_MESSAGING_APPLICATION_PUBLIC_HTTP_URL"
     },
     "platform.api-gateway": {
       "connectivityPlane": "platform",
-      "protocols": ["http"]
+      "protocols": ["http"],
+      "httpUrlEnv": "SDKWORK_MESSAGING_PLATFORM_API_GATEWAY_HTTP_URL",
+      "clientHttpEnv": "VITE_SDKWORK_MESSAGING_PLATFORM_API_GATEWAY_HTTP_URL"
     }
   },
   "cloudPublicHosts": {
-    "messaging-pc-browser": { "httpHost": "messaging.sdkwork.com" },
+    "application.public-ingress": { "httpHost": "messaging.sdkwork.com" },
     "platform.api-gateway": { "httpHost": "api.sdkwork.com" }
   },
   "orchestration": {
     "profiles": {
-      "standalone.development": {
-        "processes": [
-          {
-            "id": "messaging-pc-browser",
-            "role": "client",
-            "script": "dev:standalone",
-            "applicationRoot": "apps/sdkwork-messaging-pc",
-            "runtimeTargets": ["browser"],
-            "clientArchitectures": ["pc-web"],
-            "required": true
-          }
-        ],
-        "healthSurfaces": ["messaging-pc-browser"]
-      },
       "cloud.development": {
         "processes": [
           {
@@ -64,8 +63,14 @@
             "required": true
           }
         ],
-        "healthSurfaces": ["messaging-pc-browser", "platform.api-gateway"]
-      }
+        "healthSurfaces": ["application.public-ingress", "platform.api-gateway"]
+      },
+      "standalone.test": { "processes": [], "healthSurfaces": ["application.public-ingress"] },
+      "standalone.staging": { "processes": [], "healthSurfaces": ["application.public-ingress"] },
+      "standalone.production": { "processes": [], "healthSurfaces": ["application.public-ingress"] },
+      "cloud.test": { "processes": [], "healthSurfaces": ["application.public-ingress", "platform.api-gateway"] },
+      "cloud.staging": { "processes": [], "healthSurfaces": ["application.public-ingress", "platform.api-gateway"] },
+      "cloud.production": { "processes": [], "healthSurfaces": ["application.public-ingress", "platform.api-gateway"] }
     }
   }
 }
