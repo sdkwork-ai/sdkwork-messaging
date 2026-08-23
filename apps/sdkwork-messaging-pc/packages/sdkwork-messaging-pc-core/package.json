@@ -38,6 +38,7 @@
   "dependencies": {
     "@sdkwork/messaging-app-sdk": "workspace:*",
     "@sdkwork/sdk-common": "workspace:*",
-    "@sdkwork/messaging-backend-sdk": "workspace:*"
+    "@sdkwork/messaging-backend-sdk": "workspace:*",
+    "@sdkwork/utils": "workspace:*"
   }
 }

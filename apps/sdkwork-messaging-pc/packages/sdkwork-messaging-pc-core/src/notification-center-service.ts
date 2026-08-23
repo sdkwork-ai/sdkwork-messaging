@@ -4,6 +4,7 @@ import type {
   MessagingNotificationReceiptResponse,
   SdkworkAppClient,
 } from "@sdkwork/messaging-app-sdk";
+import { uuid } from "@sdkwork/utils/id";
 
 export type {
   MessagingNotification,
@@ -29,7 +30,7 @@ export function createNotificationCenterService(
   client: Pick<SdkworkAppClient, "messaging">,
   options: CreateNotificationCenterServiceOptions = {},
 ): NotificationCenterService {
-  const createIdempotencyKey = options.createIdempotencyKey ?? defaultIdempotencyKey;
+  const createIdempotencyKey = options.createIdempotencyKey ?? uuid;
 
   return {
     listNotifications(query) {
@@ -57,10 +58,5 @@ function normalizePageSize(value: number): number {
 function normalizePositiveInteger(value: number, field: string): number {
   if (!Number.isSafeInteger(value) || value < 1) throw new Error(`${field} must be a positive integer`);
   return value;
-}
-
-function defaultIdempotencyKey(): string {
-  if (typeof globalThis.crypto?.randomUUID === "function") return globalThis.crypto.randomUUID();
-  return `notification-read-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
