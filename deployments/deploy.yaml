@@ -1,6 +1,5 @@
 version: 2
 defaultProfile: cloud.production
-
 profiles:
   cloud.test:
     deployment:
@@ -16,14 +15,37 @@ profiles:
       availabilityMode: high-availability
     install:
       layout: binary-package
-    expose: []
+    expose:
+      - tls: sdkwork.com
+        mode: web
+        web: adaptive
+        domain: messaging-test.sdkwork.com
+      - tls: birdcoder.com
+        mode: web
+        web: adaptive
+        domain: messaging-test.birdcoder.com
+      - tls: dtupay.com
+        mode: web
+        web: adaptive
+        domain: messaging-test.dtupay.com
+      - tls: sdkwork.cn
+        mode: web
+        web: adaptive
+        domain: messaging-test.sdkwork.cn
+      - tls: birdcoder.cn
+        mode: web
+        web: adaptive
+        domain: messaging-test.birdcoder.cn
+      - tls: dtupay.cn
+        mode: web
+        web: adaptive
+        domain: messaging-test.dtupay.cn
     packages: []
     overrides:
       topology:
         spec: specs/topology.spec.json
         profile: cloud.test
         env: etc/topology/cloud.test.env
-
   cloud.staging:
     deployment:
       deploymentProfile: cloud
@@ -38,14 +60,37 @@ profiles:
       availabilityMode: high-availability
     install:
       layout: binary-package
-    expose: []
+    expose:
+      - tls: sdkwork.com
+        mode: web
+        web: adaptive
+        domain: messaging-staging.sdkwork.com
+      - tls: birdcoder.com
+        mode: web
+        web: adaptive
+        domain: messaging-staging.birdcoder.com
+      - tls: dtupay.com
+        mode: web
+        web: adaptive
+        domain: messaging-staging.dtupay.com
+      - tls: sdkwork.cn
+        mode: web
+        web: adaptive
+        domain: messaging-staging.sdkwork.cn
+      - tls: birdcoder.cn
+        mode: web
+        web: adaptive
+        domain: messaging-staging.birdcoder.cn
+      - tls: dtupay.cn
+        mode: web
+        web: adaptive
+        domain: messaging-staging.dtupay.cn
     packages: []
     overrides:
       topology:
         spec: specs/topology.spec.json
         profile: cloud.staging
         env: etc/topology/cloud.staging.env
-
   cloud.production:
     deployment:
       deploymentProfile: cloud
@@ -60,14 +105,37 @@ profiles:
       availabilityMode: high-availability
     install:
       layout: binary-package
-    expose: []
+    expose:
+      - tls: sdkwork.com
+        mode: web
+        web: adaptive
+        domain: messaging.sdkwork.com
+      - tls: birdcoder.com
+        mode: web
+        web: adaptive
+        domain: messaging.birdcoder.com
+      - tls: dtupay.com
+        mode: web
+        web: adaptive
+        domain: messaging.dtupay.com
+      - tls: sdkwork.cn
+        mode: web
+        web: adaptive
+        domain: messaging.sdkwork.cn
+      - tls: birdcoder.cn
+        mode: web
+        web: adaptive
+        domain: messaging.birdcoder.cn
+      - tls: dtupay.cn
+        mode: web
+        web: adaptive
+        domain: messaging.dtupay.cn
     packages: []
     overrides:
       topology:
         spec: specs/topology.spec.json
         profile: cloud.production
         env: etc/topology/cloud.production.env
-
   cloud.development:
     deployment:
       deploymentProfile: cloud
@@ -82,14 +150,37 @@ profiles:
       availabilityMode: high-availability
     install:
       layout: binary-package
-    expose: []
+    expose:
+      - tls: sdkwork.com
+        mode: web
+        web: adaptive
+        domain: messaging-dev.sdkwork.com
+      - tls: birdcoder.com
+        mode: web
+        web: adaptive
+        domain: messaging-dev.birdcoder.com
+      - tls: dtupay.com
+        mode: web
+        web: adaptive
+        domain: messaging-dev.dtupay.com
+      - tls: sdkwork.cn
+        mode: web
+        web: adaptive
+        domain: messaging-dev.sdkwork.cn
+      - tls: birdcoder.cn
+        mode: web
+        web: adaptive
+        domain: messaging-dev.birdcoder.cn
+      - tls: dtupay.cn
+        mode: web
+        web: adaptive
+        domain: messaging-dev.dtupay.cn
     packages: []
     overrides:
       topology:
         spec: specs/topology.spec.json
         profile: cloud.development
         env: etc/topology/cloud.development.env
-
   standalone.test:
     deployment:
       deploymentProfile: standalone
@@ -104,14 +195,37 @@ profiles:
       availabilityMode: single-instance
     install:
       layout: binary-package
-    expose: []
+    expose:
+      - tls: sdkwork.com
+        mode: web
+        web: adaptive
+        domain: messaging-test.sdkwork.com
+      - tls: birdcoder.com
+        mode: web
+        web: adaptive
+        domain: messaging-test.birdcoder.com
+      - tls: dtupay.com
+        mode: web
+        web: adaptive
+        domain: messaging-test.dtupay.com
+      - tls: sdkwork.cn
+        mode: web
+        web: adaptive
+        domain: messaging-test.sdkwork.cn
+      - tls: birdcoder.cn
+        mode: web
+        web: adaptive
+        domain: messaging-test.birdcoder.cn
+      - tls: dtupay.cn
+        mode: web
+        web: adaptive
+        domain: messaging-test.dtupay.cn
     packages: []
     overrides:
       topology:
         spec: specs/topology.spec.json
         profile: standalone.test
         env: etc/topology/standalone.test.env
-
   standalone.production:
     deployment:
       deploymentProfile: standalone
@@ -126,14 +240,37 @@ profiles:
       availabilityMode: single-instance
     install:
       layout: binary-package
-    expose: []
+    expose:
+      - tls: sdkwork.com
+        mode: web
+        web: adaptive
+        domain: messaging.sdkwork.com
+      - tls: birdcoder.com
+        mode: web
+        web: adaptive
+        domain: messaging.birdcoder.com
+      - tls: dtupay.com
+        mode: web
+        web: adaptive
+        domain: messaging.dtupay.com
+      - tls: sdkwork.cn
+        mode: web
+        web: adaptive
+        domain: messaging.sdkwork.cn
+      - tls: birdcoder.cn
+        mode: web
+        web: adaptive
+        domain: messaging.birdcoder.cn
+      - tls: dtupay.cn
+        mode: web
+        web: adaptive
+        domain: messaging.dtupay.cn
     packages: []
     overrides:
       topology:
         spec: specs/topology.spec.json
         profile: standalone.production
         env: etc/topology/standalone.production.env
-
   standalone.development:
     deployment:
       deploymentProfile: standalone
@@ -148,7 +285,31 @@ profiles:
       availabilityMode: single-instance
     install:
       layout: binary-package
-    expose: []
+    expose:
+      - tls: sdkwork.com
+        mode: web
+        web: adaptive
+        domain: messaging-dev.sdkwork.com
+      - tls: birdcoder.com
+        mode: web
+        web: adaptive
+        domain: messaging-dev.birdcoder.com
+      - tls: dtupay.com
+        mode: web
+        web: adaptive
+        domain: messaging-dev.dtupay.com
+      - tls: sdkwork.cn
+        mode: web
+        web: adaptive
+        domain: messaging-dev.sdkwork.cn
+      - tls: birdcoder.cn
+        mode: web
+        web: adaptive
+        domain: messaging-dev.birdcoder.cn
+      - tls: dtupay.cn
+        mode: web
+        web: adaptive
+        domain: messaging-dev.dtupay.cn
     packages: []
     overrides:
       topology:

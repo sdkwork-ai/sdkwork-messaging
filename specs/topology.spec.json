@@ -7,8 +7,20 @@
   "profileRoot": "etc/topology",
   "profilePattern": "{deploymentProfile}.{environment}.env",
   "vocabulary": {
-    "deploymentProfile": { "allowed": ["standalone", "cloud"] },
-    "environment": { "allowed": ["development", "test", "staging", "production"] }
+    "deploymentProfile": {
+      "allowed": [
+        "standalone",
+        "cloud"
+      ]
+    },
+    "environment": {
+      "allowed": [
+        "development",
+        "test",
+        "staging",
+        "production"
+      ]
+    }
   },
   "defaults": {
     "developmentProfileId": "standalone.development",
@@ -34,20 +46,108 @@
   "surfaces": {
     "application.public-ingress": {
       "connectivityPlane": "application",
-      "protocols": ["http"],
+      "protocols": [
+        "http"
+      ],
       "httpUrlEnv": "SDKWORK_MESSAGING_APPLICATION_PUBLIC_HTTP_URL",
       "clientHttpEnv": "VITE_SDKWORK_MESSAGING_APPLICATION_PUBLIC_HTTP_URL"
     },
     "platform.api-gateway": {
       "connectivityPlane": "platform",
-      "protocols": ["http"],
+      "protocols": [
+        "http"
+      ],
       "httpUrlEnv": "SDKWORK_MESSAGING_PLATFORM_API_GATEWAY_HTTP_URL",
       "clientHttpEnv": "VITE_SDKWORK_MESSAGING_PLATFORM_API_GATEWAY_HTTP_URL"
     }
   },
   "cloudPublicHosts": {
-    "application.public-ingress": { "httpHost": "messaging.sdkwork.com" },
-    "platform.api-gateway": { "httpHost": "api.sdkwork.com" }
+    "application.public-ingress": {
+      "httpHost": "messaging.sdkwork.com",
+      "environments": {
+        "development": {
+          "httpHosts": [
+            "messaging-dev.sdkwork.com",
+            "messaging-dev.birdcoder.com",
+            "messaging-dev.dtupay.com",
+            "messaging-dev.sdkwork.cn",
+            "messaging-dev.birdcoder.cn",
+            "messaging-dev.dtupay.cn"
+          ]
+        },
+        "test": {
+          "httpHosts": [
+            "messaging-test.sdkwork.com",
+            "messaging-test.birdcoder.com",
+            "messaging-test.dtupay.com",
+            "messaging-test.sdkwork.cn",
+            "messaging-test.birdcoder.cn",
+            "messaging-test.dtupay.cn"
+          ]
+        },
+        "staging": {
+          "httpHosts": [
+            "messaging-staging.sdkwork.com",
+            "messaging-staging.birdcoder.com",
+            "messaging-staging.dtupay.com",
+            "messaging-staging.sdkwork.cn",
+            "messaging-staging.birdcoder.cn",
+            "messaging-staging.dtupay.cn"
+          ]
+        }
+      },
+      "httpHosts": [
+        "messaging.sdkwork.com",
+        "messaging.birdcoder.com",
+        "messaging.dtupay.com",
+        "messaging.sdkwork.cn",
+        "messaging.birdcoder.cn",
+        "messaging.dtupay.cn"
+      ]
+    },
+    "platform.api-gateway": {
+      "httpHost": "api.sdkwork.com",
+      "environments": {
+        "development": {
+          "httpHosts": [
+            "api-dev.sdkwork.com",
+            "api-dev.birdcoder.com",
+            "api-dev.dtupay.com",
+            "api-dev.sdkwork.cn",
+            "api-dev.birdcoder.cn",
+            "api-dev.dtupay.cn"
+          ]
+        },
+        "test": {
+          "httpHosts": [
+            "api-test.sdkwork.com",
+            "api-test.birdcoder.com",
+            "api-test.dtupay.com",
+            "api-test.sdkwork.cn",
+            "api-test.birdcoder.cn",
+            "api-test.dtupay.cn"
+          ]
+        },
+        "staging": {
+          "httpHosts": [
+            "api-staging.sdkwork.com",
+            "api-staging.birdcoder.com",
+            "api-staging.dtupay.com",
+            "api-staging.sdkwork.cn",
+            "api-staging.birdcoder.cn",
+            "api-staging.dtupay.cn"
+          ]
+        }
+      },
+      "httpHosts": [
+        "api.sdkwork.com",
+        "api.birdcoder.com",
+        "api.dtupay.com",
+        "api.sdkwork.cn",
+        "api.birdcoder.cn",
+        "api.dtupay.cn"
+      ]
+    }
   },
   "orchestration": {
     "profiles": {
@@ -58,19 +158,59 @@
             "role": "client",
             "script": "dev:cloud",
             "applicationRoot": "apps/sdkwork-messaging-pc",
-            "runtimeTargets": ["browser"],
-            "clientArchitectures": ["pc-web"],
+            "runtimeTargets": [
+              "browser"
+            ],
+            "clientArchitectures": [
+              "pc-web"
+            ],
             "required": true
           }
         ],
-        "healthSurfaces": ["application.public-ingress", "platform.api-gateway"]
+        "healthSurfaces": [
+          "application.public-ingress",
+          "platform.api-gateway"
+        ]
       },
-      "standalone.test": { "processes": [], "healthSurfaces": ["application.public-ingress"] },
-      "standalone.staging": { "processes": [], "healthSurfaces": ["application.public-ingress"] },
-      "standalone.production": { "processes": [], "healthSurfaces": ["application.public-ingress"] },
-      "cloud.test": { "processes": [], "healthSurfaces": ["application.public-ingress", "platform.api-gateway"] },
-      "cloud.staging": { "processes": [], "healthSurfaces": ["application.public-ingress", "platform.api-gateway"] },
-      "cloud.production": { "processes": [], "healthSurfaces": ["application.public-ingress", "platform.api-gateway"] }
+      "standalone.test": {
+        "processes": [],
+        "healthSurfaces": [
+          "application.public-ingress"
+        ]
+      },
+      "standalone.staging": {
+        "processes": [],
+        "healthSurfaces": [
+          "application.public-ingress"
+        ]
+      },
+      "standalone.production": {
+        "processes": [],
+        "healthSurfaces": [
+          "application.public-ingress"
+        ]
+      },
+      "cloud.test": {
+        "processes": [],
+        "healthSurfaces": [
+          "application.public-ingress",
+          "platform.api-gateway"
+        ]
+      },
+      "cloud.staging": {
+        "processes": [],
+        "healthSurfaces": [
+          "application.public-ingress",
+          "platform.api-gateway"
+        ]
+      },
+      "cloud.production": {
+        "processes": [],
+        "healthSurfaces": [
+          "application.public-ingress",
+          "platform.api-gateway"
+        ]
+      }
     }
   }
 }
