@@ -18,7 +18,11 @@
     "preview": "vite preview --host 127.0.0.1 --port 5184 --strictPort",
     "start": "pnpm preview",
     "stop": "node ../../../sdkwork-specs/tools/stop-sdkwork-workspace-processes.mjs --workspace ../../..",
-    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build:dev": "node ../../../sdkwork-specs/tools/build-browser-client.mjs --app-root . --environment dev",
+    "build:test": "node ../../../sdkwork-specs/tools/build-browser-client.mjs --app-root . --environment test",
+    "build:staging": "node ../../../sdkwork-specs/tools/build-browser-client.mjs --app-root . --environment staging",
+    "build:prod": "node ../../../sdkwork-specs/tools/build-browser-client.mjs --app-root . --environment prod"
   },
   "dependencies": {
     "@sdkwork/auth-pc-react": "workspace:*",

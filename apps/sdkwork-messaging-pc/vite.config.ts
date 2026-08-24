@@ -1,3 +1,11 @@
+import { resolveBrowserDistOutDir } from '../../../sdkwork-specs/tools/browser-dist-layout.mjs';
+function resolveViteEnvironment(mode, processEnv = process.env) {
+  const profileMatch = /^(standalone|cloud)\.(development|test|staging|production)$/u.exec(mode ?? '');
+  return profileMatch?.[2]
+    ?? (['development', 'test', 'staging', 'production'].includes(processEnv.SDKWORK_ENVIRONMENT ?? '')
+      ? processEnv.SDKWORK_ENVIRONMENT
+      : 'production');
+}
 import tailwindcss from "@tailwindcss/vite";
 import { createSdkworkCredentialEntryBootstrapVitePlugin } from "@sdkwork/iam-credential-entry/vite";
 import react from "@vitejs/plugin-react";
@@ -15,6 +23,7 @@ export default defineConfig(({ mode }) => ({
   ],
   resolve: { dedupe: ["react", "react-dom"] },
   build: {
+      outDir: resolveBrowserDistOutDir(resolveViteEnvironment(mode, process.env)),
     rolldownOptions: {
       output: {
         codeSplitting: {
