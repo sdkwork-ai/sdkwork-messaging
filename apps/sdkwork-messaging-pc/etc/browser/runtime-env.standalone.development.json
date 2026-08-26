@@ -6,9 +6,17 @@
   "browserOriginMode": "same-origin",
   "defaultLocale": "zh-CN",
   "fallbackLocale": "en-US",
-  "supportedLocales": ["zh-CN", "en-US"],
-  "activeLocales": ["zh-CN", "en-US"],
+  "supportedLocales": [
+    "zh-CN",
+    "en-US"
+  ],
+  "activeLocales": [
+    "zh-CN",
+    "en-US"
+  ],
   "appApiBaseUrl": "/",
-  "appbaseAppApiBaseUrl": "/"
+  "backendApiBaseUrl": "/",
+  "driveAppApiBaseUrl": "/",
+  "appbaseAppApiBaseUrl": "/",
+  "deployAppApiBaseUrl": "/"
 }
-

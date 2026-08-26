@@ -1,7 +1,7 @@
 {
-  "environment": "production",
+  "environment": "staging",
   "deploymentProfile": "standalone",
-  "profileId": "standalone.production",
+  "profileId": "standalone.staging",
   "runtimeTarget": "browser",
   "browserOriginMode": "same-origin",
   "defaultLocale": "zh-CN",
