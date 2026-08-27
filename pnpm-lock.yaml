@@ -429,6 +429,9 @@ importers:
       '@sdkwork/sdk-common':
         specifier: workspace:*
         version: link:../../../../sdkwork-sdk-commons/sdkwork-sdk-common-typescript
+      '@sdkwork/utils':
+        specifier: workspace:*
+        version: link:../../../../sdkwork-utils/packages/sdkwork-utils-typescript
 
   ../sdkwork-sdk-commons/sdkwork-sdk-common-typescript:
     dependencies:
