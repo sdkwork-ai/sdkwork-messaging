@@ -36,27 +36,193 @@
   "runtime": {
     "family": "web",
     "framework": "react",
-    "runtimes": ["WEB", "BROWSER"],
-    "deliveryModes": ["WEB_URL"],
+    "runtimes": [
+      "WEB",
+      "BROWSER"
+    ],
+    "deliveryModes": [
+      "WEB_URL"
+    ],
     "defaultPlatform": "WEB",
     "defaultArchitecture": "universal",
-    "supportedDeploymentProfiles": ["standalone", "cloud"],
+    "supportedDeploymentProfiles": [
+      "standalone",
+      "cloud"
+    ],
     "defaultDeploymentProfile": "standalone"
+  },
+  "media": {
+    "icons": {
+      "primary": {
+        "id": "sdkwork-messaging-pc-primary-icon",
+        "type": "ICON",
+        "purpose": "PRIMARY",
+        "url": "https://cdn.sdkwork.com/apps/sdkwork-messaging-pc/assets/icon-1024.png",
+        "platform": "APP",
+        "locale": "en-US",
+        "width": 1024,
+        "height": 1024,
+        "format": "PNG",
+        "fileSizeBytes": 524288,
+        "alphaChannel": false,
+        "sortOrder": 0,
+        "enabled": true,
+        "metadata": {
+          "generatedPlaceholder": true
+        }
+      },
+      "platform": [],
+      "metadata": {
+        "generatedPlaceholder": true
+      }
+    },
+    "screenshots": [
+      {
+        "id": "sdkwork-messaging-pc-web-screenshot",
+        "type": "SCREENSHOT",
+        "purpose": "CATALOG_SCREENSHOT",
+        "url": "https://cdn.sdkwork.com/apps/sdkwork-messaging-pc/media/web-screenshot.png",
+        "platform": "WEB",
+        "locale": "en-US",
+        "deviceClass": "BROWSER",
+        "displayType": "WEB_DESKTOP",
+        "width": 1920,
+        "height": 1080,
+        "format": "PNG",
+        "fileSizeBytes": 1048576,
+        "alphaChannel": false,
+        "caption": "SDKWork Notification Center product screenshot.",
+        "sortOrder": 0,
+        "enabled": true,
+        "metadata": {
+          "generatedPlaceholder": true,
+          "altText": "SDKWork Notification Center app screenshot."
+        }
+      }
+    ],
+    "previews": [
+      {
+        "id": "sdkwork-messaging-pc-catalog-preview",
+        "type": "PREVIEW_IMAGE",
+        "purpose": "CATALOG_PREVIEW",
+        "url": "https://cdn.sdkwork.com/apps/sdkwork-messaging-pc/media/preview-cover.png",
+        "platform": "WEB",
+        "locale": "en-US",
+        "width": 1600,
+        "height": 900,
+        "format": "PNG",
+        "fileSizeBytes": 786432,
+        "alphaChannel": false,
+        "caption": "SDKWork Notification Center preview.",
+        "sortOrder": 0,
+        "enabled": true,
+        "metadata": {
+          "generatedPlaceholder": true,
+          "altText": "SDKWork Notification Center preview cover."
+        }
+      }
+    ],
+    "metadata": {
+      "assetVersion": "0.1.0",
+      "defaultLocale": "en-US"
+    }
   },
   "publish": {
     "status": "DRAFT",
-    "platforms": ["WEB"],
-    "installPlatforms": ["WEB"],
+    "platforms": [
+      "WEB"
+    ],
+    "installPlatforms": [
+      "WEB"
+    ],
     "config": {
       "workspaceRoot": "apps/sdkwork-messaging-pc",
       "framework": "react",
       "managedBy": "sdkwork-messaging"
+    },
+    "defaultPackageId": "linux-x64-standalone-server-tar-gz",
+    "installSkill": {
+      "name": "sdkwork-skills-app"
+    },
+    "stores": [],
+    "storeUrl": "https://sdkwork.com/apps/sdkwork-messaging-pc"
+  },
+  "artifacts": {
+    "installConfig": {
+      "defaultPackageId": "linux-x64-standalone-server-tar-gz",
+      "installCommand": "sdkwork install sdkwork-messaging-pc",
+      "launchCommand": "sdkwork open sdkwork-messaging-pc",
+      "uninstallCommand": "sdkwork uninstall sdkwork-messaging-pc",
+      "packages": [
+        {
+          "id": "linux-x64-standalone-server-tar-gz",
+          "name": "Sdkwork Messaging Pc standalone server archive",
+          "sourceType": "BINARY_URL",
+          "packageFormat": "TAR_GZ",
+          "platform": "API",
+          "url": "https://cdn.sdkwork.com/apps/sdkwork-messaging-pc/STABLE/0.1.0/linux-x64-standalone-server-tar-gz-0.1.0.tar.gz",
+          "architecture": "x64",
+          "checksumAlgorithm": "SHA-256",
+          "checksum": "6e0eddcc61f5625caee0ba22245ca1dfc34d9f54b514d3e59f9f2bfdf45ca74c",
+          "deploymentProfile": "standalone",
+          "runtimeTarget": "server",
+          "profileBinding": "fixed",
+          "enabled": true,
+          "metadata": {
+            "releaseBuildDeferred": false
+          }
+        },
+        {
+          "id": "linux-x64-cloud-server-tar-gz",
+          "name": "Sdkwork Messaging Pc cloud server archive",
+          "sourceType": "BINARY_URL",
+          "packageFormat": "TAR_GZ",
+          "platform": "API",
+          "url": "https://cdn.sdkwork.com/apps/sdkwork-messaging-pc/STABLE/0.1.0/linux-x64-cloud-server-tar-gz-0.1.0.tar.gz",
+          "architecture": "x64",
+          "checksumAlgorithm": "SHA-256",
+          "checksum": "428f050a481bbe7bf4936a11e90a57436d45c84a2603ff0854e33ab0f887aa0b",
+          "deploymentProfile": "cloud",
+          "runtimeTarget": "server",
+          "profileBinding": "fixed",
+          "enabled": true,
+          "metadata": {
+            "releaseBuildDeferred": false
+          }
+        }
+      ]
     }
   },
   "release": {
     "currentVersion": "0.1.0",
     "defaultChannel": "DEV",
-    "latest": { "DEV": "0.1.0" }
+    "latest": {
+      "STABLE": "0.1.0",
+      "DEV": "0.1.0"
+    },
+    "notes": [
+      {
+        "version": "0.1.0",
+        "releaseChannel": "DEV",
+        "title": "SDKWork Notification Center 0.1.0",
+        "summary": "SDKWork Notification Center initialized standard release.",
+        "content": "Initial SDKWork App Standard v3 manifest for SDKWork Notification Center.",
+        "highlights": [
+          "SDKWork App Standard v3 configuration initialized",
+          "platform_app projection metadata standardized",
+          "Download package matrix normalized"
+        ],
+        "packageIds": [
+          "linux-x64-standalone-server-tar-gz",
+          "linux-x64-cloud-server-tar-gz"
+        ],
+        "publishedAt": "2026-05-07T00:00:00Z",
+        "current": true,
+        "forceUpdate": false,
+        "minSupportedVersion": "0.1.0",
+        "metadata": {}
+      }
+    ]
   },
   "security": {
     "checksumRequired": true,

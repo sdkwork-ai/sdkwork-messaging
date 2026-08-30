@@ -25,7 +25,8 @@
   },
   "defaults": {
     "developmentProfileId": "standalone.development",
-    "productionProfileId": "cloud.production"
+    "productionProfileId": "cloud.production",
+    "desktopBuildProfileId": "cloud.production"
   },
   "profileFiles": {
     "standalone.development": "etc/topology/standalone.development.env",
@@ -279,19 +280,22 @@
         "processes": [],
         "healthSurfaces": [
           "application.public-ingress"
-        ]
+        ],
+        "browserDeliveries": []
       },
       "standalone.staging": {
         "processes": [],
         "healthSurfaces": [
           "application.public-ingress"
-        ]
+        ],
+        "browserDeliveries": []
       },
       "standalone.production": {
         "processes": [],
         "healthSurfaces": [
           "application.public-ingress"
-        ]
+        ],
+        "browserDeliveries": []
       },
       "cloud.test": {
         "processes": [],
@@ -316,12 +320,14 @@
       },
       "standalone.demo": {
         "processes": [],
-        "healthSurfaces": []
+        "healthSurfaces": [],
+        "browserDeliveries": []
       },
       "cloud.demo": {
         "processes": [],
         "healthSurfaces": []
       }
     }
-  }
+  },
+  "components": {}
 }

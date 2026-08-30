@@ -33,7 +33,7 @@
           "messaging"
         ],
         "summary": "messaging.notifications.list",
-        "operationId": "messaging.notifications.list",
+        "operationId": "notifications.list",
         "parameters": [
           {
             "name": "page",
@@ -197,7 +197,7 @@
           "messaging"
         ],
         "summary": "messaging.notifications.markRead",
-        "operationId": "messaging.notifications.read",
+        "operationId": "notifications.read",
         "parameters": [
           {
             "name": "notificationId",
@@ -215,8 +215,8 @@
             "description": "Client-provided retry key for this command. It is scoped by tenant, principal, method, and path.",
             "schema": {
               "type": "string",
-              "minLength": 8,
-              "maxLength": 256
+              "minLength": 1,
+              "maxLength": 128
             },
             "x-sdkwork-idempotency-key": true
           }
@@ -353,7 +353,7 @@
           "messaging"
         ],
         "summary": "messaging.announcements.list",
-        "operationId": "messaging.announcements.list",
+        "operationId": "announcements.list",
         "parameters": [
           {
             "name": "page",
@@ -517,7 +517,7 @@
           "messaging"
         ],
         "summary": "messaging.announcements.acknowledge",
-        "operationId": "messaging.announcements.acknowledge",
+        "operationId": "announcements.acknowledge",
         "parameters": [
           {
             "name": "announcementId",
@@ -535,8 +535,8 @@
             "description": "Client-provided retry key for this command. It is scoped by tenant, principal, method, and path.",
             "schema": {
               "type": "string",
-              "minLength": 8,
-              "maxLength": 256
+              "minLength": 1,
+              "maxLength": 128
             },
             "x-sdkwork-idempotency-key": true
           }
@@ -673,7 +673,7 @@
           "messaging"
         ],
         "summary": "messaging.pushDevices.register",
-        "operationId": "messaging.pushDevices.create",
+        "operationId": "pushDevices.create",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -682,8 +682,8 @@
             "description": "Client-provided retry key for this command. It is scoped by tenant, principal, method, and path.",
             "schema": {
               "type": "string",
-              "minLength": 8,
-              "maxLength": 256
+              "minLength": 1,
+              "maxLength": 128
             },
             "x-sdkwork-idempotency-key": true
           }
@@ -830,7 +830,7 @@
           "messaging"
         ],
         "summary": "messaging.pushDevices.unregister",
-        "operationId": "messaging.pushDevices.delete",
+        "operationId": "pushDevices.delete",
         "parameters": [
           {
             "name": "deviceId",
@@ -848,8 +848,8 @@
             "description": "Client-provided retry key for this command. It is scoped by tenant, principal, method, and path.",
             "schema": {
               "type": "string",
-              "minLength": 8,
-              "maxLength": 256
+              "minLength": 1,
+              "maxLength": 128
             },
             "x-sdkwork-idempotency-key": true
           }
@@ -956,7 +956,7 @@
           "messaging"
         ],
         "summary": "messaging.verificationCodes.create",
-        "operationId": "messaging.verificationCodes.create",
+        "operationId": "verificationCodes.create",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -965,8 +965,8 @@
             "description": "Client-provided retry key for this command. It is scoped by tenant, principal, method, and path.",
             "schema": {
               "type": "string",
-              "minLength": 8,
-              "maxLength": 256
+              "minLength": 1,
+              "maxLength": 128
             },
             "x-sdkwork-idempotency-key": true
           }
@@ -1113,7 +1113,7 @@
           "messaging"
         ],
         "summary": "messaging.verificationCodes.verify",
-        "operationId": "messaging.verificationCodes.verify",
+        "operationId": "verificationCodes.verify",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -1122,8 +1122,8 @@
             "description": "Client-provided retry key for this command. It is scoped by tenant, principal, method, and path.",
             "schema": {
               "type": "string",
-              "minLength": 8,
-              "maxLength": 256
+              "minLength": 1,
+              "maxLength": 128
             },
             "x-sdkwork-idempotency-key": true
           }

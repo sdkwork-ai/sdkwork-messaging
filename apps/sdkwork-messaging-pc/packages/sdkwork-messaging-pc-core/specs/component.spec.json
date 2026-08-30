@@ -10,40 +10,92 @@
     "domain": "messaging",
     "capability": "runtime-core",
     "surface": "pc",
-    "languages": ["typescript"],
+    "languages": [
+      "typescript"
+    ],
     "generated": false,
     "private": true,
     "status": "active",
-    "manifests": ["package.json", "specs/component.spec.json"]
+    "manifests": [
+      "package.json",
+      "specs/component.spec.json"
+    ]
   },
   "canonicalSpecs": [
-    { "file": "COMPONENT_SPEC.md", "path": "../../../../../sdkwork-specs/COMPONENT_SPEC.md", "purpose": "Component contract." },
-    { "file": "APP_PC_ARCHITECTURE_SPEC.md", "path": "../../../../../sdkwork-specs/APP_PC_ARCHITECTURE_SPEC.md", "purpose": "Core package ownership." },
-    { "file": "APP_SDK_INTEGRATION_SPEC.md", "path": "../../../../../sdkwork-specs/APP_SDK_INTEGRATION_SPEC.md", "purpose": "SDK client injection." },
-    { "file": "APP_PERMISSION_COMPOSITION_SPEC.md", "path": "../../../../../sdkwork-specs/APP_PERMISSION_COMPOSITION_SPEC.md", "purpose": "Inherited Messaging permission catalog composition." },
-    { "file": "PAGINATION_SPEC.md", "path": "../../../../../sdkwork-specs/PAGINATION_SPEC.md", "purpose": "Server-owned list windows." }
+    {
+      "file": "COMPONENT_SPEC.md",
+      "path": "../../../../../sdkwork-specs/COMPONENT_SPEC.md",
+      "purpose": "Component contract."
+    },
+    {
+      "file": "APP_PC_ARCHITECTURE_SPEC.md",
+      "path": "../../../../../sdkwork-specs/APP_PC_ARCHITECTURE_SPEC.md",
+      "purpose": "Core package ownership."
+    },
+    {
+      "file": "APP_SDK_INTEGRATION_SPEC.md",
+      "path": "../../../../../sdkwork-specs/APP_SDK_INTEGRATION_SPEC.md",
+      "purpose": "SDK client injection."
+    },
+    {
+      "file": "APP_PERMISSION_COMPOSITION_SPEC.md",
+      "path": "../../../../../sdkwork-specs/APP_PERMISSION_COMPOSITION_SPEC.md",
+      "purpose": "Inherited Messaging permission catalog composition."
+    },
+    {
+      "file": "PAGINATION_SPEC.md",
+      "path": "../../../../../sdkwork-specs/PAGINATION_SPEC.md",
+      "purpose": "Server-owned list windows."
+    }
   ],
   "contracts": {
     "layerRole": "frontend-core",
-    "publicExports": [".", "./sdk", "./modules", "./host", "./session", "./composition"],
+    "publicExports": [
+      ".",
+      "./sdk",
+      "./modules",
+      "./host",
+      "./session",
+      "./composition"
+    ],
     "providedPorts": [
-      { "name": "messagingPcRuntimeConfig", "export": "." },
-      { "name": "notificationCenterService", "export": "." }
+      {
+        "name": "messagingPcRuntimeConfig",
+        "export": "."
+      },
+      {
+        "name": "notificationCenterService",
+        "export": "."
+      }
     ],
     "requiredPorts": [
-      { "name": "messagingAppSdk", "export": "." },
-      { "name": "globalTokenManager", "export": "." }
+      {
+        "name": "messagingAppSdk",
+        "export": "."
+      },
+      {
+        "name": "globalTokenManager",
+        "export": "."
+      }
     ],
     "runtimeEntrypoints": [],
     "routeManifest": null,
-    "sdkClients": ["SdkworkAppClient"],
-    "sdkDependencies": [{ "workspace": "sdkwork-messaging-app-sdk", "surface": "app-api", "credentialMode": "authenticated-app-api" }],
+    "sdkClients": [
+      "SdkworkAppClient"
+    ],
+    "sdkDependencies": [
+      {
+        "workspace": "sdkwork-messaging-app-sdk",
+        "surface": "app-api",
+        "credentialMode": "authenticated-app-api"
+      }
+    ],
     "permissionComposition": {
       "inheritanceMode": "module-catalog-with-overrides",
       "moduleCatalogRefs": [
         {
           "moduleId": "messaging",
-          "manifestRef": "../../../sdkwork-iam/iam/modules/messaging/iam.module.manifest.json",
+          "manifestRef": "../../../../../sdkwork-iam/iam/modules/messaging/iam.module.manifest.json",
           "inheritPermissions": true,
           "inheritRoles": true
         }
@@ -62,16 +114,32 @@
         "forbidLocalPermissionCatalogForDependencyDomains": true,
         "allowExplicitOverridesOnly": true,
         "allowFrontendHintsWithoutServerDuplication": true
+      },
+      "applicationModule": {
+        "manifestRef": "../../../../../sdkwork-iam/iam/modules/messaging/iam.module.manifest.json"
       }
     },
     "events": [],
-    "configKeys": ["appApiBaseUrl", "appbaseAppApiBaseUrl", "environment", "deploymentProfile", "profileId"]
+    "configKeys": [
+      "appApiBaseUrl",
+      "appbaseAppApiBaseUrl",
+      "environment",
+      "deploymentProfile",
+      "profileId"
+    ]
   },
   "integration": {
     "authority": "Root SDKWork specs remain authoritative.",
     "dependencyPolicy": "Feature packages depend on exported service ports, not SDK transports.",
     "sdkPolicy": "Only this core adapter imports the composed Messaging App SDK; bootstrap supplies the global TokenManager."
   },
-  "verification": { "commands": ["pnpm --dir apps/sdkwork-messaging-pc typecheck", "pnpm --dir apps/sdkwork-messaging-pc test"] },
-  "metadata": { "standardVersion": "2026-07-28" }
+  "verification": {
+    "commands": [
+      "pnpm --dir apps/sdkwork-messaging-pc typecheck",
+      "pnpm --dir apps/sdkwork-messaging-pc test"
+    ]
+  },
+  "metadata": {
+    "standardVersion": "2026-07-28"
+  }
 }
