@@ -7,9 +7,7 @@ use sdkwork_routes_messaging_backend_api::{
     gateway_route_manifest, gateway_mount, wrap_router_with_web_framework_from_env,
     MessagingAdminStore, PostgresMessagingAdminStore,
 };
-use sdkwork_web_bootstrap::{
-    ApiAssemblyContribution, PgPoolReadinessCheck, ReadinessCheck,
-};
+use sdkwork_web_bootstrap::{ApiAssemblyContribution, PgPoolReadinessCheck, ReadinessCheck, WebModule};
 use sdkwork_web_core::HttpRouteManifest;
 
 /// Indivisible host-neutral API assembly contribution (web-bootstrap contract,
@@ -55,4 +53,11 @@ pub async fn assemble_business_routes() -> Result<ApiAssembly, String> {
 
 pub async fn assemble_api_router() -> Result<ApiAssembly, String> {
     assemble_business_routes().await
+}
+
+/// Canonical Web Module definition for this application
+/// (API_ASSEMBLY_SPEC §4.1.1): the complete HTTP surface — every route,
+/// manifest, and OpenAPI document of this owner — as one installable module.
+pub async fn web_module() -> Result<WebModule, String> {
+    Ok(WebModule::from_contribution(assemble_api_router().await?))
 }

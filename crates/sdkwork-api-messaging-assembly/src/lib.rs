@@ -6,7 +6,7 @@ mod bootstrap;
 mod contribution;
 mod generated;
 
-pub use bootstrap::{assemble_api_router, ApiAssembly, assemble_business_routes};
+pub use bootstrap::{assemble_api_router, ApiAssembly, assemble_business_routes, web_module};
 pub use contribution::assemble_backend_api_contribution;
 
 /// Runs messaging-owned database lifecycle before dependent assemblies load.
