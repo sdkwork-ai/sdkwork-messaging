@@ -1,4 +1,4 @@
-export type MessagingLifecycleEnvironment = "development" | "test" | "staging" | "production";
+export type MessagingLifecycleEnvironment = "development" | "test" | "staging" | "demo" | "production";
 export type MessagingDeploymentProfile = "standalone" | "cloud";
 export type MessagingBrowserOriginMode = "same-origin" | "cross-origin";
 export type MessagingLocale = "en-US" | "zh-CN";
@@ -31,7 +31,7 @@ export function parseMessagingPcRuntimeConfig(
   browserOrigin?: string,
 ): MessagingPcRuntimeConfig {
   if (!isRecord(value)) throw new Error("Runtime configuration must be an object");
-  const environment = readEnum(value.environment, ["development", "test", "staging", "production"] as const, "environment");
+  const environment = readEnum(value.environment, ["development", "test", "staging", "demo", "production"] as const, "environment");
   const deploymentProfile = readEnum(value.deploymentProfile, ["standalone", "cloud"] as const, "deploymentProfile");
   const profileId = readProfileId(value.profileId, deploymentProfile, environment);
   const runtimeTarget = readEnum(value.runtimeTarget, ["browser"] as const, "runtimeTarget");

@@ -10,7 +10,7 @@ import { createSdkworkMessagingService, type SdkworkMessagingService } from "@sd
 export interface MessagingRuntimeConfig {
   appId: string;
   enabledCapabilities: readonly MessagingCapability[];
-  environment: "development" | "test" | "staging" | "production";
+  environment: "development" | "test" | "staging" | "demo" | "production";
 }
 
 export interface MessagingRuntime {

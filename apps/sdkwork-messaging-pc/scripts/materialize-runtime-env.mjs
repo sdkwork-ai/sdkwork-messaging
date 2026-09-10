@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const APP_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DEPLOYMENT_CONFIG_PATH = path.join(APP_ROOT, "etc", "sdkwork.deployment.config.json");
-const SUPPORTED_ENVIRONMENTS = new Set(["development", "test", "staging", "production"]);
+const SUPPORTED_ENVIRONMENTS = new Set(["development", "test", "staging", "demo", "production"]);
 const SUPPORTED_PROFILES = new Set(["standalone", "cloud"]);
 const SDK_BASE_URL_KEYS = ["appApiBaseUrl", "appbaseAppApiBaseUrl"];
 
