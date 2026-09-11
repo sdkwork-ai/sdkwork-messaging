@@ -6,8 +6,15 @@
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "stop": "node ../sdkwork-specs/tools/stop-sdkwork-workspace-processes.mjs --workspace .",
-    "test": "vitest run",
+    "stop": "pnpm exec sdkwork-app stop",
+    "dev": "pnpm dev:standalone",
+    "dev:standalone": "pnpm exec sdkwork-app dev --deployment-profile standalone",
+    "dev:cloud": "pnpm exec sdkwork-app dev --deployment-profile cloud",
+    "build": "pnpm exec sdkwork-app build",
+    "test": "pnpm exec sdkwork-app test",
+    "check": "pnpm exec sdkwork-app check",
+    "verify": "pnpm exec sdkwork-app verify",
+    "clean": "pnpm exec sdkwork-app clean",
     "test:migration": "node tests/messaging-migration-contract.test.mjs",
     "test:messaging-contracts": "vitest run apps/sdkwork-messaging-common/packages/sdkwork-messaging-contracts/tests",
     "test:messaging-runtime": "vitest run apps/sdkwork-messaging-common/packages/sdkwork-messaging-runtime/tests",
@@ -43,7 +50,12 @@
     "build:pc:staging:cloud": "node ../sdkwork-specs/tools/build-browser-client.mjs --root . --architecture pc --environment staging --deployment-profile cloud",
     "build:pc:demo:cloud": "node ../sdkwork-specs/tools/build-browser-client.mjs --root . --architecture pc --environment demo --deployment-profile cloud",
     "build:pc:prod:cloud": "node ../sdkwork-specs/tools/build-browser-client.mjs --root . --architecture pc --environment prod --deployment-profile cloud",
-    "topology:validate": "node ../sdkwork-app-topology/scripts/sdkwork-topology.mjs validate --root . --spec specs/topology.spec.json"
+    "topology:validate": "node ../sdkwork-app-topology/scripts/sdkwork-topology.mjs validate --root . --spec specs/topology.spec.json",
+    "_sdkwork:test": "vitest run",
+    "_sdkwork:check": "pnpm run check:app-composition && pnpm run check:browser-build-scripts",
+    "_sdkwork:clean": "cargo clean",
+    "_sdkwork:verify": "pnpm run check && pnpm run test",
+    "_sdkwork:build": "cargo build --workspace --release && pnpm --dir apps/sdkwork-messaging-pc run build:prod"
   },
   "devDependencies": {
     "@types/node": "^25.5.2",
@@ -51,7 +63,8 @@
     "@types/react-dom": "^19.2.3",
     "rollup": "^4.0.0",
     "typescript": "^6.0.2",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.2",
+    "@sdkwork/app-topology": "workspace:*"
   },
   "dependencies": {
     "@sdkwork/sdk-common": "^1.0.2"
