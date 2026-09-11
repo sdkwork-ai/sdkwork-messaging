@@ -1,10 +1,14 @@
 [package]
+rust-version.workspace = true
 name = "sdkwork-messaging-delivery-repository-sqlx"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 description = "SQLx storage contracts for SDKWork messaging."
 
+
+[lints]
+workspace = true
 [lib]
 name = "sdkwork_messaging_delivery_repository_sqlx"
 path = "src/lib.rs"
