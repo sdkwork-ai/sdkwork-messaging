@@ -1,0 +1,1 @@
+{"version":3,"file":"messaging-outbound-message-list-response.d.ts","sourceRoot":"","sources":["messaging-outbound-message-list-response.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,wBAAwB,EAAE,MAAM,8BAA8B,CAAC;AAC7E,OAAO,KAAK,EAAE,QAAQ,EAAE,MAAM,aAAa,CAAC;AAE5C,MAAM,WAAW,oCAAoC;IACnD,KAAK,EAAE,wBAAwB,EAAE,CAAC;IAClC,QAAQ,EAAE,QAAQ,CAAC;CACpB"}
