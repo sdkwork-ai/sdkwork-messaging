@@ -1,1 +1,0 @@
-{"version":3,"file":"messaging-template-list-response.d.ts","sourceRoot":"","sources":["messaging-template-list-response.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,iBAAiB,EAAE,MAAM,sBAAsB,CAAC;AAC9D,OAAO,KAAK,EAAE,QAAQ,EAAE,MAAM,aAAa,CAAC;AAE5C,MAAM,WAAW,6BAA6B;IAC5C,KAAK,EAAE,iBAAiB,EAAE,CAAC;IAC3B,QAAQ,EAAE,QAAQ,CAAC;CACpB"}

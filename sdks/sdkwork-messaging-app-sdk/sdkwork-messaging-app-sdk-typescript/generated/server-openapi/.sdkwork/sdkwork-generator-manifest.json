@@ -6,12 +6,13 @@
     "version": "1.0.0",
     "language": "typescript",
     "sdkType": "app",
+    "protocol": "http",
     "packageName": "@sdkwork/messaging-app-sdk"
   },
   "generatedFiles": [
     {
       "path": "bin/publish-core.mjs",
-      "sha256": "affb1f1b5400ac492e94e2d01f3104b8dd38b50329e371265d4f0945f2b0763c"
+      "sha256": "a47e95119bf3eafcbcb2102f7024c147f967924e4e3f343d1a29effb4b6765df"
     },
     {
       "path": "bin/publish.ps1",
@@ -39,19 +40,19 @@
     },
     {
       "path": "package.json",
-      "sha256": "cd8d0905b60bc21aedb166c3511c6f9875c1d569c67df2bdd6eada082b32aad5"
+      "sha256": "7feb37964ecbea34bbe8fc9a9dd999be9aa03c36cff493b56cc91115b3a112ac"
     },
     {
       "path": "README.md",
-      "sha256": "c7102d4c4071c65ea2f537380014bcb341905db7a287b2b3a9bd51b0f8d13f3e"
+      "sha256": "8128ad425a4aac07120611ae663a2780a343ba0847a4b40507809d6cd840e3d7"
     },
     {
       "path": "sdkwork-sdk.json",
-      "sha256": "90753b244e092acb24353010ebc5ae2e3b68f2868e2499a86fe1f07a3349fc32"
+      "sha256": "b8c689932c58ed54987415d1f2850e2a8cc4cebd316c8384b0b19b622ac98766"
     },
     {
       "path": "src/api/base.ts",
-      "sha256": "02ad25e6bf331ff241ba387c2947ddf1900dd849038e08c2757416a3aa788a04"
+      "sha256": "94d136c54a008dfe7602e373a0b2c79176bbf2fc6e7c899fc23b1f12f750380f"
     },
     {
       "path": "src/api/index.ts",
@@ -59,7 +60,7 @@
     },
     {
       "path": "src/api/messaging.ts",
-      "sha256": "6ff835b77b71ac4a13bd753c895913fd24b11ffd9caf827ee6c92a159437f69d"
+      "sha256": "d01b6ce3756797b488034a2f75278d00124fa0cc456f06ffeb4a9cf3f0802281"
     },
     {
       "path": "src/api/paths.ts",
@@ -71,7 +72,7 @@
     },
     {
       "path": "src/http/client.ts",
-      "sha256": "05609fa19c8bfded1765dadb8f875dae5dd3e6f11f13244f6239450dea8732fc"
+      "sha256": "f0e93f51af678aadaf96d3e4b26e2224cb5f551b3f4651980630bbe1c7f1ceac"
     },
     {
       "path": "src/http/index.ts",
@@ -83,39 +84,59 @@
     },
     {
       "path": "src/sdk.ts",
-      "sha256": "77919cb5c2a3edc0910e94b2c688073cc500fbe2f3797230aeaa0c0162aa2b6e"
+      "sha256": "1f7660a0636a0a517708d5c894b93dd1e0f443e92f915c152dc23e66bb96e7f0"
     },
     {
       "path": "src/types/common.ts",
-      "sha256": "ac5b348259c39e2cd8357dfcf8269268ee1da5f8a6e0770d714ab5eb796b3050"
+      "sha256": "d2506be8c4bdbe8e7059393467e6e71d75ef1d8c018dbf997bb0ab2a77b6c7b6"
+    },
+    {
+      "path": "src/types/field-error.ts",
+      "sha256": "7688827a804d5c888fdf626b89e3356832f858e24f0657069b6b842a31ae6907"
     },
     {
       "path": "src/types/index.ts",
-      "sha256": "5f326a216d313a23dd2724b33e40a1b4cd163af781397a05744352955a392db2"
+      "sha256": "a512fa7454e25e9dcd44633ae2bd5aff71975e721606b8a3feabfcbcc650a7d3"
     },
     {
       "path": "src/types/messaging-announcement-list-response.ts",
-      "sha256": "6000b5b53bd100e33f1402f7f87493b7317d4b754dab699b6089f7f644c3db52"
+      "sha256": "e2e7e5596e519cdd29e7bbf0643f71a2f49e99c4272fbe991c5173e83b00eda4"
     },
     {
       "path": "src/types/messaging-announcement-receipt-response.ts",
-      "sha256": "f38a572b698abe08cd15168405e6b92c985feb3ff77ae88f4eccb46476515375"
+      "sha256": "859344d86842711ca04dbbd6f479c89cec5f9bb880ce5add43c8d87e8d03bac9"
     },
     {
       "path": "src/types/messaging-announcement.ts",
       "sha256": "5234e1748d64228d333b11b70733288416a10ce7c73760be79eb2788e308b228"
     },
     {
+      "path": "src/types/messaging-announcements-acknowledge-response.ts",
+      "sha256": "feccbe33eedbb36ba28b447c0138ae3a23cca390a23908aced3575e053636511"
+    },
+    {
+      "path": "src/types/messaging-announcements-list-response.ts",
+      "sha256": "49ca24ae45a04ccd12b0d3c087e0123674861affb16a71bb4005832d4e098bcc"
+    },
+    {
       "path": "src/types/messaging-notification-list-response.ts",
-      "sha256": "4da8718822ffb11fe01035dc4947608159dccbe8a750b166b60de46b449e6481"
+      "sha256": "5bf2abeda01a6c734de776157fb8552aebb2b906b23ca9eb6f5dfbbc6b169dd4"
     },
     {
       "path": "src/types/messaging-notification-receipt-response.ts",
-      "sha256": "9c76f38eb4580b0e67abe90f48348dc351ec6d723264b351f333ae83fa1fab3c"
+      "sha256": "b3b95d99bc41c008baec0dcaab289c6e1cc9aa66b984e0117789a7383d5e2ae4"
     },
     {
       "path": "src/types/messaging-notification.ts",
       "sha256": "339afe9b8cd7997dc8b8870af4c261daf673f8d0060904dd2c26bdf690a55129"
+    },
+    {
+      "path": "src/types/messaging-notifications-list-response.ts",
+      "sha256": "5a0b425c79c7c9a44131afbe7c18a06d78423b74573e273aa0a54cf97f00ee3d"
+    },
+    {
+      "path": "src/types/messaging-notifications-read-response.ts",
+      "sha256": "fa3c30e93ca4654ad7a093f3641eef646bfb4c4d226a05dc240c4c4d29f66f14"
     },
     {
       "path": "src/types/messaging-push-device-register-request.ts",
@@ -123,11 +144,15 @@
     },
     {
       "path": "src/types/messaging-push-device-response.ts",
-      "sha256": "48a3c6846139fac182691df1b1c5c2567fafe5cac6684f6fe08395e02a459351"
+      "sha256": "0b5144709015098072d976ad238502a6871e0700d7d62035e0cfcf38cb978d27"
     },
     {
       "path": "src/types/messaging-push-device-unregister-response.ts",
-      "sha256": "63d9c59c3725bfc208d7466f0badc703ba2143505e1be2a570013d641665d5a8"
+      "sha256": "f62bc6704fbb95e41b8e362a41c49e980d9ea03dde858af098cbdb80f66d8f6a"
+    },
+    {
+      "path": "src/types/messaging-push-devices-create-response201.ts",
+      "sha256": "a43102bca82b82644f7e2ae99e12e475b57a066973989587f52b3913b89782d4"
     },
     {
       "path": "src/types/messaging-verification-code-create-request.ts",
@@ -135,7 +160,7 @@
     },
     {
       "path": "src/types/messaging-verification-code-response.ts",
-      "sha256": "95211b47ce93c19bbd8cc0db09a0394376a2d6a0ad69deb0352415bc4f1f3846"
+      "sha256": "b5770c5e3e6b2c206274811c38d3d0799c6537fd3b0cf7ddd7fb046acca46b8d"
     },
     {
       "path": "src/types/messaging-verification-code-verify-request.ts",
@@ -143,19 +168,59 @@
     },
     {
       "path": "src/types/messaging-verification-code-verify-response.ts",
-      "sha256": "3dcf93d3e22c44df1d5f38706949a7eab3073c4c6a7d1cb0ab3c7c4550ad634c"
+      "sha256": "b2b6b6cf76d288e2ad9da7ee284b70059c2420d5bca9c2b69181af71745b1abc"
+    },
+    {
+      "path": "src/types/messaging-verification-codes-create-response201.ts",
+      "sha256": "a998bb8a0bd31108b2766892fe8ece91a023e3cad90ab1f631197411d3a3e4c2"
+    },
+    {
+      "path": "src/types/messaging-verification-codes-verify-response.ts",
+      "sha256": "5031efb2b1a5b447b0dd1d46817f2c69d994c8798c2ad75f7a67b9e5b400d9f6"
     },
     {
       "path": "src/types/page-info.ts",
-      "sha256": "e6bb77af689ee1a5875e522d1c829c8bb61906c7b1c140288a194002dc223fee"
+      "sha256": "0bf2b44313bc24851eb9ffb6063c1b9eb043e1e5721c8ace8882a3cfa21c932a"
     },
     {
       "path": "src/types/problem-detail.ts",
-      "sha256": "e051a68eb4309127f17144ee2c61c395bf34eb6acf8fb7d5d5aa7c2d45a2e272"
+      "sha256": "c41fdf6433e1167d2fb1f3ac38fd13eb77178f4c0633c9e27824f1e1687ee4f6"
+    },
+    {
+      "path": "src/types/sdk-work-api-response.ts",
+      "sha256": "79cef2c8e584ba8b8e96c6c77ccf6bda087b0c68cbed63cb97d5fb1ff3e47e1a"
+    },
+    {
+      "path": "src/types/sdk-work-command-data.ts",
+      "sha256": "a875c230e70650e636ac09c1af57ae8ea0f512a89dd21482bb9e6292bb6bad5a"
+    },
+    {
+      "path": "src/types/sdk-work-command-response.ts",
+      "sha256": "36f82aede9b7b352a9b57545705da4003816785c7913fb2436df633f5c2e8447"
+    },
+    {
+      "path": "src/types/sdk-work-list-response.ts",
+      "sha256": "eeb07e413d7e912345eda1cb1093e8e6abfe9b42d8350482f7b580138c7936c5"
+    },
+    {
+      "path": "src/types/sdk-work-page-data.ts",
+      "sha256": "b9f6e60cc3bc39eed4cdf6029a401cc88b6001e4f4c72703487f478001024743"
+    },
+    {
+      "path": "src/types/sdk-work-platform-error-code.ts",
+      "sha256": "f5e30be72be3d1aebd8200627bfac368f10cdd69d2271d24e6b4a2d7edf97fb7"
+    },
+    {
+      "path": "src/types/sdk-work-resource-data.ts",
+      "sha256": "f5a027b000a19c08d5b2560ae47fea43c83f4c5d7e85ad37faafe1e9177459cd"
+    },
+    {
+      "path": "src/types/sdk-work-resource-response.ts",
+      "sha256": "89c05f5549bef773335245f56f61ca1a6959978726799391d584a6bd25d12fdc"
     },
     {
       "path": "tsconfig.json",
-      "sha256": "7c8a6c2b00fb208ec28e1e6045194487d1b3e563d6c44cef4783fd4fe0e8ffad"
+      "sha256": "35f6f0baf03ca4245339f0a532b02c6b0c8e64d66852a2f77d38ae063b2024b8"
     }
   ],
   "scaffoldFiles": [

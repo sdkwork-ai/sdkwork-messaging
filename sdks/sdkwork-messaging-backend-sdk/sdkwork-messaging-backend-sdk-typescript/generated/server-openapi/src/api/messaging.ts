@@ -46,7 +46,7 @@ export class MessagingTemplatesApi {
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.request<{ items: MessagingTemplate[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/templates`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, sdkworkUnwrapKind: 'page' });
+    return this.client.request<{ items: MessagingTemplate[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/templates`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
   }
 
 /** messaging.templates.create */
@@ -57,7 +57,7 @@ export class MessagingTemplatesApi {
       },
       {}
     );
-    return this.client.request<MessagingTemplateResponse>(backendApiPath(`/messaging/templates`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, headers: requestHeaders, contentType: 'application/json', sdkworkUnwrapKind: 'item' });
+    return this.client.request<MessagingTemplateResponse>(backendApiPath(`/messaging/templates`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
   }
 
 /** messaging.templates.retrieve */
@@ -66,7 +66,7 @@ export class MessagingTemplatesApi {
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.request<MessagingTemplateResponse>(appendQueryString(backendApiPath(`/messaging/templates/${serializePathParameter(templateId, { name: 'templateId', style: 'simple', explode: false })}`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, sdkworkUnwrapKind: 'item' });
+    return this.client.request<MessagingTemplateResponse>(appendQueryString(backendApiPath(`/messaging/templates/${serializePathParameter(templateId, { name: 'templateId', style: 'simple', explode: false })}`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'item' });
   }
 
 /** messaging.templates.update */
@@ -77,7 +77,7 @@ export class MessagingTemplatesApi {
       },
       {}
     );
-    return this.client.request<MessagingTemplateResponse>(backendApiPath(`/messaging/templates/${serializePathParameter(templateId, { name: 'templateId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PUT' as any, body, headers: requestHeaders, contentType: 'application/json', sdkworkUnwrapKind: 'item' });
+    return this.client.request<MessagingTemplateResponse>(backendApiPath(`/messaging/templates/${serializePathParameter(templateId, { name: 'templateId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'PUT' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
   }
 
 /** messaging.templates.delete */
@@ -88,7 +88,7 @@ export class MessagingTemplatesApi {
       },
       {}
     );
-    return this.client.request<void>(backendApiPath(`/messaging/templates/${serializePathParameter(templateId, { name: 'templateId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'DELETE' as any, headers: requestHeaders });
+    return this.client.request<void>(backendApiPath(`/messaging/templates/${serializePathParameter(templateId, { name: 'templateId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'DELETE' as any, ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}) });
   }
 }
 
@@ -115,7 +115,7 @@ export class MessagingChannelsApi {
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.request<MessagingChannelResponse>(appendQueryString(backendApiPath(`/messaging/channels/${serializePathParameter(channel, { name: 'channel', style: 'simple', explode: false })}`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, sdkworkUnwrapKind: 'item' });
+    return this.client.request<MessagingChannelResponse>(appendQueryString(backendApiPath(`/messaging/channels/${serializePathParameter(channel, { name: 'channel', style: 'simple', explode: false })}`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'item' });
   }
 
 /** messaging.channels.update */
@@ -126,7 +126,7 @@ export class MessagingChannelsApi {
       },
       {}
     );
-    return this.client.request<MessagingChannelResponse>(backendApiPath(`/messaging/channels/${serializePathParameter(channel, { name: 'channel', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PUT' as any, body, headers: requestHeaders, contentType: 'application/json', sdkworkUnwrapKind: 'item' });
+    return this.client.request<MessagingChannelResponse>(backendApiPath(`/messaging/channels/${serializePathParameter(channel, { name: 'channel', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'PUT' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
   }
 }
 
@@ -153,7 +153,7 @@ export class MessagingVerificationPoliciesApi {
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.request<{ items: MessagingVerificationPolicy[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/verification_policies`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, sdkworkUnwrapKind: 'page' });
+    return this.client.request<{ items: MessagingVerificationPolicy[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/verification_policies`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
   }
 
 /** messaging.verificationPolicies.update */
@@ -164,7 +164,7 @@ export class MessagingVerificationPoliciesApi {
       },
       {}
     );
-    return this.client.request<MessagingVerificationPolicyResponse>(backendApiPath(`/messaging/verification_policies/${serializePathParameter(policyId, { name: 'policyId', style: 'simple', explode: false })}`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'PUT' as any, body, headers: requestHeaders, contentType: 'application/json', sdkworkUnwrapKind: 'item' });
+    return this.client.request<MessagingVerificationPolicyResponse>(backendApiPath(`/messaging/verification_policies/${serializePathParameter(policyId, { name: 'policyId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'PUT' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
   }
 }
 
@@ -191,7 +191,7 @@ export class MessagingOutboundMessagesApi {
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.request<{ items: MessagingOutboundMessage[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/outbound_messages`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, sdkworkUnwrapKind: 'page' });
+    return this.client.request<{ items: MessagingOutboundMessage[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/outbound_messages`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
   }
 
 /** messaging.outboundMessages.send */
@@ -202,7 +202,7 @@ export class MessagingOutboundMessagesApi {
       },
       {}
     );
-    return this.client.request<MessagingOutboundMessageResponse>(backendApiPath(`/messaging/outbound_messages`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, headers: requestHeaders, contentType: 'application/json', sdkworkUnwrapKind: 'item' });
+    return this.client.request<MessagingOutboundMessageResponse>(backendApiPath(`/messaging/outbound_messages`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
   }
 }
 
@@ -229,7 +229,7 @@ export class MessagingPushMessagesApi {
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.request<{ items: MessagingPushMessage[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/push_messages`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, sdkworkUnwrapKind: 'page' });
+    return this.client.request<{ items: MessagingPushMessage[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/push_messages`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
   }
 
 /** messaging.pushMessages.send */
@@ -240,7 +240,7 @@ export class MessagingPushMessagesApi {
       },
       {}
     );
-    return this.client.request<MessagingPushMessageResponse>(backendApiPath(`/messaging/push_messages`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, headers: requestHeaders, contentType: 'application/json', sdkworkUnwrapKind: 'item' });
+    return this.client.request<MessagingPushMessageResponse>(backendApiPath(`/messaging/push_messages`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
   }
 }
 
@@ -267,7 +267,7 @@ export class MessagingAnnouncementsApi {
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.request<{ items: MessagingAnnouncement[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/announcements`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, sdkworkUnwrapKind: 'page' });
+    return this.client.request<{ items: MessagingAnnouncement[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/announcements`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
   }
 
 /** messaging.announcements.publish */
@@ -278,7 +278,7 @@ export class MessagingAnnouncementsApi {
       },
       {}
     );
-    return this.client.request<MessagingAnnouncementResponse>(backendApiPath(`/messaging/announcements`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, headers: requestHeaders, contentType: 'application/json', sdkworkUnwrapKind: 'item' });
+    return this.client.request<MessagingAnnouncementResponse>(backendApiPath(`/messaging/announcements`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
   }
 }
 
@@ -305,7 +305,7 @@ export class MessagingNotificationsApi {
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.request<{ items: MessagingNotification[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/notifications`), query), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'GET' as any, sdkworkUnwrapKind: 'page' });
+    return this.client.request<{ items: MessagingNotification[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/notifications`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
   }
 
 /** messaging.notifications.create */
@@ -316,12 +316,11 @@ export class MessagingNotificationsApi {
       },
       {}
     );
-    return this.client.request<MessagingNotificationResponse>(backendApiPath(`/messaging/notifications`), { signal: requestOptions?.signal, timeout: requestOptions?.timeout, method: 'POST' as any, body, headers: requestHeaders, contentType: 'application/json', sdkworkUnwrapKind: 'item' });
+    return this.client.request<MessagingNotificationResponse>(backendApiPath(`/messaging/notifications`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
   }
 }
 
 export class MessagingApi {
-  private client: HttpClient;
   public readonly notifications: MessagingNotificationsApi;
   public readonly announcements: MessagingAnnouncementsApi;
   public readonly pushMessages: MessagingPushMessagesApi;
@@ -331,7 +330,6 @@ export class MessagingApi {
   public readonly templates: MessagingTemplatesApi;
 
   constructor(client: HttpClient) {
-    this.client = client;
     this.notifications = new MessagingNotificationsApi(client);
     this.announcements = new MessagingAnnouncementsApi(client);
     this.pushMessages = new MessagingPushMessagesApi(client);

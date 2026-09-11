@@ -1,7 +1,7 @@
 import { appApiPath } from './paths';
-import type { HttpClient } from '../http/client';
+import type { ApiRequestOptions, HttpClient } from '../http/client';
 
-import type { MessagingAnnouncementListResponse, MessagingAnnouncementReceiptResponse, MessagingNotificationListResponse, MessagingNotificationReceiptResponse, MessagingPushDeviceRegisterRequest, MessagingPushDeviceResponse, MessagingPushDeviceUnregisterResponse, MessagingVerificationCodeCreateRequest, MessagingVerificationCodeResponse, MessagingVerificationCodeVerifyRequest, MessagingVerificationCodeVerifyResponse } from '../types';
+import type { MessagingAnnouncement, MessagingAnnouncementReceiptResponse, MessagingNotification, MessagingNotificationReceiptResponse, MessagingPushDeviceRegisterRequest, MessagingPushDeviceResponse, MessagingVerificationCodeCreateRequest, MessagingVerificationCodeResponse, MessagingVerificationCodeVerifyRequest, MessagingVerificationCodeVerifyResponse, PageInfo } from '../types';
 
 
 export interface MessagingVerificationCodesCreateParams {
@@ -21,33 +21,33 @@ export class MessagingVerificationCodesApi {
 
 
 /** messaging.verificationCodes.create */
-  async create(body: MessagingVerificationCodeCreateRequest, params: MessagingVerificationCodesCreateParams): Promise<MessagingVerificationCodeResponse> {
+  async create(body: MessagingVerificationCodeCreateRequest, params: MessagingVerificationCodesCreateParams, requestOptions?: ApiRequestOptions): Promise<MessagingVerificationCodeResponse> {
     const requestHeaders = buildRequestHeaders(
       {
         'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
       },
       {}
     );
-    return this.client.post<MessagingVerificationCodeResponse>(appApiPath(`/messaging/verification_codes`), body, undefined, requestHeaders, 'application/json');
+    return this.client.request<MessagingVerificationCodeResponse>(appApiPath(`/messaging/verification_codes`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
   }
 
 /** messaging.verificationCodes.verify */
-  async verify(body: MessagingVerificationCodeVerifyRequest, params: MessagingVerificationCodesVerifyParams): Promise<MessagingVerificationCodeVerifyResponse> {
+  async verify(body: MessagingVerificationCodeVerifyRequest, params: MessagingVerificationCodesVerifyParams, requestOptions?: ApiRequestOptions): Promise<MessagingVerificationCodeVerifyResponse> {
     const requestHeaders = buildRequestHeaders(
       {
         'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
       },
       {}
     );
-    return this.client.post<MessagingVerificationCodeVerifyResponse>(appApiPath(`/messaging/verification_codes/verify`), body, undefined, requestHeaders, 'application/json');
+    return this.client.request<MessagingVerificationCodeVerifyResponse>(appApiPath(`/messaging/verification_codes/verify`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
   }
 }
 
-export interface MessagingPushDevicesRegisterParams {
+export interface MessagingPushDevicesCreateParams {
   idempotencyKey: string;
 }
 
-export interface MessagingPushDevicesUnregisterParams {
+export interface MessagingPushDevicesDeleteParams {
   idempotencyKey: string;
 }
 
@@ -60,25 +60,25 @@ export class MessagingPushDevicesApi {
 
 
 /** messaging.pushDevices.register */
-  async register(body: MessagingPushDeviceRegisterRequest, params: MessagingPushDevicesRegisterParams): Promise<MessagingPushDeviceResponse> {
+  async create(body: MessagingPushDeviceRegisterRequest, params: MessagingPushDevicesCreateParams, requestOptions?: ApiRequestOptions): Promise<MessagingPushDeviceResponse> {
     const requestHeaders = buildRequestHeaders(
       {
         'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
       },
       {}
     );
-    return this.client.post<MessagingPushDeviceResponse>(appApiPath(`/messaging/push_devices`), body, undefined, requestHeaders, 'application/json');
+    return this.client.request<MessagingPushDeviceResponse>(appApiPath(`/messaging/push_devices`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
   }
 
 /** messaging.pushDevices.unregister */
-  async unregister(deviceId: string, params: MessagingPushDevicesUnregisterParams): Promise<MessagingPushDeviceUnregisterResponse> {
+  async delete(deviceId: string, params: MessagingPushDevicesDeleteParams, requestOptions?: ApiRequestOptions): Promise<void> {
     const requestHeaders = buildRequestHeaders(
       {
         'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
       },
       {}
     );
-    return this.client.delete<MessagingPushDeviceUnregisterResponse>(appApiPath(`/messaging/push_devices/${serializePathParameter(deviceId, { name: 'deviceId', style: 'simple', explode: false })}`), undefined, requestHeaders);
+    return this.client.request<void>(appApiPath(`/messaging/push_devices/${serializePathParameter(deviceId, { name: 'deviceId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'DELETE' as any, ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}) });
   }
 }
 
@@ -100,23 +100,23 @@ export class MessagingAnnouncementsApi {
 
 
 /** messaging.announcements.list */
-  async list(params?: MessagingAnnouncementsListParams): Promise<MessagingAnnouncementListResponse> {
+  async list(params?: MessagingAnnouncementsListParams, requestOptions?: ApiRequestOptions): Promise<{ items: MessagingAnnouncement[]; pageInfo: PageInfo; }> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<MessagingAnnouncementListResponse>(appendQueryString(appApiPath(`/messaging/announcements`), query));
+    return this.client.request<{ items: MessagingAnnouncement[]; pageInfo: PageInfo; }>(appendQueryString(appApiPath(`/messaging/announcements`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
   }
 
 /** messaging.announcements.acknowledge */
-  async acknowledge(announcementId: string, params: MessagingAnnouncementsAcknowledgeParams): Promise<MessagingAnnouncementReceiptResponse> {
+  async acknowledge(announcementId: string, params: MessagingAnnouncementsAcknowledgeParams, requestOptions?: ApiRequestOptions): Promise<MessagingAnnouncementReceiptResponse> {
     const requestHeaders = buildRequestHeaders(
       {
         'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
       },
       {}
     );
-    return this.client.post<MessagingAnnouncementReceiptResponse>(appApiPath(`/messaging/announcements/${serializePathParameter(announcementId, { name: 'announcementId', style: 'simple', explode: false })}/acknowledge`), undefined, undefined, requestHeaders);
+    return this.client.request<MessagingAnnouncementReceiptResponse>(appApiPath(`/messaging/announcements/${serializePathParameter(announcementId, { name: 'announcementId', style: 'simple', explode: false })}/acknowledge`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
   }
 }
 
@@ -125,7 +125,7 @@ export interface MessagingNotificationsListParams {
   pageSize?: number;
 }
 
-export interface MessagingNotificationsMarkReadParams {
+export interface MessagingNotificationsReadParams {
   idempotencyKey: string;
 }
 
@@ -138,35 +138,33 @@ export class MessagingNotificationsApi {
 
 
 /** messaging.notifications.list */
-  async list(params?: MessagingNotificationsListParams): Promise<MessagingNotificationListResponse> {
+  async list(params?: MessagingNotificationsListParams, requestOptions?: ApiRequestOptions): Promise<{ items: MessagingNotification[]; pageInfo: PageInfo; }> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.get<MessagingNotificationListResponse>(appendQueryString(appApiPath(`/messaging/notifications`), query));
+    return this.client.request<{ items: MessagingNotification[]; pageInfo: PageInfo; }>(appendQueryString(appApiPath(`/messaging/notifications`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
   }
 
 /** messaging.notifications.markRead */
-  async markRead(notificationId: string, params: MessagingNotificationsMarkReadParams): Promise<MessagingNotificationReceiptResponse> {
+  async read(notificationId: string, params: MessagingNotificationsReadParams, requestOptions?: ApiRequestOptions): Promise<MessagingNotificationReceiptResponse> {
     const requestHeaders = buildRequestHeaders(
       {
         'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
       },
       {}
     );
-    return this.client.post<MessagingNotificationReceiptResponse>(appApiPath(`/messaging/notifications/${serializePathParameter(notificationId, { name: 'notificationId', style: 'simple', explode: false })}/read`), undefined, undefined, requestHeaders);
+    return this.client.request<MessagingNotificationReceiptResponse>(appApiPath(`/messaging/notifications/${serializePathParameter(notificationId, { name: 'notificationId', style: 'simple', explode: false })}/read`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
   }
 }
 
 export class MessagingApi {
-  private client: HttpClient;
   public readonly notifications: MessagingNotificationsApi;
   public readonly announcements: MessagingAnnouncementsApi;
   public readonly pushDevices: MessagingPushDevicesApi;
   public readonly verificationCodes: MessagingVerificationCodesApi;
 
   constructor(client: HttpClient) {
-    this.client = client;
     this.notifications = new MessagingNotificationsApi(client);
     this.announcements = new MessagingAnnouncementsApi(client);
     this.pushDevices = new MessagingPushDevicesApi(client);
