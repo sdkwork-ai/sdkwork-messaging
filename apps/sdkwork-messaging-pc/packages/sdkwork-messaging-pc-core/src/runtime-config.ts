@@ -45,7 +45,7 @@ export function parseMessagingPcRuntimeConfig(
   }
   const baseUrls = deploymentProfile === "standalone"
     ? readStandaloneBaseUrls(value, browserOrigin, browserOriginMode)
-    : readCloudBaseUrls(value, environment, browserOriginMode);
+    : readCloudBaseUrls(value, environment, browserOriginMode, browserOrigin);
   return { activeLocales, ...baseUrls, browserOriginMode, defaultLocale, deploymentProfile, environment, fallbackLocale, profileId, runtimeTarget, supportedLocales };
 }
 
@@ -79,7 +79,20 @@ function readCloudBaseUrls(
   value: Record<string, unknown>,
   environment: MessagingLifecycleEnvironment,
   browserOriginMode: MessagingBrowserOriginMode,
+  browserOrigin: string | undefined,
 ) {
+  // Dev contract (APP_RUNTIME_ENV_SPEC.md §2, BROWSER_RUNTIME_ENV_SPEC.md §1):
+  // every DEV runtime document is same-origin relative in BOTH deployment
+  // profiles — the cloud dev ingress fans canonical API paths server-side to
+  // the locally started sdkwork-api-cloud-gateway, so the browser-visible
+  // shape never carries the deploy-time api-* family.
+  if (environment === "development" && browserOriginMode === "same-origin") {
+    for (const field of ["appApiBaseUrl", "appbaseAppApiBaseUrl"] as const) {
+      if (value[field] !== "/") throw new Error(`${field} must use the canonical dev same-origin root /`);
+    }
+    const origin = readBrowserOrigin(browserOrigin);
+    return { appApiBaseUrl: origin, appbaseAppApiBaseUrl: origin };
+  }
   if (browserOriginMode !== "cross-origin") throw new Error("cloud browserOriginMode must equal cross-origin");
   return {
     appApiBaseUrl: readUrl(value.appApiBaseUrl, "appApiBaseUrl", environment),

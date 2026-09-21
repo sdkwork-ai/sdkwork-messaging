@@ -7,14 +7,40 @@ import {
   createNotificationCenterService,
   loadMessagingPcRuntimeConfig,
   resolveMessagingLocale,
+  type MessagingPcRuntimeConfig,
 } from "@sdkwork/messaging-pc-core";
 import { createTokenManager } from "@sdkwork/sdk-common";
 import { createMessagingAuthRuntimeConfigLoader } from "../auth/auth-runtime-config.ts";
 
 const MESSAGING_PC_APP_ID = "sdkwork-messaging-pc";
 
+/**
+ * Publishes the runtime document to the canonical browser global
+ * (BROWSER_RUNTIME_ENV_SPEC.md §4, APP_RUNTIME_ENV_SPEC.md §4) BEFORE the
+ * first SDK client call, including the deployment-mode aliases the shared
+ * `@sdkwork/sdk-common` resolvers inspect (`readRuntimeEnv` reads this
+ * bridge first; import.meta.env / process.env channels are unreliable in
+ * bundled apps).
+ */
+function publishRuntimeEnvGlobalBridge(config: MessagingPcRuntimeConfig): void {
+  const bridge = {
+    environment: config.environment,
+    deploymentProfile: config.deploymentProfile,
+    profileId: config.profileId,
+    browserOriginMode: config.browserOriginMode,
+    appApiBaseUrl: config.appApiBaseUrl,
+    appbaseAppApiBaseUrl: config.appbaseAppApiBaseUrl,
+    SDKWORK_DEPLOYMENT_PROFILE: config.deploymentProfile,
+    SDKWORK_DEPLOY_MODE: config.deploymentProfile,
+    VITE_SDKWORK_DEPLOYMENT_PROFILE: config.deploymentProfile,
+    VITE_SDKWORK_DEPLOY_MODE: config.deploymentProfile,
+  };
+  (globalThis as unknown as Record<string, unknown>).SDKWORK_RUNTIME_ENV = Object.freeze(bridge);
+}
+
 export async function bootstrapMessagingPcRuntime() {
   const config = await loadMessagingPcRuntimeConfig();
+  publishRuntimeEnvGlobalBridge(config);
   const locale = resolveMessagingLocale(config, navigator.languages);
   const tokenManager = createTokenManager();
   const tokenStore = createPersistentIamTokenStore({ appId: MESSAGING_PC_APP_ID, storage: window.localStorage });

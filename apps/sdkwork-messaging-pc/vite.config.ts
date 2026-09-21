@@ -1,5 +1,7 @@
 import { resolveViteEnvironment, resolveLucideReactEntry } from '../../../sdkwork-specs/tools/vite-runtime-profile.mjs';
 import { resolveBrowserDistOutDir } from '../../../sdkwork-specs/tools/browser-dist-layout.mjs';
+import { buildBrowserDevRuntimeEnvDocument } from '../../../sdkwork-specs/tools/browser-runtime-env.mjs';
+import { createBrowserRuntimeEnvVitePlugin } from '../../../sdkwork-specs/tools/browser-runtime-env-vite.mjs';
 
 import tailwindcss from "@tailwindcss/vite";
 import { createSdkworkCredentialEntryBootstrapVitePlugin } from "@sdkwork/iam-credential-entry/vite";
@@ -7,13 +9,38 @@ import react from "@vitejs/plugin-react";
 import { env } from "node:process";
 import { defineConfig } from "vite";
 
+const RUNTIME_ENV_DOCUMENT_PATH = "/runtime-env.json";
+
+/**
+ * Serve-only dev runtime document (APP_RUNTIME_ENV_SPEC.md §2/§6,
+ * BROWSER_RUNTIME_ENV_SPEC.md §2; shared Vite integration factory owns the
+ * middleware wiring). Both deployment profiles serve the SAME same-origin
+ * relative document in dev — the profile changes only the server-side fan-out
+ * target. Without this middleware the dev server falls through to the
+ * public/runtime-env.json build leftover (or 404 on a fresh checkout) and the
+ * bootstrap fails on stale deploy-time values.
+ *
+ * The BUILD document stays owned by the canonical browser build runner
+ * (deploy-time authority with the locale materialization); this plugin
+ * deliberately does not emit a build asset.
+ */
+function messagingRuntimeEnvDocumentPlugin(mode: string) {
+  return createBrowserRuntimeEnvVitePlugin({
+    name: "messaging-runtime-env-document",
+    path: RUNTIME_ENV_DOCUMENT_PATH,
+    resolveServeDocument: () =>
+      JSON.stringify(buildBrowserDevRuntimeEnvDocument({ profileId: mode })),
+  });
+}
+
 export default defineConfig(({ mode }: { mode: string }) => ({
   plugins: [
+    messagingRuntimeEnvDocumentPlugin(mode),
     react(),
     tailwindcss(),
     createSdkworkCredentialEntryBootstrapVitePlugin({
       accessToken: env.SDKWORK_ACCESS_TOKEN,
-      environment: mode.includes("production") ? "production" : mode.includes("test") ? "test" : mode.includes("staging") ? "staging" : "development",
+      environment: resolveViteEnvironment(mode, process.env),
     }),
   ],
   resolve: { dedupe: ["react", "react-dom"] },
