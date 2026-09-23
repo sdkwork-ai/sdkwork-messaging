@@ -13,17 +13,14 @@ import {
   TextInput,
   ToggleInput,
 } from "../components/form";
-import { createNotifyAdminService, type NotifyAdminService } from "../notifyAdminService";
+import {
+  defaultNotifyAdminService,
+  type NotifyAdminService,
+} from "../notifyAdminService";
 
 export interface SdkworkMessagingEmailChannelPageProps {
   service?: NotifyAdminService;
 }
-
-const ENCRYPTION_OPTIONS = [
-  { value: "smtps", label: "SMTPS (SSL)" },
-  { value: "starttls", label: "STARTTLS" },
-  { value: "none", label: "None" },
-] as const;
 
 interface EmailChannelForm {
   provider: string;
@@ -56,13 +53,19 @@ function readConfig(config: Record<string, unknown> | undefined, key: string): s
 
 export function EmailChannelPage({ service }: SdkworkMessagingEmailChannelPageProps) {
   const { t } = useTranslation();
-  const admin = service ?? createNotifyAdminService();
+  const admin = service ?? defaultNotifyAdminService;
   const [form, setForm] = useState<EmailChannelForm>(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [secretConfigured, setSecretConfigured] = useState(false);
+
+  const encryptionOptions = [
+    { value: "smtps", label: t("admin.notify.email.encryption.smtps", "SMTPS (SSL)") },
+    { value: "starttls", label: t("admin.notify.email.encryption.starttls", "STARTTLS") },
+    { value: "none", label: t("admin.notify.email.encryption.none", "None") },
+  ];
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -141,8 +144,12 @@ export function EmailChannelPage({ service }: SdkworkMessagingEmailChannelPagePr
         description={t("admin.notify.email.description")}
       />
       {error ? <ErrorState message={error} onRetry={() => void load()} /> : null}
-      {notice ? <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">{notice}</div> : null}
-      <div className="space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      {notice ? (
+        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+          {notice}
+        </div>
+      ) : null}
+      <div className="space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#1a1a1a]">
         <Field label={t("admin.notify.email.provider")}>
           <TextInput value="SMTP" onChange={() => undefined} disabled />
         </Field>
@@ -160,7 +167,7 @@ export function EmailChannelPage({ service }: SdkworkMessagingEmailChannelPagePr
           <SelectInput
             value={form.encryption}
             onChange={(value) => setField("encryption", value)}
-            options={ENCRYPTION_OPTIONS}
+            options={encryptionOptions}
           />
         </Field>
         <Field label={t("admin.notify.email.username")}>
@@ -182,7 +189,7 @@ export function EmailChannelPage({ service }: SdkworkMessagingEmailChannelPagePr
               placeholder={secretConfigured ? "********" : ""}
             />
             {secretConfigured ? (
-              <KeyRound className="absolute right-3 top-2.5 h-4 w-4 text-slate-400" />
+              <KeyRound className="absolute right-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
             ) : null}
           </div>
         </Field>
@@ -194,10 +201,10 @@ export function EmailChannelPage({ service }: SdkworkMessagingEmailChannelPagePr
             <TextInput value={form.fromName} onChange={(value) => setField("fromName", value)} />
           </Field>
         </div>
-        <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
+        <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3 dark:bg-white/5">
           <div>
-            <p className="text-sm font-medium text-slate-700">{t("admin.notify.common.enabled")}</p>
-            <p className="text-xs text-slate-400">{t("admin.notify.email.enabledHint")}</p>
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.notify.common.enabled")}</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">{t("admin.notify.email.enabledHint")}</p>
           </div>
           <ToggleInput checked={form.enabled} onChange={(value) => setField("enabled", value)} />
         </div>

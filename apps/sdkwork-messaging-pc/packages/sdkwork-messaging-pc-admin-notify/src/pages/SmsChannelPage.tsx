@@ -13,17 +13,14 @@ import {
   TextInput,
   ToggleInput,
 } from "../components/form";
-import { createNotifyAdminService, type NotifyAdminService } from "../notifyAdminService";
+import {
+  defaultNotifyAdminService,
+  type NotifyAdminService,
+} from "../notifyAdminService";
 
 export interface SdkworkMessagingSmsChannelPageProps {
   service?: NotifyAdminService;
 }
-
-const PROVIDER_OPTIONS = [
-  { value: "aliyun", label: "Aliyun SMS" },
-  { value: "tencent", label: "Tencent Cloud SMS" },
-  { value: "generic_http", label: "Generic HTTP Gateway" },
-] as const;
 
 interface SmsChannelForm {
   provider: string;
@@ -54,13 +51,19 @@ function readConfig(config: Record<string, unknown> | undefined, key: string): s
 
 export function SmsChannelPage({ service }: SdkworkMessagingSmsChannelPageProps) {
   const { t } = useTranslation();
-  const admin = service ?? createNotifyAdminService();
+  const admin = service ?? defaultNotifyAdminService;
   const [form, setForm] = useState<SmsChannelForm>(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [secretConfigured, setSecretConfigured] = useState(false);
+
+  const providerOptions = [
+    { value: "aliyun", label: t("admin.notify.sms.provider.aliyun", "Aliyun SMS") },
+    { value: "tencent", label: t("admin.notify.sms.provider.tencent", "Tencent Cloud SMS") },
+    { value: "generic_http", label: t("admin.notify.sms.provider.generic_http", "Generic HTTP Gateway") },
+  ];
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -137,13 +140,17 @@ export function SmsChannelPage({ service }: SdkworkMessagingSmsChannelPageProps)
         description={t("admin.notify.sms.description")}
       />
       {error ? <ErrorState message={error} onRetry={() => void load()} /> : null}
-      {notice ? <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">{notice}</div> : null}
-      <div className="space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      {notice ? (
+        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+          {notice}
+        </div>
+      ) : null}
+      <div className="space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#1a1a1a]">
         <Field label={t("admin.notify.sms.provider")}>
           <SelectInput
             value={form.provider}
             onChange={(value) => setField("provider", value)}
-            options={PROVIDER_OPTIONS}
+            options={providerOptions}
           />
         </Field>
         <Field label={t("admin.notify.sms.accessKeyId")}>
@@ -169,7 +176,7 @@ export function SmsChannelPage({ service }: SdkworkMessagingSmsChannelPageProps)
               placeholder={secretConfigured ? "********" : ""}
             />
             {secretConfigured ? (
-              <KeyRound className="absolute right-3 top-2.5 h-4 w-4 text-slate-400" />
+              <KeyRound className="absolute right-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
             ) : null}
           </div>
         </Field>
@@ -189,10 +196,10 @@ export function SmsChannelPage({ service }: SdkworkMessagingSmsChannelPageProps)
             <TextInput value={form.endpoint} onChange={(value) => setField("endpoint", value)} placeholder="https://gateway.example.com/send" />
           </Field>
         ) : null}
-        <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
+        <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3 dark:bg-white/5">
           <div>
-            <p className="text-sm font-medium text-slate-700">{t("admin.notify.common.enabled")}</p>
-            <p className="text-xs text-slate-400">{t("admin.notify.sms.enabledHint")}</p>
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.notify.common.enabled")}</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">{t("admin.notify.sms.enabledHint")}</p>
           </div>
           <ToggleInput checked={form.enabled} onChange={(value) => setField("enabled", value)} />
         </div>

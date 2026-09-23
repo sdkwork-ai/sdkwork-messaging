@@ -16,7 +16,7 @@ import {
   TextInput,
 } from "../components/form";
 import {
-  createNotifyAdminService,
+  defaultNotifyAdminService,
   extractTemplateVariables,
   type MessagingTemplateStatus,
   type NotifyAdminService,
@@ -36,6 +36,7 @@ const STATUS_OPTIONS = [
 ] as const;
 
 const PAGE_SIZE = 20;
+const KEYWORD_DEBOUNCE_MS = 300;
 
 interface TemplateFormState {
   templateCode: string;
@@ -55,19 +56,26 @@ const EMPTY_FORM: TemplateFormState = {
 
 export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateListPageProps) {
   const { t } = useTranslation();
-  const admin = service ?? createNotifyAdminService();
+  const admin = service ?? defaultNotifyAdminService;
   const [items, setItems] = useState<MessagingTemplate[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [statusFilter, setStatusFilter] = useState("");
   const [keyword, setKeyword] = useState("");
+  const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<MessagingTemplate | null>(null);
   const [form, setForm] = useState<TemplateFormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [variables, setVariables] = useState<string[]>([]);
+  const [panelOpen, setPanelOpen] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedKeyword(keyword.trim()), KEYWORD_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [keyword]);
 
   const load = useCallback(
     async (targetPage: number) => {
@@ -77,7 +85,7 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
         const result = await admin.listTemplates({
           channel,
           status: (statusFilter || undefined) as MessagingTemplateStatus | undefined,
-          keyword: keyword.trim() || undefined,
+          keyword: debouncedKeyword || undefined,
           page: targetPage,
           pageSize: PAGE_SIZE,
         });
@@ -91,17 +99,23 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
         setLoading(false);
       }
     },
-    [admin, channel, keyword, statusFilter, t],
+    [admin, channel, debouncedKeyword, statusFilter, t],
   );
 
   useEffect(() => {
     void load(1);
   }, [load]);
 
+  const closePanel = useCallback(() => {
+    setEditing(null);
+    setPanelOpen(false);
+  }, []);
+
   const beginCreate = () => {
     setEditing(null);
     setForm(EMPTY_FORM);
     setVariables([]);
+    setPanelOpen(true);
   };
 
   const beginEdit = (item: MessagingTemplate) => {
@@ -114,6 +128,7 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
       status: item.status,
     });
     setVariables(item.variables ?? []);
+    setPanelOpen(true);
   };
 
   const updateContent = (content: string) => {
@@ -142,7 +157,7 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
         });
       }
       await load(page);
-      setEditing(null);
+      closePanel();
     } catch {
       setError(t("admin.notify.common.saveFailed"));
     } finally {
@@ -160,8 +175,6 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
     }
   };
 
-  const panelOpen = editing !== null || form.templateCode !== "" || form.name !== "" || form.content !== "";
-
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader
@@ -178,12 +191,12 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
       />
       <div className="mb-4 flex items-center gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
           <input
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
             placeholder={t("admin.notify.templates.searchPlaceholder")}
-            className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:border-sky-500"
+            className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-sky-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
           />
         </div>
         <SelectInput
@@ -203,12 +216,12 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
         </PrimaryButton>
       </div>
       {error ? <ErrorState message={error} /> : null}
-      {loading ? (
+      {loading && items.length === 0 ? (
         <LoadingState label={t("admin.notify.common.loading")} />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#1a1a1a]">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
               <tr>
                 <th className="px-4 py-3 font-medium">{t("admin.notify.templates.code")}</th>
                 <th className="px-4 py-3 font-medium">{t("admin.notify.templates.name")}</th>
@@ -225,13 +238,13 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                  <td className="px-4 py-3 font-mono text-xs text-slate-600">{item.templateCode}</td>
-                  <td className="px-4 py-3 text-slate-800">{item.name}</td>
+                <tr key={item.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 dark:border-white/5 dark:hover:bg-white/5">
+                  <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">{item.templateCode}</td>
+                  <td className="px-4 py-3 text-slate-800 dark:text-slate-100">{item.name}</td>
                   {channel === "email" ? (
-                    <td className="max-w-[220px] truncate px-4 py-3 text-slate-500">{item.subject ?? "—"}</td>
+                    <td className="max-w-[220px] truncate px-4 py-3 text-slate-500 dark:text-slate-400">{item.subject ?? "—"}</td>
                   ) : null}
-                  <td className="px-4 py-3 text-slate-500">
+                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
                     {(item.variables ?? []).length > 0 ? (
                       <span className="font-mono text-xs">{item.variables!.join(", ")}</span>
                     ) : (
@@ -242,7 +255,7 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
                     <td className="px-4 py-3">
                       <StatusPill status={item.approvalStatus} />
                       {item.approvalNote ? (
-                        <span className="ml-2 text-xs text-slate-400">{item.approvalNote}</span>
+                        <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">{item.approvalNote}</span>
                       ) : null}
                     </td>
                   ) : null}
@@ -253,7 +266,7 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
                     <button
                       type="button"
                       onClick={() => beginEdit(item)}
-                      className="mr-2 inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-sky-600 hover:bg-sky-50"
+                      className="mr-2 inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-sky-600 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-500/10"
                     >
                       <Edit3 className="h-3.5 w-3.5" />
                       {t("admin.notify.common.edit")}
@@ -261,7 +274,7 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
                     <button
                       type="button"
                       onClick={() => void remove(item)}
-                      className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-rose-600 hover:bg-rose-50"
+                      className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       {t("admin.notify.common.delete")}
@@ -271,7 +284,7 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
               ))}
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={channel === "email" ? 6 : 6} className="px-4 py-10 text-center text-slate-400">
+                  <td colSpan={6} className="px-4 py-10 text-center text-slate-400 dark:text-slate-500">
                     {t("admin.notify.templates.empty")}
                   </td>
                 </tr>
@@ -280,7 +293,7 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
           </table>
         </div>
       )}
-      <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
+      <div className="mt-4 flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
         <span>
           {t("admin.notify.templates.page")} {page} / {totalPages}
         </span>
@@ -296,17 +309,17 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
 
       {panelOpen ? (
         <div className="fixed inset-0 z-40 flex justify-end bg-slate-900/30">
-          <div className="flex h-full w-full max-w-xl flex-col bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-              <h2 className="text-base font-semibold text-slate-800">
+          <div className="flex h-full w-full max-w-xl flex-col bg-white shadow-xl dark:bg-[#1a1a1a]">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-white/10">
+              <h2 className="text-base font-semibold text-slate-800 dark:text-white">
                 {editing
                   ? t("admin.notify.templates.editTitle")
                   : t("admin.notify.templates.createTitle")}
               </h2>
               <button
                 type="button"
-                onClick={() => setEditing(null)}
-                className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                onClick={closePanel}
+                className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-slate-200"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -336,12 +349,12 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
               </Field>
               {variables.length > 0 ? (
                 <div>
-                  <p className="mb-1 text-sm font-medium text-slate-700">
+                  <p className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-200">
                     {t("admin.notify.templates.detectedVariables")}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {variables.map((variable) => (
-                      <span key={variable} className="rounded bg-sky-50 px-2 py-1 font-mono text-xs text-sky-700">
+                      <span key={variable} className="rounded bg-sky-50 px-2 py-1 font-mono text-xs text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">
                         {"{{"}{variable}{"}}"}
                       </span>
                     ))}
@@ -359,9 +372,9 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
                 />
               </Field>
             </div>
-            <div className="border-t border-slate-200 px-6 py-4">
+            <div className="border-t border-slate-200 px-6 py-4 dark:border-white/10">
               <ActionBar>
-                <SecondaryButton onClick={() => setEditing(null)}>
+                <SecondaryButton onClick={closePanel}>
                   {t("admin.notify.common.cancel")}
                 </SecondaryButton>
                 <PrimaryButton onClick={() => void save()} disabled={saving}>

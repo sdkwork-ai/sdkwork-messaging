@@ -139,6 +139,15 @@ export function createNotifyAdminService(): NotifyAdminService {
   };
 }
 
+/**
+ * Process-wide default service instance for pages that are not given an
+ * injected `service` prop. The underlying transport client is resolved through
+ * the holder at call time, so this instance stays valid even when the host
+ * configures the SDK client after module load; creating it per render would
+ * change callback identities every render and retrigger page load effects.
+ */
+export const defaultNotifyAdminService: NotifyAdminService = createNotifyAdminService();
+
 export function extractTemplateVariables(content: string): string[] {
   const variables: string[] = [];
   const regex = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/gu;
