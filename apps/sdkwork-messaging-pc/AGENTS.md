@@ -6,7 +6,7 @@ Read `../../../sdkwork-specs/SOUL.md` before executing tasks in this application
 
 ## Application Identity
 
-Read `sdkwork.app.config.json` for application identity and SDK inventory. Concrete browser runtime values are owned by `etc/` and materialized to `public/runtime-env.json`.
+Read `agent.app.config.json` for application identity and SDK inventory. Concrete browser runtime values are owned by `etc/` and materialized to `public/runtime-env.json`.
 
 ## Local Structure
 

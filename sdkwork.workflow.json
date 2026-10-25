@@ -6,7 +6,7 @@
     "name": "sdkwork-messaging",
     "repository": "sdkwork-ai/sdkwork-messaging",
     "sourcePath": ".",
-    "configPath": "sdkwork.app.config.json"
+    "configPath": "agent.app.config.json"
   },
   "release": {
     "artifactPrefix": "sdkwork-messaging",
