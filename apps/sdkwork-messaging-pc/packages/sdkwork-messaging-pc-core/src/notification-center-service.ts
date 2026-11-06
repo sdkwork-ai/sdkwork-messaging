@@ -42,7 +42,7 @@ export function createNotificationCenterService(
     markRead(notificationId) {
       const normalizedId = notificationId.trim();
       if (!normalizedId) throw new Error("notificationId is required");
-      return client.messaging.notifications.markRead(normalizedId, {
+      return client.messaging.notifications.read(normalizedId, {
         idempotencyKey: createIdempotencyKey(),
       });
     },
