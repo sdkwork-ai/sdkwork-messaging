@@ -1,13 +1,13 @@
 import { backendApiPath } from './paths';
 import type { ApiRequestOptions, HttpClient } from '../http/client';
 
-import type { MessagingAnnouncement, MessagingAnnouncementPublishRequest, MessagingAnnouncementResponse, MessagingChannelResponse, MessagingChannelUpdateRequest, MessagingNotification, MessagingNotificationCreateRequest, MessagingNotificationResponse, MessagingOutboundMessage, MessagingOutboundMessageResponse, MessagingOutboundMessageSendRequest, MessagingPushMessage, MessagingPushMessageResponse, MessagingPushMessageSendRequest, MessagingTemplate, MessagingTemplateCreateRequest, MessagingTemplateResponse, MessagingTemplateUpdateRequest, MessagingVerificationPolicy, MessagingVerificationPolicyResponse, MessagingVerificationPolicyUpdateRequest, PageInfo } from '../types';
+import type { MessagingAnnouncement, MessagingAnnouncementPublishRequest, MessagingAnnouncementResponse, MessagingEmailAccount, MessagingEmailAccountCreateRequest, MessagingEmailAccountResponse, MessagingEmailAccountUpdateRequest, MessagingEmailSender, MessagingEmailSenderCreateRequest, MessagingEmailSenderResponse, MessagingEmailSenderUpdateRequest, MessagingEmailSendRule, MessagingEmailSendRuleResponse, MessagingEmailSendRuleUpdateRequest, MessagingNotification, MessagingNotificationCreateRequest, MessagingNotificationResponse, MessagingOutboundMessage, MessagingOutboundMessageResponse, MessagingOutboundMessageSendRequest, MessagingPushMessage, MessagingPushMessageResponse, MessagingPushMessageSendRequest, MessagingSmsAccount, MessagingSmsAccountCreateRequest, MessagingSmsAccountResponse, MessagingSmsAccountUpdateRequest, MessagingSmsSendRule, MessagingSmsSendRuleResponse, MessagingSmsSendRuleUpdateRequest, MessagingSmsSignature, MessagingSmsSignatureCreateRequest, MessagingSmsSignatureResponse, MessagingSmsSignatureUpdateRequest, MessagingTemplate, MessagingTemplateCreateRequest, MessagingTemplateResponse, MessagingTemplateUpdateRequest, MessagingVerificationPolicy, MessagingVerificationPolicyResponse, MessagingVerificationPolicyUpdateRequest, PageInfo } from '../types';
 
 
 export interface MessagingTemplatesListParams {
   channel?: 'sms' | 'email';
   status?: 'draft' | 'active' | 'disabled';
-  keyword?: string;
+  q?: string;
   page?: number;
   pageSize?: number;
 }
@@ -42,7 +42,7 @@ export class MessagingTemplatesApi {
     const query = buildQueryString([
       { name: 'channel', value: params?.channel, style: 'form', explode: true, allowReserved: false },
       { name: 'status', value: params?.status, style: 'form', explode: true, allowReserved: false },
-      { name: 'keyword', value: params?.keyword, style: 'form', explode: true, allowReserved: false },
+      { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
     ]);
@@ -92,16 +92,16 @@ export class MessagingTemplatesApi {
   }
 }
 
-export interface MessagingChannelsRetrieveParams {
+export interface MessagingSmsSendRulesListParams {
   page?: number;
   pageSize?: number;
 }
 
-export interface MessagingChannelsUpdateParams {
+export interface MessagingSmsSendRulesUpdateParams {
   idempotencyKey: string;
 }
 
-export class MessagingChannelsApi {
+export class MessagingSmsSendRulesApi {
   private client: HttpClient;
 
   constructor(client: HttpClient) {
@@ -109,24 +109,394 @@ export class MessagingChannelsApi {
   }
 
 
-/** messaging.channels.retrieve */
-  async retrieve(channel: 'sms' | 'email', params?: MessagingChannelsRetrieveParams, requestOptions?: ApiRequestOptions): Promise<MessagingChannelResponse> {
+/** messaging.smsSendRules.list */
+  async list(params?: MessagingSmsSendRulesListParams, requestOptions?: ApiRequestOptions): Promise<{ items: MessagingSmsSendRule[]; pageInfo: PageInfo; }> {
     const query = buildQueryString([
       { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
       { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
     ]);
-    return this.client.request<MessagingChannelResponse>(appendQueryString(backendApiPath(`/messaging/channels/${serializePathParameter(channel, { name: 'channel', style: 'simple', explode: false })}`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'item' });
+    return this.client.request<{ items: MessagingSmsSendRule[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/sms/send_rules`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
   }
 
-/** messaging.channels.update */
-  async update(channel: 'sms' | 'email', body: MessagingChannelUpdateRequest, params: MessagingChannelsUpdateParams, requestOptions?: ApiRequestOptions): Promise<MessagingChannelResponse> {
+/** messaging.smsSendRules.update */
+  async update(scenario: 'default' | 'verification_code' | 'system_notification' | 'marketing', body: MessagingSmsSendRuleUpdateRequest, params: MessagingSmsSendRulesUpdateParams, requestOptions?: ApiRequestOptions): Promise<MessagingSmsSendRuleResponse> {
     const requestHeaders = buildRequestHeaders(
       {
         'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
       },
       {}
     );
-    return this.client.request<MessagingChannelResponse>(backendApiPath(`/messaging/channels/${serializePathParameter(channel, { name: 'channel', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'PUT' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
+    return this.client.request<MessagingSmsSendRuleResponse>(backendApiPath(`/messaging/sms/send_rules/${serializePathParameter(scenario, { name: 'scenario', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'PUT' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
+  }
+}
+
+export interface MessagingSmsSignaturesListParams {
+  accountId?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface MessagingSmsSignaturesCreateParams {
+  idempotencyKey: string;
+}
+
+export interface MessagingSmsSignaturesRetrieveParams {
+  page?: number;
+  pageSize?: number;
+}
+
+export interface MessagingSmsSignaturesUpdateParams {
+  idempotencyKey: string;
+}
+
+export interface MessagingSmsSignaturesDeleteParams {
+  idempotencyKey: string;
+}
+
+export class MessagingSmsSignaturesApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** messaging.smsSignatures.list */
+  async list(params?: MessagingSmsSignaturesListParams, requestOptions?: ApiRequestOptions): Promise<{ items: MessagingSmsSignature[]; pageInfo: PageInfo; }> {
+    const query = buildQueryString([
+      { name: 'account_id', value: params?.accountId, style: 'form', explode: true, allowReserved: false },
+      { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
+      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<{ items: MessagingSmsSignature[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/sms/signatures`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
+  }
+
+/** messaging.smsSignatures.create */
+  async create(body: MessagingSmsSignatureCreateRequest, params: MessagingSmsSignaturesCreateParams, requestOptions?: ApiRequestOptions): Promise<MessagingSmsSignatureResponse> {
+    const requestHeaders = buildRequestHeaders(
+      {
+        'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
+      },
+      {}
+    );
+    return this.client.request<MessagingSmsSignatureResponse>(backendApiPath(`/messaging/sms/signatures`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
+  }
+
+/** messaging.smsSignatures.retrieve */
+  async retrieve(signatureId: string, params?: MessagingSmsSignaturesRetrieveParams, requestOptions?: ApiRequestOptions): Promise<MessagingSmsSignatureResponse> {
+    const query = buildQueryString([
+      { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
+      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<MessagingSmsSignatureResponse>(appendQueryString(backendApiPath(`/messaging/sms/signatures/${serializePathParameter(signatureId, { name: 'signatureId', style: 'simple', explode: false })}`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'item' });
+  }
+
+/** messaging.smsSignatures.update */
+  async update(signatureId: string, body: MessagingSmsSignatureUpdateRequest, params: MessagingSmsSignaturesUpdateParams, requestOptions?: ApiRequestOptions): Promise<MessagingSmsSignatureResponse> {
+    const requestHeaders = buildRequestHeaders(
+      {
+        'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
+      },
+      {}
+    );
+    return this.client.request<MessagingSmsSignatureResponse>(backendApiPath(`/messaging/sms/signatures/${serializePathParameter(signatureId, { name: 'signatureId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'PUT' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
+  }
+
+/** messaging.smsSignatures.delete */
+  async delete(signatureId: string, params: MessagingSmsSignaturesDeleteParams, requestOptions?: ApiRequestOptions): Promise<void> {
+    const requestHeaders = buildRequestHeaders(
+      {
+        'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
+      },
+      {}
+    );
+    return this.client.request<void>(backendApiPath(`/messaging/sms/signatures/${serializePathParameter(signatureId, { name: 'signatureId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'DELETE' as any, ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}) });
+  }
+}
+
+export interface MessagingSmsAccountsListParams {
+  page?: number;
+  pageSize?: number;
+}
+
+export interface MessagingSmsAccountsCreateParams {
+  idempotencyKey: string;
+}
+
+export interface MessagingSmsAccountsRetrieveParams {
+  page?: number;
+  pageSize?: number;
+}
+
+export interface MessagingSmsAccountsUpdateParams {
+  idempotencyKey: string;
+}
+
+export interface MessagingSmsAccountsDeleteParams {
+  idempotencyKey: string;
+}
+
+export class MessagingSmsAccountsApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** messaging.smsAccounts.list */
+  async list(params?: MessagingSmsAccountsListParams, requestOptions?: ApiRequestOptions): Promise<{ items: MessagingSmsAccount[]; pageInfo: PageInfo; }> {
+    const query = buildQueryString([
+      { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
+      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<{ items: MessagingSmsAccount[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/sms/accounts`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
+  }
+
+/** messaging.smsAccounts.create */
+  async create(body: MessagingSmsAccountCreateRequest, params: MessagingSmsAccountsCreateParams, requestOptions?: ApiRequestOptions): Promise<MessagingSmsAccountResponse> {
+    const requestHeaders = buildRequestHeaders(
+      {
+        'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
+      },
+      {}
+    );
+    return this.client.request<MessagingSmsAccountResponse>(backendApiPath(`/messaging/sms/accounts`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
+  }
+
+/** messaging.smsAccounts.retrieve */
+  async retrieve(accountId: string, params?: MessagingSmsAccountsRetrieveParams, requestOptions?: ApiRequestOptions): Promise<MessagingSmsAccountResponse> {
+    const query = buildQueryString([
+      { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
+      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<MessagingSmsAccountResponse>(appendQueryString(backendApiPath(`/messaging/sms/accounts/${serializePathParameter(accountId, { name: 'accountId', style: 'simple', explode: false })}`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'item' });
+  }
+
+/** messaging.smsAccounts.update */
+  async update(accountId: string, body: MessagingSmsAccountUpdateRequest, params: MessagingSmsAccountsUpdateParams, requestOptions?: ApiRequestOptions): Promise<MessagingSmsAccountResponse> {
+    const requestHeaders = buildRequestHeaders(
+      {
+        'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
+      },
+      {}
+    );
+    return this.client.request<MessagingSmsAccountResponse>(backendApiPath(`/messaging/sms/accounts/${serializePathParameter(accountId, { name: 'accountId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'PUT' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
+  }
+
+/** messaging.smsAccounts.delete */
+  async delete(accountId: string, params: MessagingSmsAccountsDeleteParams, requestOptions?: ApiRequestOptions): Promise<void> {
+    const requestHeaders = buildRequestHeaders(
+      {
+        'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
+      },
+      {}
+    );
+    return this.client.request<void>(backendApiPath(`/messaging/sms/accounts/${serializePathParameter(accountId, { name: 'accountId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'DELETE' as any, ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}) });
+  }
+}
+
+export interface MessagingEmailSendRulesListParams {
+  page?: number;
+  pageSize?: number;
+}
+
+export interface MessagingEmailSendRulesUpdateParams {
+  idempotencyKey: string;
+}
+
+export class MessagingEmailSendRulesApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** messaging.emailSendRules.list */
+  async list(params?: MessagingEmailSendRulesListParams, requestOptions?: ApiRequestOptions): Promise<{ items: MessagingEmailSendRule[]; pageInfo: PageInfo; }> {
+    const query = buildQueryString([
+      { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
+      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<{ items: MessagingEmailSendRule[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/email/send_rules`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
+  }
+
+/** messaging.emailSendRules.update */
+  async update(scenario: 'default' | 'verification_code' | 'system_notification' | 'marketing', body: MessagingEmailSendRuleUpdateRequest, params: MessagingEmailSendRulesUpdateParams, requestOptions?: ApiRequestOptions): Promise<MessagingEmailSendRuleResponse> {
+    const requestHeaders = buildRequestHeaders(
+      {
+        'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
+      },
+      {}
+    );
+    return this.client.request<MessagingEmailSendRuleResponse>(backendApiPath(`/messaging/email/send_rules/${serializePathParameter(scenario, { name: 'scenario', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'PUT' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
+  }
+}
+
+export interface MessagingEmailSendersListParams {
+  accountId?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface MessagingEmailSendersCreateParams {
+  idempotencyKey: string;
+}
+
+export interface MessagingEmailSendersRetrieveParams {
+  page?: number;
+  pageSize?: number;
+}
+
+export interface MessagingEmailSendersUpdateParams {
+  idempotencyKey: string;
+}
+
+export interface MessagingEmailSendersDeleteParams {
+  idempotencyKey: string;
+}
+
+export class MessagingEmailSendersApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** messaging.emailSenders.list */
+  async list(params?: MessagingEmailSendersListParams, requestOptions?: ApiRequestOptions): Promise<{ items: MessagingEmailSender[]; pageInfo: PageInfo; }> {
+    const query = buildQueryString([
+      { name: 'account_id', value: params?.accountId, style: 'form', explode: true, allowReserved: false },
+      { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
+      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<{ items: MessagingEmailSender[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/email/senders`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
+  }
+
+/** messaging.emailSenders.create */
+  async create(body: MessagingEmailSenderCreateRequest, params: MessagingEmailSendersCreateParams, requestOptions?: ApiRequestOptions): Promise<MessagingEmailSenderResponse> {
+    const requestHeaders = buildRequestHeaders(
+      {
+        'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
+      },
+      {}
+    );
+    return this.client.request<MessagingEmailSenderResponse>(backendApiPath(`/messaging/email/senders`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
+  }
+
+/** messaging.emailSenders.retrieve */
+  async retrieve(senderId: string, params?: MessagingEmailSendersRetrieveParams, requestOptions?: ApiRequestOptions): Promise<MessagingEmailSenderResponse> {
+    const query = buildQueryString([
+      { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
+      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<MessagingEmailSenderResponse>(appendQueryString(backendApiPath(`/messaging/email/senders/${serializePathParameter(senderId, { name: 'senderId', style: 'simple', explode: false })}`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'item' });
+  }
+
+/** messaging.emailSenders.update */
+  async update(senderId: string, body: MessagingEmailSenderUpdateRequest, params: MessagingEmailSendersUpdateParams, requestOptions?: ApiRequestOptions): Promise<MessagingEmailSenderResponse> {
+    const requestHeaders = buildRequestHeaders(
+      {
+        'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
+      },
+      {}
+    );
+    return this.client.request<MessagingEmailSenderResponse>(backendApiPath(`/messaging/email/senders/${serializePathParameter(senderId, { name: 'senderId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'PUT' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
+  }
+
+/** messaging.emailSenders.delete */
+  async delete(senderId: string, params: MessagingEmailSendersDeleteParams, requestOptions?: ApiRequestOptions): Promise<void> {
+    const requestHeaders = buildRequestHeaders(
+      {
+        'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
+      },
+      {}
+    );
+    return this.client.request<void>(backendApiPath(`/messaging/email/senders/${serializePathParameter(senderId, { name: 'senderId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'DELETE' as any, ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}) });
+  }
+}
+
+export interface MessagingEmailAccountsListParams {
+  page?: number;
+  pageSize?: number;
+}
+
+export interface MessagingEmailAccountsCreateParams {
+  idempotencyKey: string;
+}
+
+export interface MessagingEmailAccountsRetrieveParams {
+  page?: number;
+  pageSize?: number;
+}
+
+export interface MessagingEmailAccountsUpdateParams {
+  idempotencyKey: string;
+}
+
+export interface MessagingEmailAccountsDeleteParams {
+  idempotencyKey: string;
+}
+
+export class MessagingEmailAccountsApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** messaging.emailAccounts.list */
+  async list(params?: MessagingEmailAccountsListParams, requestOptions?: ApiRequestOptions): Promise<{ items: MessagingEmailAccount[]; pageInfo: PageInfo; }> {
+    const query = buildQueryString([
+      { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
+      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<{ items: MessagingEmailAccount[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/email/accounts`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
+  }
+
+/** messaging.emailAccounts.create */
+  async create(body: MessagingEmailAccountCreateRequest, params: MessagingEmailAccountsCreateParams, requestOptions?: ApiRequestOptions): Promise<MessagingEmailAccountResponse> {
+    const requestHeaders = buildRequestHeaders(
+      {
+        'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
+      },
+      {}
+    );
+    return this.client.request<MessagingEmailAccountResponse>(backendApiPath(`/messaging/email/accounts`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
+  }
+
+/** messaging.emailAccounts.retrieve */
+  async retrieve(accountId: string, params?: MessagingEmailAccountsRetrieveParams, requestOptions?: ApiRequestOptions): Promise<MessagingEmailAccountResponse> {
+    const query = buildQueryString([
+      { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
+      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<MessagingEmailAccountResponse>(appendQueryString(backendApiPath(`/messaging/email/accounts/${serializePathParameter(accountId, { name: 'accountId', style: 'simple', explode: false })}`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'item' });
+  }
+
+/** messaging.emailAccounts.update */
+  async update(accountId: string, body: MessagingEmailAccountUpdateRequest, params: MessagingEmailAccountsUpdateParams, requestOptions?: ApiRequestOptions): Promise<MessagingEmailAccountResponse> {
+    const requestHeaders = buildRequestHeaders(
+      {
+        'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
+      },
+      {}
+    );
+    return this.client.request<MessagingEmailAccountResponse>(backendApiPath(`/messaging/email/accounts/${serializePathParameter(accountId, { name: 'accountId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'PUT' as any, body, contentType: 'application/json', ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
+  }
+
+/** messaging.emailAccounts.delete */
+  async delete(accountId: string, params: MessagingEmailAccountsDeleteParams, requestOptions?: ApiRequestOptions): Promise<void> {
+    const requestHeaders = buildRequestHeaders(
+      {
+        'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
+      },
+      {}
+    );
+    return this.client.request<void>(backendApiPath(`/messaging/email/accounts/${serializePathParameter(accountId, { name: 'accountId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'DELETE' as any, ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}) });
   }
 }
 
@@ -326,7 +696,12 @@ export class MessagingApi {
   public readonly pushMessages: MessagingPushMessagesApi;
   public readonly outboundMessages: MessagingOutboundMessagesApi;
   public readonly verificationPolicies: MessagingVerificationPoliciesApi;
-  public readonly channels: MessagingChannelsApi;
+  public readonly emailAccounts: MessagingEmailAccountsApi;
+  public readonly emailSenders: MessagingEmailSendersApi;
+  public readonly emailSendRules: MessagingEmailSendRulesApi;
+  public readonly smsAccounts: MessagingSmsAccountsApi;
+  public readonly smsSignatures: MessagingSmsSignaturesApi;
+  public readonly smsSendRules: MessagingSmsSendRulesApi;
   public readonly templates: MessagingTemplatesApi;
 
   constructor(client: HttpClient) {
@@ -335,7 +710,12 @@ export class MessagingApi {
     this.pushMessages = new MessagingPushMessagesApi(client);
     this.outboundMessages = new MessagingOutboundMessagesApi(client);
     this.verificationPolicies = new MessagingVerificationPoliciesApi(client);
-    this.channels = new MessagingChannelsApi(client);
+    this.emailAccounts = new MessagingEmailAccountsApi(client);
+    this.emailSenders = new MessagingEmailSendersApi(client);
+    this.emailSendRules = new MessagingEmailSendRulesApi(client);
+    this.smsAccounts = new MessagingSmsAccountsApi(client);
+    this.smsSignatures = new MessagingSmsSignaturesApi(client);
+    this.smsSendRules = new MessagingSmsSendRulesApi(client);
     this.templates = new MessagingTemplatesApi(client);
   }
 

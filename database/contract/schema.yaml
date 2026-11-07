@@ -48,9 +48,24 @@ tables:
   - name: messaging_verification_attempt
     lifecycle_status: active
     owner: messaging-platform
-  - name: messaging_channel
+  - name: messaging_template
     lifecycle_status: active
     owner: messaging-platform
-  - name: messaging_template
+  - name: messaging_email_account
+    lifecycle_status: active
+    owner: messaging-platform
+  - name: messaging_email_sender
+    lifecycle_status: active
+    owner: messaging-platform
+  - name: messaging_email_send_rule
+    lifecycle_status: active
+    owner: messaging-platform
+  - name: messaging_sms_account
+    lifecycle_status: active
+    owner: messaging-platform
+  - name: messaging_sms_signature
+    lifecycle_status: active
+    owner: messaging-platform
+  - name: messaging_sms_send_rule
     lifecycle_status: active
     owner: messaging-platform

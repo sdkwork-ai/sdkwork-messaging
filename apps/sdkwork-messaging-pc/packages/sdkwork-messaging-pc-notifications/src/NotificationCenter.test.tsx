@@ -62,8 +62,8 @@ describe("NotificationCenter", () => {
 
   it("uses server page metadata for next-page navigation", async () => {
     const listNotifications = vi.fn()
-      .mockResolvedValueOnce(pageResponse(notifications, { page: 1, totalPages: 2, totalItems: 21 }))
-      .mockResolvedValueOnce(pageResponse([], { page: 2, totalPages: 2, totalItems: 21 }));
+      .mockResolvedValueOnce(pageResponse(notifications, { page: 1, totalPages: 2, totalItems: "21" }))
+      .mockResolvedValueOnce(pageResponse([], { page: 2, totalPages: 2, totalItems: "21" }));
     const service = createService(pageResponse(notifications), listNotifications);
     render(<NotificationCenter access={{ status: "authenticated", service }} locale="en-US" />);
     await screen.findByText("Page 1 of 2");
@@ -117,7 +117,6 @@ function pageResponse(
 ): MessagingNotificationListResponse {
   return {
     items,
-    pageInfo: { page: 1, pageSize: 20, totalItems: items.length, totalPages: 1, ...pageInfo },
-    requestId: "request-1",
+    pageInfo: { mode: "offset", page: 1, pageSize: 20, totalItems: String(items.length), totalPages: 1, ...pageInfo },
   };
 }

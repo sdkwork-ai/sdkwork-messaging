@@ -2,7 +2,7 @@
   "openapi": "3.1.2",
   "info": {
     "title": "SDKWork Messaging App API",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "description": "App/client contract for in-app notifications, announcements, app push device registration, and verification codes.",
     "x-sdkwork-api-authority": "sdkwork-messaging-app-api",
     "x-sdkwork-sdk-family": "sdkwork-messaging-app-sdk"
@@ -856,7 +856,7 @@
         ],
         "responses": {
           "204": {
-            "description": "Success"
+            "description": "Deleted"
           },
           "400": {
             "description": "Bad request",
@@ -1696,7 +1696,9 @@
           },
           "totalItems": {
             "type": "string",
-            "pattern": "^[0-9]+$"
+            "format": "int64",
+            "pattern": "^[0-9]+$",
+            "x-sdkwork-int64-string": true
           },
           "totalPages": {
             "type": "integer",

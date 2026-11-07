@@ -1,4 +1,4 @@
-use sdkwork_web_core::{HttpRouteManifest, HttpRoute, HttpMethod};
+use sdkwork_web_core::{HttpMethod, HttpRoute, HttpRouteManifest};
 
 use crate::paths::SDK_DOMAIN;
 
@@ -80,18 +80,185 @@ const HTTP_ROUTES: &[HttpRoute] = &[
     .with_idempotent(true),
     HttpRoute::dual_token(
         HttpMethod::Get,
-        "/backend/v3/api/messaging/channels/{channel}",
+        "/backend/v3/api/messaging/email/accounts",
         SDK_DOMAIN,
-        "messaging.channels.retrieve",
+        "messaging.emailAccounts.list",
+    )
+    .with_required_permission("messaging.emailAccounts.get"),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/messaging/email/accounts",
+        SDK_DOMAIN,
+        "messaging.emailAccounts.create",
+    )
+    .with_required_permission("messaging.emailAccounts.post")
+    .with_idempotent(true),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/messaging/email/accounts/{accountId}",
+        SDK_DOMAIN,
+        "messaging.emailAccounts.retrieve",
+    )
+    .with_required_permission("messaging.emailAccounts.get"),
+    HttpRoute::dual_token(
+        HttpMethod::Put,
+        "/backend/v3/api/messaging/email/accounts/{accountId}",
+        SDK_DOMAIN,
+        "messaging.emailAccounts.update",
+    )
+    .with_required_permission("messaging.emailAccounts.put")
+    .with_idempotent(true),
+    HttpRoute::dual_token(
+        HttpMethod::Delete,
+        "/backend/v3/api/messaging/email/accounts/{accountId}",
+        SDK_DOMAIN,
+        "messaging.emailAccounts.delete",
+    )
+    .with_required_permission("messaging.emailAccounts.delete")
+    .with_idempotent(true),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/messaging/email/senders",
+        SDK_DOMAIN,
+        "messaging.emailSenders.list",
+    )
+    .with_required_permission("messaging.emailSenders.get"),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/messaging/email/senders",
+        SDK_DOMAIN,
+        "messaging.emailSenders.create",
+    )
+    .with_required_permission("messaging.emailSenders.post")
+    .with_idempotent(true),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/messaging/email/senders/{senderId}",
+        SDK_DOMAIN,
+        "messaging.emailSenders.retrieve",
     )
     .with_required_permission("messaging.channels.get"),
     HttpRoute::dual_token(
         HttpMethod::Put,
-        "/backend/v3/api/messaging/channels/{channel}",
+        "/backend/v3/api/messaging/email/senders/{senderId}",
         SDK_DOMAIN,
-        "messaging.channels.update",
+        "messaging.emailSenders.update",
     )
-    .with_required_permission("messaging.channels.put")
+    .with_required_permission("messaging.emailSenders.put")
+    .with_idempotent(true),
+    HttpRoute::dual_token(
+        HttpMethod::Delete,
+        "/backend/v3/api/messaging/email/senders/{senderId}",
+        SDK_DOMAIN,
+        "messaging.emailSenders.delete",
+    )
+    .with_required_permission("messaging.emailSenders.delete")
+    .with_idempotent(true),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/messaging/email/send_rules",
+        SDK_DOMAIN,
+        "messaging.emailSendRules.list",
+    )
+    .with_required_permission("messaging.emailSendRules.get"),
+    HttpRoute::dual_token(
+        HttpMethod::Put,
+        "/backend/v3/api/messaging/email/send_rules/{scenario}",
+        SDK_DOMAIN,
+        "messaging.emailSendRules.update",
+    )
+    .with_required_permission("messaging.emailSendRules.put")
+    .with_idempotent(true),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/messaging/sms/accounts",
+        SDK_DOMAIN,
+        "messaging.smsAccounts.list",
+    )
+    .with_required_permission("messaging.smsAccounts.get"),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/messaging/sms/accounts",
+        SDK_DOMAIN,
+        "messaging.smsAccounts.create",
+    )
+    .with_required_permission("messaging.smsAccounts.post")
+    .with_idempotent(true),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/messaging/sms/accounts/{accountId}",
+        SDK_DOMAIN,
+        "messaging.smsAccounts.retrieve",
+    )
+    .with_required_permission("messaging.smsAccounts.get"),
+    HttpRoute::dual_token(
+        HttpMethod::Put,
+        "/backend/v3/api/messaging/sms/accounts/{accountId}",
+        SDK_DOMAIN,
+        "messaging.smsAccounts.update",
+    )
+    .with_required_permission("messaging.smsAccounts.put")
+    .with_idempotent(true),
+    HttpRoute::dual_token(
+        HttpMethod::Delete,
+        "/backend/v3/api/messaging/sms/accounts/{accountId}",
+        SDK_DOMAIN,
+        "messaging.smsAccounts.delete",
+    )
+    .with_required_permission("messaging.smsAccounts.delete")
+    .with_idempotent(true),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/messaging/sms/signatures",
+        SDK_DOMAIN,
+        "messaging.smsSignatures.list",
+    )
+    .with_required_permission("messaging.smsSignatures.get"),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/messaging/sms/signatures",
+        SDK_DOMAIN,
+        "messaging.smsSignatures.create",
+    )
+    .with_required_permission("messaging.smsSignatures.post")
+    .with_idempotent(true),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/messaging/sms/signatures/{signatureId}",
+        SDK_DOMAIN,
+        "messaging.smsSignatures.retrieve",
+    )
+    .with_required_permission("messaging.smsSignatures.get"),
+    HttpRoute::dual_token(
+        HttpMethod::Put,
+        "/backend/v3/api/messaging/sms/signatures/{signatureId}",
+        SDK_DOMAIN,
+        "messaging.smsSignatures.update",
+    )
+    .with_required_permission("messaging.smsSignatures.put")
+    .with_idempotent(true),
+    HttpRoute::dual_token(
+        HttpMethod::Delete,
+        "/backend/v3/api/messaging/sms/signatures/{signatureId}",
+        SDK_DOMAIN,
+        "messaging.smsSignatures.delete",
+    )
+    .with_required_permission("messaging.smsSignatures.delete")
+    .with_idempotent(true),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/messaging/sms/send_rules",
+        SDK_DOMAIN,
+        "messaging.smsSendRules.list",
+    )
+    .with_required_permission("messaging.smsSendRules.get"),
+    HttpRoute::dual_token(
+        HttpMethod::Put,
+        "/backend/v3/api/messaging/sms/send_rules/{scenario}",
+        SDK_DOMAIN,
+        "messaging.smsSendRules.update",
+    )
+    .with_required_permission("messaging.smsSendRules.put")
     .with_idempotent(true),
     HttpRoute::dual_token(
         HttpMethod::Get,

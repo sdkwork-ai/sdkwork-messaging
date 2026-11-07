@@ -9,7 +9,8 @@ pub use sdkwork_messaging_database_host::{
 
 pub type MessagingDatabasePool = DatabasePool;
 
-pub async fn connect_messaging_database_pool_from_env() -> Result<MessagingDatabasePool, PoolError> {
+pub async fn connect_messaging_database_pool_from_env() -> Result<MessagingDatabasePool, PoolError>
+{
     let config = DatabaseConfig::from_env("MESSAGING")?;
     create_pool_from_config(config).await
 }

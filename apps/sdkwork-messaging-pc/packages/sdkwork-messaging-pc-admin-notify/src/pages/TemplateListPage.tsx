@@ -85,7 +85,7 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
         const result = await admin.listTemplates({
           channel,
           status: (statusFilter || undefined) as MessagingTemplateStatus | undefined,
-          keyword: debouncedKeyword || undefined,
+          q: debouncedKeyword || undefined,
           page: targetPage,
           pageSize: PAGE_SIZE,
         });

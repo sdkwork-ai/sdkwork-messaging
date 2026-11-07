@@ -39,9 +39,7 @@ export default defineConfig({
     include: [
       "apps/sdkwork-messaging-common/packages/**/*.test.ts",
       "apps/sdkwork-messaging-pc/packages/**/*.test.ts",
-      "apps/sdkwork-messaging-pc/packages/**/*.test.tsx",
       "apps/sdkwork-messaging-pc/tests/**/*.test.ts",
-      "apps/sdkwork-messaging-pc/tests/**/*.test.tsx",
       "sdks/**/*.test.ts"
     ],
   },

@@ -80,16 +80,15 @@ const service: NotificationCenterService = {
     const items = query.page === 1 ? currentFirstPage : secondPage;
     return {
       items,
-      pageInfo: { page: query.page, pageSize: query.pageSize, totalItems: 41, totalPages: 3 },
-      requestId: `visual-fixture-page-${query.page}`,
-    };
+      pageInfo: { mode: "offset", page: query.page, pageSize: query.pageSize, totalItems: "41", totalPages: 3 },
+      };
   },
   async markRead(notificationId) {
     const readAt = new Date().toISOString();
     currentFirstPage = currentFirstPage.map((item) => item.id === notificationId
       ? { ...item, status: "read", readAt }
       : item);
-    return { notificationId, status: "read", readAt, requestId: `visual-fixture-read-${notificationId}` };
+    return { notificationId, status: "read" };
   },
 };
 

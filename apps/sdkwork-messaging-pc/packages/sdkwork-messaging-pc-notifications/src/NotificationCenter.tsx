@@ -17,6 +17,11 @@ import { useNotificationCenter } from "./use-notification-center.ts";
 
 export const NOTIFICATION_CENTER_ROUTE = "/notifications";
 
+function parseTotalItems(value: string | undefined): number {
+  const parsed = Number.parseInt(value ?? "0", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
 export function NotificationCenter({
   access,
   locale,
@@ -72,7 +77,7 @@ function AuthenticatedNotificationCenter({
         <header className="notification-toolbar">
           <div className="notification-toolbar__summary">
             <strong>{t("currentPageUnread", { count: unreadCount })}</strong>
-            <span>{t("totalCount", { count: pageValue?.pageInfo.totalItems ?? 0 })}</span>
+            <span>{t("totalCount", { count: parseTotalItems(pageValue?.pageInfo.totalItems) })}</span>
           </div>
           <div className="notification-toolbar__actions">
             <label className="notification-search">
@@ -109,13 +114,13 @@ function AuthenticatedNotificationCenter({
               />
             ) : null}
 
-            {pageValue && pageValue.pageInfo.totalPages > 1 ? (
+            {pageValue && (pageValue.pageInfo.totalPages ?? 0) > 1 ? (
               <footer className="notification-pagination">
                 <button aria-label={t("previous")} className="icon-button" disabled={page <= 1} onClick={() => setPage(page - 1)} title={t("previous")} type="button">
                   <ChevronLeft aria-hidden="true" size={17} />
                 </button>
-                <span>{t("page", { current: pageValue.pageInfo.page, total: pageValue.pageInfo.totalPages })}</span>
-                <button aria-label={t("next")} className="icon-button" disabled={page >= pageValue.pageInfo.totalPages} onClick={() => setPage(page + 1)} title={t("next")} type="button">
+                <span>{t("page", { current: pageValue.pageInfo.page ?? 1, total: pageValue.pageInfo.totalPages ?? 0 })}</span>
+                <button aria-label={t("next")} className="icon-button" disabled={page >= (pageValue.pageInfo.totalPages ?? 0)} onClick={() => setPage(page + 1)} title={t("next")} type="button">
                   <ChevronRight aria-hidden="true" size={17} />
                 </button>
               </footer>

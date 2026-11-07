@@ -12,15 +12,15 @@ const requiredCurrentFiles = [
   "tsconfig.base.json",
   "vitest.config.ts",
   "Cargo.toml",
-  "packages/common/foundation/sdkwork-messaging-runtime-bootstrap/package.json",
-  "packages/common/messaging/sdkwork-messaging-contracts/package.json",
-  "packages/common/messaging/sdkwork-messaging-sdk-ports/package.json",
-  "packages/common/messaging/sdkwork-messaging-service/package.json",
-  "packages/common/messaging/sdkwork-messaging-runtime/package.json",
+  "apps/sdkwork-messaging-common/packages/sdkwork-messaging-runtime-bootstrap/package.json",
+  "apps/sdkwork-messaging-common/packages/sdkwork-messaging-contracts/package.json",
+  "apps/sdkwork-messaging-common/packages/sdkwork-messaging-sdk-ports/package.json",
+  "apps/sdkwork-messaging-common/packages/sdkwork-messaging-service/package.json",
+  "apps/sdkwork-messaging-common/packages/sdkwork-messaging-runtime/package.json",
   "crates/sdkwork-messaging-delivery-service/Cargo.toml",
   "crates/sdkwork-messaging-delivery-repository-sqlx/Cargo.toml",
   "crates/sdkwork-messaging-delivery-repository-sqlx/migrations/0001_messaging_storage.sql",
-  "crates/sdkwork-routes-messaging-app-api/Cargo.toml",
+  "crates/sdkwork-api-messaging-assembly/Cargo.toml",
   "crates/sdkwork-routes-messaging-backend-api/Cargo.toml",
   "sdks/materialize-messaging-v3-openapi-boundaries.mjs",
   "sdks/sdkwork-messaging-app-sdk/openapi/sdkwork-messaging-app-api.openapi.yaml",
@@ -167,25 +167,25 @@ assertSdkFamily({
   owner: "sdkwork-messaging",
   prefix: "/app/v3/api",
   expectedOperationIds: [
-    "messaging.notifications.list",
-    "messaging.notifications.markRead",
-    "messaging.announcements.list",
-    "messaging.announcements.acknowledge",
-    "messaging.pushDevices.register",
-    "messaging.pushDevices.unregister",
-    "messaging.verificationCodes.create",
-    "messaging.verificationCodes.verify",
+    "notifications.list",
+    "notifications.read",
+    "announcements.list",
+    "announcements.acknowledge",
+    "pushDevices.create",
+    "pushDevices.delete",
+    "verificationCodes.create",
+    "verificationCodes.verify",
   ],
 });
 
 const appOpenApi = readJson("sdks/sdkwork-messaging-app-sdk/openapi/sdkwork-messaging-app-api.openapi.yaml");
 for (const operationId of [
-  "messaging.notifications.markRead",
-  "messaging.announcements.acknowledge",
-  "messaging.pushDevices.register",
-  "messaging.pushDevices.unregister",
-  "messaging.verificationCodes.create",
-  "messaging.verificationCodes.verify",
+  "notifications.read",
+  "announcements.acknowledge",
+  "pushDevices.create",
+  "pushDevices.delete",
+  "verificationCodes.create",
+  "verificationCodes.verify",
 ]) {
   assertHasIdempotencyHeader(appOpenApi, operationId);
 }
@@ -203,26 +203,55 @@ assertSdkFamily({
   owner: "sdkwork-messaging",
   prefix: "/backend/v3/api",
   expectedOperationIds: [
-    "messaging.notifications.list",
-    "messaging.notifications.create",
-    "messaging.announcements.list",
-    "messaging.announcements.publish",
-    "messaging.pushMessages.list",
-    "messaging.pushMessages.send",
-    "messaging.outboundMessages.list",
-    "messaging.outboundMessages.send",
-    "messaging.verificationPolicies.list",
-    "messaging.verificationPolicies.update",
+    "notifications.list",
+    "notifications.create",
+    "announcements.list",
+    "announcements.create",
+    "pushMessages.list",
+    "pushMessages.create",
+    "outboundMessages.list",
+    "outboundMessages.create",
+    "verificationPolicies.list",
+    "verificationPolicies.update",
+    "emailAccounts.list",
+    "emailAccounts.create",
+    "emailAccounts.retrieve",
+    "emailAccounts.update",
+    "emailAccounts.delete",
+    "emailSenders.list",
+    "emailSenders.create",
+    "emailSenders.retrieve",
+    "emailSenders.update",
+    "emailSenders.delete",
+    "emailSendRules.list",
+    "emailSendRules.update",
+    "smsAccounts.list",
+    "smsAccounts.create",
+    "smsAccounts.retrieve",
+    "smsAccounts.update",
+    "smsAccounts.delete",
+    "smsSignatures.list",
+    "smsSignatures.create",
+    "smsSignatures.retrieve",
+    "smsSignatures.update",
+    "smsSignatures.delete",
+    "smsSendRules.list",
+    "smsSendRules.update",
+    "templates.list",
+    "templates.create",
+    "templates.retrieve",
+    "templates.update",
+    "templates.delete",
   ],
 });
 
 const backendOpenApi = readJson("sdks/sdkwork-messaging-backend-sdk/openapi/sdkwork-messaging-backend-api.openapi.yaml");
 for (const operationId of [
-  "messaging.notifications.create",
-  "messaging.announcements.publish",
-  "messaging.pushMessages.send",
-  "messaging.outboundMessages.send",
-  "messaging.verificationPolicies.update",
+  "notifications.create",
+  "announcements.create",
+  "pushMessages.create",
+  "outboundMessages.create",
+  "verificationPolicies.update",
 ]) {
   assertHasIdempotencyHeader(backendOpenApi, operationId);
 }
@@ -288,4 +317,76 @@ if (existsSync(APPBASE_ROOT)) {
   assert.doesNotMatch(lockfile, /@sdkwork\/(?:channel|contacts|social|im|rtc|comments|community)-(?:pc|mobile)-react/u);
 }
 
+
+// ---------------------------------------------------------------------------
+// Configuration schema contract (multi-provider email/SMS hardening).
+// DATABASE_SPEC §6.5 (actor audit), §6.6/DB017 (soft-delete-aware uniqueness),
+// §17 (optimistic version), §22 (messaging_channel retirement).
+
+const baselineDdl = readFileSync(
+  path.join(ROOT, "database/ddl/baseline/postgres/0001_messaging_baseline.sql"),
+  "utf8",
+);
+
+function tableBody(ddl, table) {
+  const marker = "CREATE TABLE IF NOT EXISTS ".concat(table, " (");
+  const start = ddl.indexOf(marker);
+  assert.ok(start >= 0, "baseline must declare ".concat(table));
+  const end = ddl.indexOf(");", start);
+  return ddl.slice(start, end);
+}
+
+const configTables = [
+  "messaging_email_account",
+  "messaging_email_sender",
+  "messaging_email_send_rule",
+  "messaging_sms_account",
+  "messaging_sms_signature",
+  "messaging_sms_send_rule",
+];
+
+for (const table of configTables) {
+  const body = tableBody(baselineDdl, table);
+  assert.ok(body.includes("updated_by BIGINT"), table.concat(" must carry updated_by actor audit"));
+  assert.ok(body.includes("version BIGINT NOT NULL DEFAULT 0"), table.concat(" must carry an optimistic version"));
+  assert.ok(body.includes("deleted_at TIMESTAMPTZ"), table.concat(" must be soft-delete capable"));
+}
+
+// Secret material lives on the provider-account tables only.
+for (const accountTable of ["messaging_email_account", "messaging_sms_account"]) {
+  const body = tableBody(baselineDdl, accountTable);
+  assert.ok(body.includes("secret_ciphertext VARCHAR"), accountTable.concat(" must keep encrypted secret storage"));
+  assert.ok(body.includes("secret_fingerprint VARCHAR"), accountTable.concat(" must keep the secret fingerprint column"));
+}
+
+// Soft-delete-aware uniqueness: partial unique indexes over live rows only.
+for (const indexName of [
+  "uk_messaging_email_account_scope_name",
+  "uk_messaging_email_sender_address",
+  "uk_messaging_email_send_rule_scope_scenario",
+  "uk_messaging_sms_account_scope_name",
+  "uk_messaging_sms_signature_scope_name",
+  "uk_messaging_sms_send_rule_scope_scenario",
+]) {
+  const marker = "CREATE UNIQUE INDEX IF NOT EXISTS ".concat(indexName);
+  const indexStart = baselineDdl.indexOf(marker);
+  assert.ok(indexStart >= 0, "baseline must declare partial unique index ".concat(indexName));
+  const indexEnd = baselineDdl.indexOf(";", indexStart);
+  const indexDdl = baselineDdl.slice(indexStart, indexEnd);
+  assert.ok(indexDdl.includes("WHERE deleted_at IS NULL"), indexName.concat(" must be partial over live rows"));
+  assert.ok(!baselineDdl.includes("CONSTRAINT ".concat(indexName, " UNIQUE")), indexName.concat(" must not remain a table constraint"));
+}
+
+// Retired legacy channel surface: the multi-provider tables replaced it.
+assert.ok(!baselineDdl.includes("CREATE TABLE IF NOT EXISTS messaging_channel"), "messaging_channel must be retired from the baseline");
+assert.ok(!baselineDdl.includes("uk_messaging_channel_scope"), "messaging_channel scope constraint must be retired");
+
+const retireMigration = readFileSync(
+  path.join(ROOT, "database/migrations/postgres/0004_config_hardening.up.sql"),
+  "utf8",
+);
+assert.ok(retireMigration.includes("DROP TABLE IF EXISTS messaging_channel"), "0004 must drop messaging_channel");
+assert.ok(retireMigration.includes("WHERE deleted_at IS NULL"), "0004 must convert uniqueness to partial indexes");
+
 console.log("sdkwork-messaging migration contract checks passed.");
+

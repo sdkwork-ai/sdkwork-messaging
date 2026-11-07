@@ -29,7 +29,6 @@ pub struct MessagingStorageCapabilityManifest {
     pub push_tables: Vec<&'static str>,
     pub outbound_tables: Vec<&'static str>,
     pub verification_tables: Vec<&'static str>,
-    pub channel_tables: Vec<&'static str>,
     pub template_tables: Vec<&'static str>,
     pub migrations: Vec<&'static str>,
     pub repository_bindings: Vec<MessagingRepositoryBinding>,
@@ -67,10 +66,6 @@ pub fn messaging_verification_tables() -> Vec<&'static str> {
     ]
 }
 
-pub fn messaging_channel_tables() -> Vec<&'static str> {
-    vec!["messaging_channel"]
-}
-
 pub fn messaging_template_tables() -> Vec<&'static str> {
     vec!["messaging_template"]
 }
@@ -81,7 +76,6 @@ pub fn messaging_storage_tables() -> Vec<&'static str> {
     tables.extend(messaging_push_tables());
     tables.extend(messaging_outbound_tables());
     tables.extend(messaging_verification_tables());
-    tables.extend(messaging_channel_tables());
     tables.extend(messaging_template_tables());
     tables
 }
@@ -104,7 +98,6 @@ pub fn messaging_storage_capability_manifest() -> MessagingStorageCapabilityMani
         push_tables: messaging_push_tables(),
         outbound_tables: messaging_outbound_tables(),
         verification_tables: messaging_verification_tables(),
-        channel_tables: messaging_channel_tables(),
         template_tables: messaging_template_tables(),
         migrations: vec![MESSAGING_STORAGE_MIGRATION],
         repository_bindings: vec![
@@ -136,12 +129,6 @@ pub fn messaging_storage_capability_manifest() -> MessagingStorageCapabilityMani
                 domain: "messaging",
                 repository_name: "MessagingVerificationRepository",
                 tables: messaging_verification_tables(),
-                requires_transaction: true,
-            },
-            MessagingRepositoryBinding {
-                domain: "messaging",
-                repository_name: "MessagingChannelRepository",
-                tables: messaging_channel_tables(),
                 requires_transaction: true,
             },
             MessagingRepositoryBinding {

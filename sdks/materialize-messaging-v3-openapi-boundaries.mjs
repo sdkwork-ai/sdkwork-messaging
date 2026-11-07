@@ -6,7 +6,7 @@ import { alignOpenApiOperationPatterns } from "../../sdkwork-specs/tools/lib/ali
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const GENERATOR_PATH = path.resolve(ROOT, "../sdkwork-sdk-generator/bin/sdkgen.js");
-const VERSION = "1.0.0";
+const VERSION = "1.2.0";
 const OWNER = "sdkwork-messaging";
 
 const FAMILIES = [
@@ -58,17 +58,43 @@ const FAMILIES = [
       route("POST", "/backend/v3/api/messaging/outbound_messages", "messaging.outboundMessages.send", "messaging.outboundMessages", "messaging.outbound_messages.send", "MessagingOutboundMessageSendRequest", "MessagingOutboundMessageResponse", true),
       route("GET", "/backend/v3/api/messaging/verification_policies", "messaging.verificationPolicies.list", "messaging.verificationPolicies", "messaging.verification_policies.list", null, "MessagingVerificationPolicyListResponse", false),
       route("PUT", "/backend/v3/api/messaging/verification_policies/{policyId}", "messaging.verificationPolicies.update", "messaging.verificationPolicies", "messaging.verification_policies.update", "MessagingVerificationPolicyUpdateRequest", "MessagingVerificationPolicyResponse", true, [pathParameter("policyId")]),
-      route("GET", "/backend/v3/api/messaging/channels/{channel}", "messaging.channels.retrieve", "messaging.channels", "messaging.channels.retrieve", null, "MessagingChannelResponse", false, [channelParameter()]),
-      route("PUT", "/backend/v3/api/messaging/channels/{channel}", "messaging.channels.update", "messaging.channels", "messaging.channels.update", "MessagingChannelUpdateRequest", "MessagingChannelResponse", true, [channelParameter()]),
+      route("GET", "/backend/v3/api/messaging/email/accounts", "messaging.emailAccounts.list", "messaging.emailAccounts", "messaging.emailAccounts.list", null, "MessagingEmailAccountListResponse", false),
+      route("POST", "/backend/v3/api/messaging/email/accounts", "messaging.emailAccounts.create", "messaging.emailAccounts", "messaging.emailAccounts.create", "MessagingEmailAccountCreateRequest", "MessagingEmailAccountResponse", true),
+      route("GET", "/backend/v3/api/messaging/email/accounts/{accountId}", "messaging.emailAccounts.retrieve", "messaging.emailAccounts", "messaging.emailAccounts.retrieve", null, "MessagingEmailAccountResponse", false, [accountIdParameter()]),
+      route("PUT", "/backend/v3/api/messaging/email/accounts/{accountId}", "messaging.emailAccounts.update", "messaging.emailAccounts", "messaging.emailAccounts.update", "MessagingEmailAccountUpdateRequest", "MessagingEmailAccountResponse", true, [accountIdParameter()]),
+      route("DELETE", "/backend/v3/api/messaging/email/accounts/{accountId}", "messaging.emailAccounts.delete", "messaging.emailAccounts", "messaging.emailAccounts.delete", null, null, true, [accountIdParameter()]),
+      route("GET", "/backend/v3/api/messaging/email/senders", "messaging.emailSenders.list", "messaging.emailSenders", "messaging.emailSenders.list", null, "MessagingEmailSenderListResponse", false, [accountIdQueryParameter()]),
+      route("POST", "/backend/v3/api/messaging/email/senders", "messaging.emailSenders.create", "messaging.emailSenders", "messaging.emailSenders.create", "MessagingEmailSenderCreateRequest", "MessagingEmailSenderResponse", true),
+      route("GET", "/backend/v3/api/messaging/email/senders/{senderId}", "messaging.emailSenders.retrieve", "messaging.emailSenders", "messaging.emailSenders.retrieve", null, "MessagingEmailSenderResponse", false, [senderIdParameter()]),
+      route("PUT", "/backend/v3/api/messaging/email/senders/{senderId}", "messaging.emailSenders.update", "messaging.emailSenders", "messaging.emailSenders.update", "MessagingEmailSenderUpdateRequest", "MessagingEmailSenderResponse", true, [senderIdParameter()]),
+      route("DELETE", "/backend/v3/api/messaging/email/senders/{senderId}", "messaging.emailSenders.delete", "messaging.emailSenders", "messaging.emailSenders.delete", null, null, true, [senderIdParameter()]),
+      // Bounded collection: exactly four scenario rows exist per scope (schema-enforced
+      // by uk_messaging_email_send_rule_scope_scenario); pagination omitted per PAGINATION_SPEC §11.
+      route("GET", "/backend/v3/api/messaging/email/send_rules", "messaging.emailSendRules.list", "messaging.emailSendRules", "messaging.emailSendRules.list", null, "MessagingEmailSendRuleListResponse", false),
+      route("PUT", "/backend/v3/api/messaging/email/send_rules/{scenario}", "messaging.emailSendRules.update", "messaging.emailSendRules", "messaging.emailSendRules.update", "MessagingEmailSendRuleUpdateRequest", "MessagingEmailSendRuleResponse", true, [scenarioParameter()]),
+      route("GET", "/backend/v3/api/messaging/sms/accounts", "messaging.smsAccounts.list", "messaging.smsAccounts", "messaging.smsAccounts.list", null, "MessagingSmsAccountListResponse", false),
+      route("POST", "/backend/v3/api/messaging/sms/accounts", "messaging.smsAccounts.create", "messaging.smsAccounts", "messaging.smsAccounts.create", "MessagingSmsAccountCreateRequest", "MessagingSmsAccountResponse", true),
+      route("GET", "/backend/v3/api/messaging/sms/accounts/{accountId}", "messaging.smsAccounts.retrieve", "messaging.smsAccounts", "messaging.smsAccounts.retrieve", null, "MessagingSmsAccountResponse", false, [accountIdParameter()]),
+      route("PUT", "/backend/v3/api/messaging/sms/accounts/{accountId}", "messaging.smsAccounts.update", "messaging.smsAccounts", "messaging.smsAccounts.update", "MessagingSmsAccountUpdateRequest", "MessagingSmsAccountResponse", true, [accountIdParameter()]),
+      route("DELETE", "/backend/v3/api/messaging/sms/accounts/{accountId}", "messaging.smsAccounts.delete", "messaging.smsAccounts", "messaging.smsAccounts.delete", null, null, true, [accountIdParameter()]),
+      route("GET", "/backend/v3/api/messaging/sms/signatures", "messaging.smsSignatures.list", "messaging.smsSignatures", "messaging.smsSignatures.list", null, "MessagingSmsSignatureListResponse", false, [accountIdQueryParameter()]),
+      route("POST", "/backend/v3/api/messaging/sms/signatures", "messaging.smsSignatures.create", "messaging.smsSignatures", "messaging.smsSignatures.create", "MessagingSmsSignatureCreateRequest", "MessagingSmsSignatureResponse", true),
+      route("GET", "/backend/v3/api/messaging/sms/signatures/{signatureId}", "messaging.smsSignatures.retrieve", "messaging.smsSignatures", "messaging.smsSignatures.retrieve", null, "MessagingSmsSignatureResponse", false, [signatureIdParameter()]),
+      route("PUT", "/backend/v3/api/messaging/sms/signatures/{signatureId}", "messaging.smsSignatures.update", "messaging.smsSignatures", "messaging.smsSignatures.update", "MessagingSmsSignatureUpdateRequest", "MessagingSmsSignatureResponse", true, [signatureIdParameter()]),
+      route("DELETE", "/backend/v3/api/messaging/sms/signatures/{signatureId}", "messaging.smsSignatures.delete", "messaging.smsSignatures", "messaging.smsSignatures.delete", null, null, true, [signatureIdParameter()]),
+      // Bounded collection: exactly four scenario rows exist per scope (schema-enforced
+      // by uk_messaging_sms_send_rule_scope_scenario); pagination omitted per PAGINATION_SPEC §11.
+      route("GET", "/backend/v3/api/messaging/sms/send_rules", "messaging.smsSendRules.list", "messaging.smsSendRules", "messaging.smsSendRules.list", null, "MessagingSmsSendRuleListResponse", false),
+      route("PUT", "/backend/v3/api/messaging/sms/send_rules/{scenario}", "messaging.smsSendRules.update", "messaging.smsSendRules", "messaging.smsSendRules.update", "MessagingSmsSendRuleUpdateRequest", "MessagingSmsSendRuleResponse", true, [scenarioParameter()]),
       route("GET", "/backend/v3/api/messaging/templates", "messaging.templates.list", "messaging.templates", "messaging.templates.list", null, "MessagingTemplateListResponse", false, [
         queryParameter("channel", { type: "string", enum: ["sms", "email"] }),
         queryParameter("status", { type: "string", enum: ["draft", "active", "disabled"] }),
-        queryParameter("keyword", { type: "string", maxLength: 128 }),
+        queryParameter("q", { type: "string", maxLength: 128 }),
       ]),
       route("POST", "/backend/v3/api/messaging/templates", "messaging.templates.create", "messaging.templates", "messaging.templates.create", "MessagingTemplateCreateRequest", "MessagingTemplateResponse", true),
       route("GET", "/backend/v3/api/messaging/templates/{templateId}", "messaging.templates.retrieve", "messaging.templates", "messaging.templates.retrieve", null, "MessagingTemplateResponse", false, [pathParameter("templateId")]),
       route("PUT", "/backend/v3/api/messaging/templates/{templateId}", "messaging.templates.update", "messaging.templates", "messaging.templates.update", "MessagingTemplateUpdateRequest", "MessagingTemplateResponse", true, [pathParameter("templateId")]),
-      route("DELETE", "/backend/v3/api/messaging/templates/{templateId}", "messaging.templates.delete", "messaging.templates", "messaging.templates.delete", null, "MessagingTemplateDeleteResponse", true, [pathParameter("templateId")]),
+      route("DELETE", "/backend/v3/api/messaging/templates/{templateId}", "messaging.templates.delete", "messaging.templates", "messaging.templates.delete", null, null, true, [pathParameter("templateId")]),
     ],
   },
 ];
@@ -110,13 +136,32 @@ function pathParameter(name) {
   };
 }
 
-function channelParameter() {
+function accountIdParameter() {
+  return pathParameter("accountId");
+}
+
+function signatureIdParameter() {
+  return pathParameter("signatureId");
+}
+
+function senderIdParameter() {
+  return pathParameter("senderId");
+}
+
+function scenarioParameter() {
   return {
-    name: "channel",
+    name: "scenario",
     in: "path",
     required: true,
-    schema: { type: "string", enum: ["sms", "email"] },
+    schema: {
+      type: "string",
+      enum: ["default", "verification_code", "system_notification", "marketing"],
+    },
   };
+}
+
+function accountIdQueryParameter() {
+  return queryParameter("account_id", { type: "string", pattern: "^[0-9]+$" });
 }
 
 function queryParameter(name, schema) {
@@ -177,6 +222,12 @@ function problemResponses() {
     409: response("Conflict"),
     429: response("Rate limit exceeded"),
     500: response("Internal server error"),
+  };
+}
+
+function noContentResponse() {
+  return {
+    description: "Deleted",
   };
 }
 
@@ -451,27 +502,186 @@ function schemas() {
       requestId,
     }),
     MessagingVerificationPolicyListResponse: envelope("MessagingVerificationPolicyListResponse", "MessagingVerificationPolicy"),
-    MessagingChannel: object(["id", "channel", "provider", "hasSecret", "enabled"], {
+    MessagingSmsAccount: object(["id", "name", "provider", "hasSecret", "enabled", "version"], {
       id,
-      channel: directChannel,
-      provider: { type: "string", enum: ["smtp", "aliyun", "tencent", "generic_http"] },
+      name: { type: "string", minLength: 1, maxLength: 128 },
+      provider: { type: "string", enum: ["aliyun", "tencent", "huawei", "yuntongxun", "submail", "chuanglan", "twilio", "generic_http"] },
       config: { type: "object", additionalProperties: true },
       hasSecret: { type: "boolean" },
       keyDisplayMasked: { type: "string", readOnly: true },
       enabled: { type: "boolean" },
       createdAt: { type: "string", format: "date-time" },
       updatedAt: { type: "string", format: "date-time" },
+      version: int64,
     }),
-    MessagingChannelUpdateRequest: object(["provider", "config", "enabled"], {
-      provider: { type: "string", enum: ["smtp", "aliyun", "tencent", "generic_http"] },
+    MessagingSmsAccountCreateRequest: object(["name", "provider", "config", "enabled"], {
+      name: { type: "string", minLength: 1, maxLength: 128 },
+      provider: { type: "string", enum: ["aliyun", "tencent", "huawei", "yuntongxun", "submail", "chuanglan", "twilio", "generic_http"] },
       config: { type: "object", additionalProperties: true },
       secret: { type: "string", writeOnly: true, "x-sensitive": true },
       enabled: { type: "boolean" },
     }),
-    MessagingChannelResponse: object(["item", "requestId"], {
-      item: { $ref: "#/components/schemas/MessagingChannel" },
+    MessagingSmsAccountUpdateRequest: object(["name", "provider", "config", "enabled", "expectedVersion"], {
+      name: { type: "string", minLength: 1, maxLength: 128 },
+      provider: { type: "string", enum: ["aliyun", "tencent", "huawei", "yuntongxun", "submail", "chuanglan", "twilio", "generic_http"] },
+      config: { type: "object", additionalProperties: true },
+      secret: { type: "string", writeOnly: true, "x-sensitive": true },
+      enabled: { type: "boolean" },
+      expectedVersion: int64,
+    }),
+    MessagingSmsAccountResponse: object(["item", "requestId"], {
+      item: { $ref: "#/components/schemas/MessagingSmsAccount" },
       requestId,
     }),
+    MessagingSmsAccountListResponse: envelope("MessagingSmsAccountListResponse", "MessagingSmsAccount"),
+    MessagingSmsSignature: object(["id", "accountId", "accountName", "signName", "enabled", "version"], {
+      id,
+      accountId: id,
+      accountName: { type: "string", minLength: 1 },
+      signName: { type: "string", minLength: 1, maxLength: 64 },
+      enabled: { type: "boolean" },
+      createdAt: { type: "string", format: "date-time" },
+      updatedAt: { type: "string", format: "date-time" },
+      version: int64,
+    }),
+    MessagingSmsSignatureCreateRequest: object(["accountId", "signName", "enabled"], {
+      accountId: id,
+      signName: { type: "string", minLength: 1, maxLength: 64 },
+      enabled: { type: "boolean" },
+    }),
+    MessagingSmsSignatureUpdateRequest: object(["signName", "enabled", "expectedVersion"], {
+      signName: { type: "string", minLength: 1, maxLength: 64 },
+      enabled: { type: "boolean" },
+      expectedVersion: int64,
+    }),
+    MessagingSmsSignatureResponse: object(["item", "requestId"], {
+      item: { $ref: "#/components/schemas/MessagingSmsSignature" },
+      requestId,
+    }),
+    MessagingSmsSignatureListResponse: envelope("MessagingSmsSignatureListResponse", "MessagingSmsSignature"),
+    MessagingSmsSendRuleStep: object(["signatureId", "accountId", "accountName", "signName"], {
+      signatureId: id,
+      accountId: id,
+      accountName: { type: "string", minLength: 1 },
+      signName: { type: "string", minLength: 1, maxLength: 64 },
+      enabled: { type: "boolean" },
+    }),
+    MessagingSmsSendRule: object(["scenario", "chain", "enabled", "version"], {
+      scenario: { type: "string", enum: ["default", "verification_code", "system_notification", "marketing"] },
+      chain: {
+        type: "array",
+        items: { $ref: "#/components/schemas/MessagingSmsSendRuleStep" },
+      },
+      enabled: { type: "boolean" },
+      updatedAt: { type: "string", format: "date-time" },
+      version: int64,
+    }),
+    MessagingSmsSendRuleUpdateRequest: object(["signatureIds", "enabled", "expectedVersion"], {
+      signatureIds: {
+        type: "array",
+        maxItems: 50,
+        items: id,
+      },
+      enabled: { type: "boolean" },
+      expectedVersion: int64,
+    }),
+    MessagingSmsSendRuleResponse: object(["item", "requestId"], {
+      item: { $ref: "#/components/schemas/MessagingSmsSendRule" },
+      requestId,
+    }),
+    MessagingSmsSendRuleListResponse: envelope("MessagingSmsSendRuleListResponse", "MessagingSmsSendRule"),
+    MessagingEmailAccount: object(["id", "name", "provider", "hasSecret", "enabled", "version"], {
+      id,
+      name: { type: "string", minLength: 1, maxLength: 128 },
+      provider: { type: "string", enum: ["smtp", "aliyun", "tencent", "sendgrid", "mailgun", "amazon_ses", "postmark", "resend"] },
+      config: { type: "object", additionalProperties: true },
+      hasSecret: { type: "boolean" },
+      keyDisplayMasked: { type: "string", readOnly: true },
+      enabled: { type: "boolean" },
+      createdAt: { type: "string", format: "date-time" },
+      updatedAt: { type: "string", format: "date-time" },
+      version: int64,
+    }),
+    MessagingEmailAccountCreateRequest: object(["name", "provider", "config", "enabled"], {
+      name: { type: "string", minLength: 1, maxLength: 128 },
+      provider: { type: "string", enum: ["smtp", "aliyun", "tencent", "sendgrid", "mailgun", "amazon_ses", "postmark", "resend"] },
+      config: { type: "object", additionalProperties: true },
+      secret: { type: "string", writeOnly: true, "x-sensitive": true },
+      enabled: { type: "boolean" },
+    }),
+    MessagingEmailAccountUpdateRequest: object(["name", "provider", "config", "enabled", "expectedVersion"], {
+      name: { type: "string", minLength: 1, maxLength: 128 },
+      provider: { type: "string", enum: ["smtp", "aliyun", "tencent", "sendgrid", "mailgun", "amazon_ses", "postmark", "resend"] },
+      config: { type: "object", additionalProperties: true },
+      secret: { type: "string", writeOnly: true, "x-sensitive": true },
+      enabled: { type: "boolean" },
+      expectedVersion: int64,
+    }),
+    MessagingEmailAccountResponse: object(["item", "requestId"], {
+      item: { $ref: "#/components/schemas/MessagingEmailAccount" },
+      requestId,
+    }),
+    MessagingEmailAccountListResponse: envelope("MessagingEmailAccountListResponse", "MessagingEmailAccount"),
+    MessagingEmailSender: object(["id", "accountId", "accountName", "fromAddress", "enabled", "version"], {
+      id,
+      accountId: id,
+      accountName: { type: "string", minLength: 1 },
+      fromAddress: { type: "string", minLength: 3, maxLength: 320 },
+      fromName: { type: "string", maxLength: 192 },
+      enabled: { type: "boolean" },
+      createdAt: { type: "string", format: "date-time" },
+      updatedAt: { type: "string", format: "date-time" },
+      version: int64,
+    }),
+    MessagingEmailSenderCreateRequest: object(["accountId", "fromAddress", "enabled"], {
+      accountId: id,
+      fromAddress: { type: "string", minLength: 3, maxLength: 320 },
+      fromName: { type: "string", maxLength: 192 },
+      enabled: { type: "boolean" },
+    }),
+    MessagingEmailSenderUpdateRequest: object(["fromAddress", "enabled", "expectedVersion"], {
+      fromAddress: { type: "string", minLength: 3, maxLength: 320 },
+      fromName: { type: "string", maxLength: 192 },
+      enabled: { type: "boolean" },
+      expectedVersion: int64,
+    }),
+    MessagingEmailSenderResponse: object(["item", "requestId"], {
+      item: { $ref: "#/components/schemas/MessagingEmailSender" },
+      requestId,
+    }),
+    MessagingEmailSenderListResponse: envelope("MessagingEmailSenderListResponse", "MessagingEmailSender"),
+    MessagingEmailSendRuleStep: object(["senderId", "accountId", "accountName", "fromAddress"], {
+      senderId: id,
+      accountId: id,
+      accountName: { type: "string", minLength: 1 },
+      fromAddress: { type: "string", minLength: 3, maxLength: 320 },
+      fromName: { type: "string", maxLength: 192 },
+      enabled: { type: "boolean" },
+    }),
+    MessagingEmailSendRule: object(["scenario", "chain", "enabled", "version"], {
+      scenario: { type: "string", enum: ["default", "verification_code", "system_notification", "marketing"] },
+      chain: {
+        type: "array",
+        items: { $ref: "#/components/schemas/MessagingEmailSendRuleStep" },
+      },
+      enabled: { type: "boolean" },
+      updatedAt: { type: "string", format: "date-time" },
+      version: int64,
+    }),
+    MessagingEmailSendRuleUpdateRequest: object(["senderIds", "enabled", "expectedVersion"], {
+      senderIds: {
+        type: "array",
+        maxItems: 50,
+        items: id,
+      },
+      enabled: { type: "boolean" },
+      expectedVersion: int64,
+    }),
+    MessagingEmailSendRuleResponse: object(["item", "requestId"], {
+      item: { $ref: "#/components/schemas/MessagingEmailSendRule" },
+      requestId,
+    }),
+    MessagingEmailSendRuleListResponse: envelope("MessagingEmailSendRuleListResponse", "MessagingEmailSendRule"),
     MessagingTemplate: object(["id", "channel", "templateCode", "name", "content", "approvalStatus", "status"], {
       id,
       channel: directChannel,
@@ -512,11 +722,6 @@ function schemas() {
       requestId,
     }),
     MessagingTemplateListResponse: envelope("MessagingTemplateListResponse", "MessagingTemplate"),
-    MessagingTemplateDeleteResponse: object(["templateId", "deleted", "requestId"], {
-      templateId: id,
-      deleted: { type: "boolean" },
-      requestId,
-    }),
   };
 }
 
@@ -590,10 +795,16 @@ function operation(family, routeItem) {
       ...(routeItem.idempotent ? [idempotencyHeaderParameter()] : []),
       ...(routeItem.method === "GET" ? pageParameters() : []),
     ],
-    responses: {
-      200: jsonResponse(routeItem.responseSchema),
-      ...problemResponses(),
-    },
+    responses:
+      routeItem.method === "DELETE"
+        ? {
+            204: noContentResponse(),
+            ...problemResponses(),
+          }
+        : {
+            200: jsonResponse(routeItem.responseSchema),
+            ...problemResponses(),
+          },
     security: security(),
     "x-sdkwork-owner": OWNER,
     "x-sdkwork-api-authority": family.apiAuthority,

@@ -17,7 +17,7 @@
     {
       "method": "GET",
       "path": "/app/v3/api/messaging/notifications",
-      "operationId": "messaging.notifications.list",
+      "operationId": "notifications.list",
       "tags": [
         "messaging"
       ],
@@ -27,7 +27,7 @@
       },
       "handler": {
         "module": "crate::handlers",
-        "name": "messaging_notifications_list"
+        "name": "notifications_list"
       },
       "schemas": {
         "request": null,
@@ -50,7 +50,7 @@
     {
       "method": "POST",
       "path": "/app/v3/api/messaging/notifications/{notificationId}/read",
-      "operationId": "messaging.notifications.read",
+      "operationId": "notifications.read",
       "tags": [
         "messaging"
       ],
@@ -60,7 +60,7 @@
       },
       "handler": {
         "module": "crate::handlers",
-        "name": "messaging_notifications_read"
+        "name": "notifications_read"
       },
       "schemas": {
         "request": null,
@@ -83,7 +83,7 @@
     {
       "method": "GET",
       "path": "/app/v3/api/messaging/announcements",
-      "operationId": "messaging.announcements.list",
+      "operationId": "announcements.list",
       "tags": [
         "messaging"
       ],
@@ -93,7 +93,7 @@
       },
       "handler": {
         "module": "crate::handlers",
-        "name": "messaging_announcements_list"
+        "name": "announcements_list"
       },
       "schemas": {
         "request": null,
@@ -116,7 +116,7 @@
     {
       "method": "POST",
       "path": "/app/v3/api/messaging/announcements/{announcementId}/acknowledge",
-      "operationId": "messaging.announcements.acknowledge",
+      "operationId": "announcements.acknowledge",
       "tags": [
         "messaging"
       ],
@@ -126,7 +126,7 @@
       },
       "handler": {
         "module": "crate::handlers",
-        "name": "messaging_announcements_acknowledge"
+        "name": "announcements_acknowledge"
       },
       "schemas": {
         "request": null,
@@ -149,7 +149,7 @@
     {
       "method": "POST",
       "path": "/app/v3/api/messaging/push_devices",
-      "operationId": "messaging.pushDevices.create",
+      "operationId": "pushDevices.create",
       "tags": [
         "messaging"
       ],
@@ -159,7 +159,7 @@
       },
       "handler": {
         "module": "crate::handlers",
-        "name": "messaging_pushDevices_create"
+        "name": "pushDevices_create"
       },
       "schemas": {
         "request": "MessagingPushDeviceRegisterRequest",
@@ -182,7 +182,7 @@
     {
       "method": "DELETE",
       "path": "/app/v3/api/messaging/push_devices/{deviceId}",
-      "operationId": "messaging.pushDevices.delete",
+      "operationId": "pushDevices.delete",
       "tags": [
         "messaging"
       ],
@@ -192,7 +192,7 @@
       },
       "handler": {
         "module": "crate::handlers",
-        "name": "messaging_pushDevices_delete"
+        "name": "pushDevices_delete"
       },
       "schemas": {
         "request": null,
@@ -215,7 +215,7 @@
     {
       "method": "POST",
       "path": "/app/v3/api/messaging/verification_codes",
-      "operationId": "messaging.verificationCodes.create",
+      "operationId": "verificationCodes.create",
       "tags": [
         "messaging"
       ],
@@ -225,7 +225,7 @@
       },
       "handler": {
         "module": "crate::handlers",
-        "name": "messaging_verificationCodes_create"
+        "name": "verificationCodes_create"
       },
       "schemas": {
         "request": "MessagingVerificationCodeCreateRequest",
@@ -248,7 +248,7 @@
     {
       "method": "POST",
       "path": "/app/v3/api/messaging/verification_codes/verify",
-      "operationId": "messaging.verificationCodes.verify",
+      "operationId": "verificationCodes.verify",
       "tags": [
         "messaging"
       ],
@@ -258,7 +258,7 @@
       },
       "handler": {
         "module": "crate::handlers",
-        "name": "messaging_verificationCodes_verify"
+        "name": "verificationCodes_verify"
       },
       "schemas": {
         "request": "MessagingVerificationCodeVerifyRequest",

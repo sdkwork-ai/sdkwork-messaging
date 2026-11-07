@@ -306,28 +306,6 @@ CREATE TABLE IF NOT EXISTS messaging_verification_attempt (
     CONSTRAINT uk_messaging_verification_attempt_idempotency UNIQUE (tenant_id, organization_id, challenge_id, idempotency_key)
 );
 
-CREATE TABLE IF NOT EXISTS messaging_channel (
-    id BIGINT PRIMARY KEY,
-    uuid VARCHAR(64) NOT NULL UNIQUE,
-    tenant_id BIGINT NOT NULL DEFAULT 0,
-    organization_id BIGINT NOT NULL DEFAULT 0,
-    channel VARCHAR(32) NOT NULL,
-    provider VARCHAR(64) NOT NULL,
-    config_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-    secret_ciphertext VARCHAR,
-    secret_key_id VARCHAR,
-    secret_fingerprint VARCHAR,
-    enabled BOOLEAN NOT NULL DEFAULT TRUE,
-    created_by BIGINT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    version BIGINT NOT NULL DEFAULT 0,
-    deleted_at TIMESTAMPTZ,
-    deleted_by BIGINT,
-    CONSTRAINT ck_messaging_channel_channel CHECK (channel IN ('sms', 'email')),
-    CONSTRAINT ck_messaging_channel_provider CHECK (provider IN ('smtp', 'aliyun', 'tencent', 'generic_http')),
-    CONSTRAINT uk_messaging_channel_scope UNIQUE (tenant_id, organization_id, channel)
-);
 
 CREATE TABLE IF NOT EXISTS messaging_template (
     id BIGINT PRIMARY KEY,
@@ -353,6 +331,123 @@ CREATE TABLE IF NOT EXISTS messaging_template (
     CONSTRAINT ck_messaging_template_approval_status CHECK (approval_status IN ('not_applicable', 'pending', 'approved', 'rejected')),
     CONSTRAINT ck_messaging_template_status CHECK (status IN ('draft', 'active', 'disabled')),
     CONSTRAINT uk_messaging_template_scope_code UNIQUE (tenant_id, organization_id, channel, template_code)
+);
+
+CREATE TABLE IF NOT EXISTS messaging_email_account (
+    id BIGINT PRIMARY KEY,
+    uuid VARCHAR(64) NOT NULL UNIQUE,
+    tenant_id BIGINT NOT NULL DEFAULT 0,
+    organization_id BIGINT NOT NULL DEFAULT 0,
+    name VARCHAR(128) NOT NULL,
+    provider VARCHAR(64) NOT NULL,
+    config_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    secret_ciphertext VARCHAR,
+    secret_key_id VARCHAR,
+    secret_fingerprint VARCHAR,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by BIGINT,
+    updated_by BIGINT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT NOT NULL DEFAULT 0,
+    deleted_at TIMESTAMPTZ,
+    deleted_by BIGINT,
+    CONSTRAINT ck_messaging_email_account_provider CHECK (provider IN ('smtp', 'aliyun', 'tencent', 'sendgrid', 'mailgun', 'amazon_ses', 'postmark', 'resend'))
+);
+
+CREATE TABLE IF NOT EXISTS messaging_email_sender (
+    id BIGINT PRIMARY KEY,
+    uuid VARCHAR(64) NOT NULL UNIQUE,
+    tenant_id BIGINT NOT NULL DEFAULT 0,
+    organization_id BIGINT NOT NULL DEFAULT 0,
+    account_id BIGINT NOT NULL,
+    from_address VARCHAR(320) NOT NULL,
+    from_name VARCHAR(192),
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by BIGINT,
+    updated_by BIGINT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT NOT NULL DEFAULT 0,
+    deleted_at TIMESTAMPTZ,
+    deleted_by BIGINT,
+    CONSTRAINT fk_messaging_email_sender_account FOREIGN KEY (account_id) REFERENCES messaging_email_account(id)
+);
+
+CREATE TABLE IF NOT EXISTS messaging_email_send_rule (
+    id BIGINT PRIMARY KEY,
+    uuid VARCHAR(64) NOT NULL UNIQUE,
+    tenant_id BIGINT NOT NULL DEFAULT 0,
+    organization_id BIGINT NOT NULL DEFAULT 0,
+    scenario VARCHAR(64) NOT NULL,
+    chain_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by BIGINT,
+    updated_by BIGINT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT NOT NULL DEFAULT 0,
+    deleted_at TIMESTAMPTZ,
+    deleted_by BIGINT,
+    CONSTRAINT ck_messaging_email_send_rule_scenario CHECK (scenario IN ('default', 'verification_code', 'system_notification', 'marketing'))
+);
+
+CREATE TABLE IF NOT EXISTS messaging_sms_account (
+    id BIGINT PRIMARY KEY,
+    uuid VARCHAR(64) NOT NULL UNIQUE,
+    tenant_id BIGINT NOT NULL DEFAULT 0,
+    organization_id BIGINT NOT NULL DEFAULT 0,
+    name VARCHAR(128) NOT NULL,
+    provider VARCHAR(64) NOT NULL,
+    config_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    secret_ciphertext VARCHAR,
+    secret_key_id VARCHAR,
+    secret_fingerprint VARCHAR,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by BIGINT,
+    updated_by BIGINT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT NOT NULL DEFAULT 0,
+    deleted_at TIMESTAMPTZ,
+    deleted_by BIGINT,
+    CONSTRAINT ck_messaging_sms_account_provider CHECK (provider IN ('aliyun', 'tencent', 'huawei', 'yuntongxun', 'submail', 'chuanglan', 'twilio', 'generic_http'))
+);
+
+CREATE TABLE IF NOT EXISTS messaging_sms_signature (
+    id BIGINT PRIMARY KEY,
+    uuid VARCHAR(64) NOT NULL UNIQUE,
+    tenant_id BIGINT NOT NULL DEFAULT 0,
+    organization_id BIGINT NOT NULL DEFAULT 0,
+    account_id BIGINT NOT NULL,
+    sign_name VARCHAR(64) NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by BIGINT,
+    updated_by BIGINT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT NOT NULL DEFAULT 0,
+    deleted_at TIMESTAMPTZ,
+    deleted_by BIGINT,
+    CONSTRAINT fk_messaging_sms_signature_account FOREIGN KEY (account_id) REFERENCES messaging_sms_account(id)
+);
+
+CREATE TABLE IF NOT EXISTS messaging_sms_send_rule (
+    id BIGINT PRIMARY KEY,
+    uuid VARCHAR(64) NOT NULL UNIQUE,
+    tenant_id BIGINT NOT NULL DEFAULT 0,
+    organization_id BIGINT NOT NULL DEFAULT 0,
+    scenario VARCHAR(64) NOT NULL,
+    chain_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by BIGINT,
+    updated_by BIGINT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT NOT NULL DEFAULT 0,
+    deleted_at TIMESTAMPTZ,
+    deleted_by BIGINT,
+    CONSTRAINT ck_messaging_sms_send_rule_scenario CHECK (scenario IN ('default', 'verification_code', 'system_notification', 'marketing'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_messaging_notification_recipient_inbox
@@ -391,8 +486,47 @@ CREATE INDEX IF NOT EXISTS idx_messaging_verification_challenge_scene_target
 CREATE INDEX IF NOT EXISTS idx_messaging_verification_challenge_expiry
     ON messaging_verification_challenge (tenant_id, organization_id, status, expires_at);
 
-CREATE INDEX IF NOT EXISTS idx_messaging_channel_scope
-    ON messaging_channel (tenant_id, organization_id, channel, enabled);
-
 CREATE INDEX IF NOT EXISTS idx_messaging_template_channel_status
     ON messaging_template (tenant_id, organization_id, channel, status, updated_at);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_email_account_scope_name
+    ON messaging_email_account (tenant_id, organization_id, name)
+    WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_email_sender_address
+    ON messaging_email_sender_address (tenant_id, organization_id, account_id, from_address)
+    WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_email_send_rule_scope_scenario
+    ON messaging_email_send_rule (tenant_id, organization_id, scenario)
+    WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_sms_account_scope_name
+    ON messaging_sms_account (tenant_id, organization_id, name)
+    WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_sms_signature_scope_name
+    ON messaging_sms_signature (tenant_id, organization_id, account_id, sign_name)
+    WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_sms_send_rule_scope_scenario
+    ON messaging_sms_send_rule (tenant_id, organization_id, scenario)
+    WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_messaging_email_account_scope_enabled
+    ON messaging_email_account (tenant_id, organization_id, enabled, updated_at);
+
+CREATE INDEX IF NOT EXISTS idx_messaging_email_sender_scope_account
+    ON messaging_email_sender (tenant_id, organization_id, account_id, enabled, updated_at);
+
+CREATE INDEX IF NOT EXISTS idx_messaging_email_send_rule_scope_scenario
+    ON messaging_email_send_rule (tenant_id, organization_id, scenario, enabled);
+
+CREATE INDEX IF NOT EXISTS idx_messaging_sms_account_scope_enabled
+    ON messaging_sms_account (tenant_id, organization_id, enabled, updated_at);
+
+CREATE INDEX IF NOT EXISTS idx_messaging_sms_signature_scope_account
+    ON messaging_sms_signature (tenant_id, organization_id, account_id, enabled, updated_at);
+
+CREATE INDEX IF NOT EXISTS idx_messaging_sms_send_rule_scope_scenario
+    ON messaging_sms_send_rule (tenant_id, organization_id, scenario, enabled);

@@ -251,27 +251,27 @@ for (const requiredTerm of requiredMessagingTerms) {
   );
 }
 
-assert.ok(allOperationIds.includes("messaging.verificationCodes.create"));
-assert.ok(allOperationIds.includes("messaging.verificationCodes.verify"));
-assert.ok(allOperationIds.includes("messaging.outboundMessages.create"));
+assert.ok(allOperationIds.includes("verificationCodes.create"));
+assert.ok(allOperationIds.includes("verificationCodes.verify"));
+assert.ok(allOperationIds.includes("outboundMessages.create"));
 
 for (const operationId of [
-  "messaging.notifications.read",
-  "messaging.announcements.acknowledge",
-  "messaging.pushDevices.create",
-  "messaging.pushDevices.delete",
-  "messaging.verificationCodes.create",
-  "messaging.verificationCodes.verify",
+  "notifications.read",
+  "announcements.acknowledge",
+  "pushDevices.create",
+  "pushDevices.delete",
+  "verificationCodes.create",
+  "verificationCodes.verify",
 ]) {
   assertHasIdempotencyHeader(appOpenApi, operationId);
 }
 
 for (const operationId of [
-  "messaging.notifications.create",
-  "messaging.announcements.create",
-  "messaging.pushMessages.create",
-  "messaging.outboundMessages.create",
-  "messaging.verificationPolicies.update",
+  "notifications.create",
+  "announcements.create",
+  "pushMessages.create",
+  "outboundMessages.create",
+  "verificationPolicies.update",
 ]) {
   assertHasIdempotencyHeader(backendOpenApi, operationId);
 }

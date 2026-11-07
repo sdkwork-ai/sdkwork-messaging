@@ -1,6 +1,4 @@
-use sdkwork_routes_messaging_backend_api::{
-    gateway_route_manifest, route_definitions,
-};
+use sdkwork_routes_messaging_backend_api::{gateway_route_manifest, route_definitions};
 use sdkwork_web_contract::HttpMethod;
 use sdkwork_web_core::RouteAuth;
 
@@ -10,10 +8,15 @@ fn route_manifest_declares_messaging_backend_routes() {
     let routes = route_definitions();
 
     assert_eq!(manifest.routes().len(), routes.len());
-    assert_eq!(routes.len(), 17);
+    assert_eq!(routes.len(), 39);
 
     for route in routes {
-        assert_eq!(route.auth, RouteAuth::DualToken, "{} must require dual-token auth", route.operation_id);
+        assert_eq!(
+            route.auth,
+            RouteAuth::DualToken,
+            "{} must require dual-token auth",
+            route.operation_id
+        );
         assert!(
             route.path.starts_with("/backend/v3/api/messaging/"),
             "{} must live under the messaging backend prefix",
@@ -24,8 +27,15 @@ fn route_manifest_declares_messaging_backend_routes() {
             "{} must declare a required permission",
             route.operation_id
         );
-        if matches!(route.method, HttpMethod::Post | HttpMethod::Put | HttpMethod::Delete) {
-            assert!(route.idempotent, "{} must be idempotent", route.operation_id);
+        if matches!(
+            route.method,
+            HttpMethod::Post | HttpMethod::Put | HttpMethod::Delete
+        ) {
+            assert!(
+                route.idempotent,
+                "{} must be idempotent",
+                route.operation_id
+            );
         }
     }
 
@@ -41,8 +51,30 @@ fn route_manifest_declares_messaging_backend_routes() {
         "messaging.outboundMessages.send",
         "messaging.verificationPolicies.list",
         "messaging.verificationPolicies.update",
-        "messaging.channels.retrieve",
-        "messaging.channels.update",
+        "messaging.emailAccounts.list",
+        "messaging.emailAccounts.create",
+        "messaging.emailAccounts.retrieve",
+        "messaging.emailAccounts.update",
+        "messaging.emailAccounts.delete",
+        "messaging.emailSenders.list",
+        "messaging.emailSenders.create",
+        "messaging.emailSenders.retrieve",
+        "messaging.emailSenders.update",
+        "messaging.emailSenders.delete",
+        "messaging.emailSendRules.list",
+        "messaging.emailSendRules.update",
+        "messaging.smsAccounts.list",
+        "messaging.smsAccounts.create",
+        "messaging.smsAccounts.retrieve",
+        "messaging.smsAccounts.update",
+        "messaging.smsAccounts.delete",
+        "messaging.smsSignatures.list",
+        "messaging.smsSignatures.create",
+        "messaging.smsSignatures.retrieve",
+        "messaging.smsSignatures.update",
+        "messaging.smsSignatures.delete",
+        "messaging.smsSendRules.list",
+        "messaging.smsSendRules.update",
         "messaging.templates.list",
         "messaging.templates.create",
         "messaging.templates.retrieve",

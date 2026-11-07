@@ -169,25 +169,6 @@ pub struct MessagingPushDeliveryResult {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum MessagingChannelProvider {
-    Smtp,
-    Aliyun,
-    Tencent,
-    GenericHttp,
-}
-
-impl MessagingChannelProvider {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            MessagingChannelProvider::Smtp => "smtp",
-            MessagingChannelProvider::Aliyun => "aliyun",
-            MessagingChannelProvider::Tencent => "tencent",
-            MessagingChannelProvider::GenericHttp => "generic_http",
-        }
-    }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MessagingTemplateStatus {
     Draft,
     Active,
@@ -228,33 +209,6 @@ pub struct EncodedMessagingSecret {
     pub ciphertext: String,
     pub key_id: String,
     pub fingerprint: String,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MessagingChannelUpdateCommand {
-    pub tenant_id: i64,
-    pub organization_id: i64,
-    pub operator_id: Option<i64>,
-    pub channel: MessagingDirectChannel,
-    pub provider: MessagingChannelProvider,
-    pub config: serde_json::Value,
-    pub secret: Option<EncodedMessagingSecret>,
-    pub enabled: bool,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MessagingChannelSnapshot {
-    pub id: i64,
-    pub uuid: String,
-    pub channel: MessagingDirectChannel,
-    pub provider: MessagingChannelProvider,
-    pub config: serde_json::Value,
-    pub has_secret: bool,
-    pub key_display_masked: String,
-    pub enabled: bool,
-    pub created_at: String,
-    pub updated_at: String,
-    pub version: i64,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

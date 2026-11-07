@@ -60,7 +60,7 @@
     },
     {
       "path": "src/api/messaging.ts",
-      "sha256": "131d1bde82e169cba0539df15afa1751f1c2d0cd6f71da2280e9e966b4cb28bb"
+      "sha256": "46a0847cb5b1e6539060b8026f2b9a019406393ce80ae2b9c8e256126e30ec44"
     },
     {
       "path": "src/api/paths.ts",
@@ -87,8 +87,56 @@
       "sha256": "6cee94f4e91adefafcf016298f2074c3adac4c0146dfc4da14406484625522d0"
     },
     {
+      "path": "src/types/announcements-create-response201.ts",
+      "sha256": "308bcd74bac55eeebb2d194810e4109b71f9cfed9299e92325309bdd73642b74"
+    },
+    {
+      "path": "src/types/announcements-list-response.ts",
+      "sha256": "31e4b3b998f6d0a52fcdd2aa88605668734a61f463a754460c15685eebb392cc"
+    },
+    {
       "path": "src/types/common.ts",
       "sha256": "351d721c3c6f48f4453f92276856105120d72eb8d2fa9cd28de8e3854bf10f6c"
+    },
+    {
+      "path": "src/types/email-accounts-create-response201.ts",
+      "sha256": "1236acb9f028db3f52657f6d7a07c9750e5ec64c50a6f1e322eceed2e5311782"
+    },
+    {
+      "path": "src/types/email-accounts-list-response.ts",
+      "sha256": "b0ebe15b06b0bc81e8ffaec5a9b1a0e3d3f315abd8507f3469b037541eeebc1a"
+    },
+    {
+      "path": "src/types/email-accounts-retrieve-response.ts",
+      "sha256": "4dfe5f1497e7fe89271f6943db3490c25ca16a26734f05b1592eb7547c752074"
+    },
+    {
+      "path": "src/types/email-accounts-update-response.ts",
+      "sha256": "912fb37598ec3992c8b798f8fafd0f43a2f896f3ee8a7c07d7fe19c7b694e2e1"
+    },
+    {
+      "path": "src/types/email-send-rules-list-response.ts",
+      "sha256": "f77d81b7eb2d0663b54c2916cd6fc8a0603af57003d5fc059e0670dd59338f2f"
+    },
+    {
+      "path": "src/types/email-send-rules-update-response.ts",
+      "sha256": "2c43ad2fc76ef0b4094b902f68b0a9cefe0339585cfa441066f52832e029f0f4"
+    },
+    {
+      "path": "src/types/email-senders-create-response201.ts",
+      "sha256": "53e1b9423c93202d318fc17a5b9c045bc362954cfebe4bba4d5ed754b3725b57"
+    },
+    {
+      "path": "src/types/email-senders-list-response.ts",
+      "sha256": "7aa841539ce4f0857099cd3db785906a701dbc338c99ac8056e78c3266ca9bb4"
+    },
+    {
+      "path": "src/types/email-senders-retrieve-response.ts",
+      "sha256": "d6e7709a89a09e69196b952e3ec2733ffb9374853c30c780da082e722be291b1"
+    },
+    {
+      "path": "src/types/email-senders-update-response.ts",
+      "sha256": "6032b645763bb85f09f76a5bda07a7a40a9ef689fd946e2049a67cb78d32ef00"
     },
     {
       "path": "src/types/field-error.ts",
@@ -96,7 +144,7 @@
     },
     {
       "path": "src/types/index.ts",
-      "sha256": "4bba3ce9171e55f7b0a8b8a2d20c51309eeb17b058855eee14402b322452618d"
+      "sha256": "4c0409eba5a89f1c480154a224c00e7be7e9490570c57a94becf463aeeddd1d9"
     },
     {
       "path": "src/types/messaging-announcement-list-response.ts",
@@ -115,36 +163,68 @@
       "sha256": "5234e1748d64228d333b11b70733288416a10ce7c73760be79eb2788e308b228"
     },
     {
-      "path": "src/types/messaging-announcements-create-response201.ts",
-      "sha256": "69db1479c258dea806c3a687e9a8b046344aef31f7e94644fe0f7adccfee0968"
-    },
-    {
-      "path": "src/types/messaging-announcements-list-response.ts",
-      "sha256": "49ca24ae45a04ccd12b0d3c087e0123674861affb16a71bb4005832d4e098bcc"
-    },
-    {
       "path": "src/types/messaging-audience.ts",
       "sha256": "9b23f20e1ac9f52a10e74cdc6583cf79000f32621c762591e0cdb206f0cd2dde"
     },
     {
-      "path": "src/types/messaging-channel-response.ts",
-      "sha256": "b51b55f1bcd96221badc5a9bb0bbe4b4242a2a8ee8da1cb0577030c6d28ce8c6"
+      "path": "src/types/messaging-email-account-create-request.ts",
+      "sha256": "bfa7dab28f2d81b26bb709bd27f5fdf9e4b8b857237c5827300b146cc16d478e"
     },
     {
-      "path": "src/types/messaging-channel-update-request.ts",
-      "sha256": "8fe602f260e847db18d97c1b7083e16a79c0a781e7b3ddebbea2fd9009b959a1"
+      "path": "src/types/messaging-email-account-list-response.ts",
+      "sha256": "f565ba482eee7c97aed11bfcda42fcd5148b6dca31b7d24439221e1c2ea46a24"
     },
     {
-      "path": "src/types/messaging-channel.ts",
-      "sha256": "a61e716ad34ff58d41e90a2ba3b1f18c73724baee25b6ef0dc18c45d5a4b9f66"
+      "path": "src/types/messaging-email-account-response.ts",
+      "sha256": "904389564c13ef7bd60ff22cfb67db1c28eea4f02e7d90b03baf52e7a97193b3"
     },
     {
-      "path": "src/types/messaging-channels-retrieve-response.ts",
-      "sha256": "d257cb4b851df3b216840b66dbfcc1f1d370bbbfd24f731b35e6261d631f1f16"
+      "path": "src/types/messaging-email-account-update-request.ts",
+      "sha256": "7094797253ba002d26605ea97d69fee61f504706111029dd1fb1876cb0307f86"
     },
     {
-      "path": "src/types/messaging-channels-update-response.ts",
-      "sha256": "d603a6e4056fd9aaeedfacea9ffae8a7ec641f19819d16948e5b73137cfac16c"
+      "path": "src/types/messaging-email-account.ts",
+      "sha256": "f20bc91da3b77321cbdb7d8a2b08834524edd4dc3357de579678421230fedbac"
+    },
+    {
+      "path": "src/types/messaging-email-send-rule-list-response.ts",
+      "sha256": "5b8af45964f228896cae7b3cdc27147c44f0a146e5f5a82bbb352df4afad1512"
+    },
+    {
+      "path": "src/types/messaging-email-send-rule-response.ts",
+      "sha256": "9f124b35c713400b939acaa628925d88bd8b4506f445086610cb0c5b359a08d2"
+    },
+    {
+      "path": "src/types/messaging-email-send-rule-step.ts",
+      "sha256": "a2ba3631730165823c1a54893f6efbf55bd10d35eabec3271fd6049016a9eccc"
+    },
+    {
+      "path": "src/types/messaging-email-send-rule-update-request.ts",
+      "sha256": "82776c3cf8bfa7791a6f22f176a669407bdee278da95099d09c32420a702a4eb"
+    },
+    {
+      "path": "src/types/messaging-email-send-rule.ts",
+      "sha256": "47f456b3e4b4db9ff86a7978b7996dff70e6d1eb64585eb6e409338005478f26"
+    },
+    {
+      "path": "src/types/messaging-email-sender-create-request.ts",
+      "sha256": "eaa7c5aff21be6431a7242e0d24c3828d2d121e49d2bf5642a8511879c2ad1cd"
+    },
+    {
+      "path": "src/types/messaging-email-sender-list-response.ts",
+      "sha256": "d772c90b785c20012ad3a61a16caadfaf78fda6b1eae616b1f0ac095287399d3"
+    },
+    {
+      "path": "src/types/messaging-email-sender-response.ts",
+      "sha256": "1594ce3f1079c6948a89934adb8cb71b5a998a0b8fd731d76e93c64acedacd05"
+    },
+    {
+      "path": "src/types/messaging-email-sender-update-request.ts",
+      "sha256": "1af2d5fd254e0acd1a3cd3fed7b095defd60f1efe5027a6cf5f031f44727ce26"
+    },
+    {
+      "path": "src/types/messaging-email-sender.ts",
+      "sha256": "79d9612aa04a794ade2c238ee077ae360dd030267ddf6724c8bec8b5951a59c7"
     },
     {
       "path": "src/types/messaging-notification-create-request.ts",
@@ -163,14 +243,6 @@
       "sha256": "339afe9b8cd7997dc8b8870af4c261daf673f8d0060904dd2c26bdf690a55129"
     },
     {
-      "path": "src/types/messaging-notifications-create-response201.ts",
-      "sha256": "a74faf21ff69268be21ede91fa994ebbbb51acbe437a7d9e18f216967fb41b37"
-    },
-    {
-      "path": "src/types/messaging-notifications-list-response.ts",
-      "sha256": "5a0b425c79c7c9a44131afbe7c18a06d78423b74573e273aa0a54cf97f00ee3d"
-    },
-    {
       "path": "src/types/messaging-outbound-message-list-response.ts",
       "sha256": "59e72d0915319b675ce9c56b1e67c0d0f3310b6a5e80a86884a086d2886325af"
     },
@@ -185,14 +257,6 @@
     {
       "path": "src/types/messaging-outbound-message.ts",
       "sha256": "cdd6ff88a5d524134b965669e33f99203858b12404b541d836fcfe5908a2f9f6"
-    },
-    {
-      "path": "src/types/messaging-outbound-messages-create-response201.ts",
-      "sha256": "8c2dd7d85c13044523a493df29fce305fbc3d66eab31416d954d0b1f4bd02f28"
-    },
-    {
-      "path": "src/types/messaging-outbound-messages-list-response.ts",
-      "sha256": "694500006b1d472115e98df83da1f3e4ff7de00eeea887150e5b95fd30134a44"
     },
     {
       "path": "src/types/messaging-push-message-list-response.ts",
@@ -211,20 +275,68 @@
       "sha256": "17d328fbe6267db30de67900efdcfa10327332d800807496dd3c5301c1bc0ae4"
     },
     {
-      "path": "src/types/messaging-push-messages-create-response201.ts",
-      "sha256": "6c0270d055cc49f875f06be906bdc1d97aa87dce66ade599ff1ebf9b5a068036"
+      "path": "src/types/messaging-sms-account-create-request.ts",
+      "sha256": "a50fbe1c95a2a64f0a3f867859a1590b70cdaae4bdadc85dffc40f17738e3b1b"
     },
     {
-      "path": "src/types/messaging-push-messages-list-response.ts",
-      "sha256": "419d863d45dd802bcf31dab1775f2b49269d01da4f298f0dcd5a17dc06f6e660"
+      "path": "src/types/messaging-sms-account-list-response.ts",
+      "sha256": "49442c21c11fb9c0b7b3c4a19714c1635df154c25ea26d121a3e583a098d4ff2"
+    },
+    {
+      "path": "src/types/messaging-sms-account-response.ts",
+      "sha256": "ee78ba3d03760eaf34d8576f31d0057a55c1d569f3ec1c5685ff03ebb1089c4b"
+    },
+    {
+      "path": "src/types/messaging-sms-account-update-request.ts",
+      "sha256": "81e1c25706446777747f02eb00001a23cc27316f6ff834f14e3d5affef088103"
+    },
+    {
+      "path": "src/types/messaging-sms-account.ts",
+      "sha256": "53b66c35a7fdc2c9196bd2b30f5e9dffcfe86200aea40a3a664e479744f3c5d1"
+    },
+    {
+      "path": "src/types/messaging-sms-send-rule-list-response.ts",
+      "sha256": "ae81aea0194b0f3af9c9e725a5c172b27651c241b4859f8b6bb8dba9d083eaeb"
+    },
+    {
+      "path": "src/types/messaging-sms-send-rule-response.ts",
+      "sha256": "67278ac1053a0930f939ebe4b90840d3980f00441d50b95946dd0f7f8f0d9f19"
+    },
+    {
+      "path": "src/types/messaging-sms-send-rule-step.ts",
+      "sha256": "cf28d8c66c08a28a5547b5eaa0fb3d695622d57512487e2267d0a7c2710abab0"
+    },
+    {
+      "path": "src/types/messaging-sms-send-rule-update-request.ts",
+      "sha256": "f012775990da46a2a8856118c8379458afd8cffb21e94cfafee62faa03364129"
+    },
+    {
+      "path": "src/types/messaging-sms-send-rule.ts",
+      "sha256": "3fa32deeb2e3551f258282b9397f22f6d028f271c7102c502156b03caabdb89e"
+    },
+    {
+      "path": "src/types/messaging-sms-signature-create-request.ts",
+      "sha256": "477dc731407a2c91652db8432451c9619a1b975fc1a3f85042bff3b5894bf5f1"
+    },
+    {
+      "path": "src/types/messaging-sms-signature-list-response.ts",
+      "sha256": "c8cbca9cae43c72941c772c9a03f67e1aa144978aa9cbd9741560e25302dbb46"
+    },
+    {
+      "path": "src/types/messaging-sms-signature-response.ts",
+      "sha256": "e3a0ce2e8d366044555b1ee80ff5facbf19d9113651a0da0b6f26c038ff2bb05"
+    },
+    {
+      "path": "src/types/messaging-sms-signature-update-request.ts",
+      "sha256": "4b40e6ecc8691d64f405c69b6fd2c243ad43b05edc289da73d60dd579e760ba5"
+    },
+    {
+      "path": "src/types/messaging-sms-signature.ts",
+      "sha256": "e790788b8fdb478ae6aae3bcd1cc707203e93651cd89450e58361338f7d2b13d"
     },
     {
       "path": "src/types/messaging-template-create-request.ts",
       "sha256": "f0a5b6e7e618319b58a59d31e5afd7d361c48b5e1d1fe2bd0c48f8c6c30d0f13"
-    },
-    {
-      "path": "src/types/messaging-template-delete-response.ts",
-      "sha256": "f484fcbe4ead2f87fb534669a6b6b2fdb3e6613eba13ef8bae6f4259c06647a5"
     },
     {
       "path": "src/types/messaging-template-list-response.ts",
@@ -243,30 +355,6 @@
       "sha256": "41687a7b3cc489be6bda614b5ef8d0c0fda92a900a5a09936df374fc19589bf5"
     },
     {
-      "path": "src/types/messaging-templates-create-response201.ts",
-      "sha256": "a365d6678310f8b71b53f9c0b0f2e03c6723379b9dc8aebf3b32c21204a5cb23"
-    },
-    {
-      "path": "src/types/messaging-templates-list-response.ts",
-      "sha256": "84478434dd6708bd6bc1dd32023d52ddcbe3a884cd623b3f3fd74f3513bb74e1"
-    },
-    {
-      "path": "src/types/messaging-templates-retrieve-response.ts",
-      "sha256": "6a1063336b1934a85e59c7e4370d428be109d2d8b603e23640954a07ff3ea410"
-    },
-    {
-      "path": "src/types/messaging-templates-update-response.ts",
-      "sha256": "5553e82f15a7a57af14d9495b7fcb245cd678ae796013ead743d4c50ad8a3f66"
-    },
-    {
-      "path": "src/types/messaging-verification-policies-list-response.ts",
-      "sha256": "203be01a92e180933f10bd87ddb3b08c6724fa871653cdc38c26570095bc4a7d"
-    },
-    {
-      "path": "src/types/messaging-verification-policies-update-response.ts",
-      "sha256": "cdf40a451977be5b3e91ab82460efc00399cc5b3fe4005a164f65b9ba1f47ec7"
-    },
-    {
       "path": "src/types/messaging-verification-policy-list-response.ts",
       "sha256": "c0f7c85593a7ab29664e31bc9103613261cdf01e75894a963e02f4b84d685f38"
     },
@@ -283,12 +371,36 @@
       "sha256": "22281fd5b58ea804d5ade48ae7d6d43121b11bb3dc8b31e3bb57406ddd5ddc4c"
     },
     {
+      "path": "src/types/notifications-create-response201.ts",
+      "sha256": "636a1a6530678b58308128d1be83ee41fa4fdffc64e1427607b34ae7f91fda25"
+    },
+    {
+      "path": "src/types/notifications-list-response.ts",
+      "sha256": "ead55913cc89bb1b393185857ca608dd9cf93527729f1488fb71624e88e29be1"
+    },
+    {
+      "path": "src/types/outbound-messages-create-response201.ts",
+      "sha256": "b3783f9000c5f387578987c9bb6bd6921773e340e099f7a0b331d2886ca9fc18"
+    },
+    {
+      "path": "src/types/outbound-messages-list-response.ts",
+      "sha256": "92024ffb5098255c4086f5bee9cb870832edacbcaee38b9420cfb643bfd115f1"
+    },
+    {
       "path": "src/types/page-info.ts",
       "sha256": "0bf2b44313bc24851eb9ffb6063c1b9eb043e1e5721c8ace8882a3cfa21c932a"
     },
     {
       "path": "src/types/problem-detail.ts",
       "sha256": "c41fdf6433e1167d2fb1f3ac38fd13eb77178f4c0633c9e27824f1e1687ee4f6"
+    },
+    {
+      "path": "src/types/push-messages-create-response201.ts",
+      "sha256": "0fb6dce9acc5bfa6e1df4ad3d31b6a5e6ab7ff70af7c4b6ab96f298dc42d9370"
+    },
+    {
+      "path": "src/types/push-messages-list-response.ts",
+      "sha256": "6ea24ff974f3355b40c9e451a01bce4109721bf0e95bbc5d09dbe6250c8d7062"
     },
     {
       "path": "src/types/sdk-work-api-response.ts",
@@ -321,6 +433,70 @@
     {
       "path": "src/types/sdk-work-resource-response.ts",
       "sha256": "89c05f5549bef773335245f56f61ca1a6959978726799391d584a6bd25d12fdc"
+    },
+    {
+      "path": "src/types/sms-accounts-create-response201.ts",
+      "sha256": "779720a3e55db45a4c1510596c909b23242e649b582a20dd1c641b535b61eb7d"
+    },
+    {
+      "path": "src/types/sms-accounts-list-response.ts",
+      "sha256": "dfc563e6c5eb26cd8560ed4fc401b0589f1af1e024d20747c7846ee25abf73e7"
+    },
+    {
+      "path": "src/types/sms-accounts-retrieve-response.ts",
+      "sha256": "f080e84907b7cb3133b93bb4699d1ed60e2cba9b9201adbd473a627d95071a43"
+    },
+    {
+      "path": "src/types/sms-accounts-update-response.ts",
+      "sha256": "e360b9acdb9ef669ef4e2dcf4f2e58fc5171343f17ef697a6e0841360fcc0671"
+    },
+    {
+      "path": "src/types/sms-send-rules-list-response.ts",
+      "sha256": "19e207a77239f9d4d48cc8a8d733aa6c77063b42e5f558bfe1fe259dca97ef3c"
+    },
+    {
+      "path": "src/types/sms-send-rules-update-response.ts",
+      "sha256": "c2b761a98a72126f07f23a30055f72d614f305eb1191c9eb28430d4dbe3e49f2"
+    },
+    {
+      "path": "src/types/sms-signatures-create-response201.ts",
+      "sha256": "5f5babf947a1a17984de2520e382776b992be64ecf21de4fc344cca89c49a56f"
+    },
+    {
+      "path": "src/types/sms-signatures-list-response.ts",
+      "sha256": "9b3f389bcce30efa809cd78d63bb01c4238844dd99da1cb1e6097241041d375f"
+    },
+    {
+      "path": "src/types/sms-signatures-retrieve-response.ts",
+      "sha256": "488601fa2144fb4ce3f095e247fd1d1feb0b416ac4fd93439896d4fb782d68e0"
+    },
+    {
+      "path": "src/types/sms-signatures-update-response.ts",
+      "sha256": "050ceb92f9107d7607940864c648493181bcf7659e29f82ce0dcd49e72db3434"
+    },
+    {
+      "path": "src/types/templates-create-response201.ts",
+      "sha256": "929d7be4ac92c1a9908ed659bef865d691957323d484dd6feea2baaa3c90be69"
+    },
+    {
+      "path": "src/types/templates-list-response.ts",
+      "sha256": "b7c7185ad2d568d041f7552ce70c263200eccd9d2f5ddb4c1605e82a00f5efff"
+    },
+    {
+      "path": "src/types/templates-retrieve-response.ts",
+      "sha256": "53d3f47be23681574e7a3a9d5733d263a15f1bc3b7308bc645b86067b54283e3"
+    },
+    {
+      "path": "src/types/templates-update-response.ts",
+      "sha256": "ec0c43b39c37635d04e6aaa406897b9407455847fd2d25d7e7061ebf45cfc25c"
+    },
+    {
+      "path": "src/types/verification-policies-list-response.ts",
+      "sha256": "2d18710343b0378f02c3bd0e5ae8f0530a1ce30fd74d21ddcd1e198bb125f2b7"
+    },
+    {
+      "path": "src/types/verification-policies-update-response.ts",
+      "sha256": "20eafcf25fc5465befc09d9addb8864cb2b5f61d2a9cb216f0d7aa51a547df12"
     },
     {
       "path": "tsconfig.json",

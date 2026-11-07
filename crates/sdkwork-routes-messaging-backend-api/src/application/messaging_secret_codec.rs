@@ -54,10 +54,14 @@ impl AesGcmMessagingSecretCodec {
     /// variable.
     pub fn from_env() -> Self {
         match std::env::var("SDKWORK_MESSAGING_SECRET_ENCRYPTION_KEY") {
-            Ok(master) if !master.trim().is_empty() => {
-                Self::new(format!("key-{}", sha256_hash(master.trim().as_bytes())), master.trim().as_bytes())
-            }
-            _ => Self::new(KEY_ID_DEV, b"sdkwork-messaging-dev-master-secret-do-not-use-in-prod"),
+            Ok(master) if !master.trim().is_empty() => Self::new(
+                format!("key-{}", sha256_hash(master.trim().as_bytes())),
+                master.trim().as_bytes(),
+            ),
+            _ => Self::new(
+                KEY_ID_DEV,
+                b"sdkwork-messaging-dev-master-secret-do-not-use-in-prod",
+            ),
         }
     }
 

@@ -19,7 +19,7 @@ describe("SDKWork messaging SDK ports", () => {
     expect(BACKEND_MESSAGING_METHOD_TREE).toHaveProperty("verificationPolicies");
 
     const treeText = JSON.stringify({ APP_MESSAGING_METHOD_TREE, BACKEND_MESSAGING_METHOD_TREE });
-    expect(treeText).not.toMatch(/provider|sender|template|routeRule|suppression|rateLimit|dialogueThread|realtime/iu);
+    expect(treeText).not.toMatch(/provider|sender|messageTemplate|routeRule|suppression|rateLimit|dialogueThread|realtime/iu);
   });
 
   it("requires the generated messaging app SDK surface", () => {

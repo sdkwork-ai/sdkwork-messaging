@@ -81,13 +81,43 @@
       "lifecycle_status": "active"
     },
     {
-      "table_name": "messaging_channel",
+      "table_name": "messaging_template",
       "owner": "messaging-platform",
       "compliance_level": "L2",
       "lifecycle_status": "active"
     },
     {
-      "table_name": "messaging_template",
+      "table_name": "messaging_email_account",
+      "owner": "messaging-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "messaging_email_sender",
+      "owner": "messaging-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "messaging_email_send_rule",
+      "owner": "messaging-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "messaging_sms_account",
+      "owner": "messaging-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "messaging_sms_signature",
+      "owner": "messaging-platform",
+      "compliance_level": "L2",
+      "lifecycle_status": "active"
+    },
+    {
+      "table_name": "messaging_sms_send_rule",
       "owner": "messaging-platform",
       "compliance_level": "L2",
       "lifecycle_status": "active"

@@ -8,15 +8,18 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, put};
 use axum::{Json, Router};
-use serde::Deserialize;
-use serde_json::{json, Value};
 use sdkwork_utils_rust::uuid;
 use sdkwork_web_core::WebRequestContext;
+use serde::Deserialize;
+use serde_json::{json, Value};
 
 use crate::ports::{
-    CreateNotificationCommand, CreateTemplateCommand, MessagingAdminStore, MessagingAdminSubject,
-    PublishAnnouncementCommand, SendOutboundMessageCommand, SendPushMessageCommand,
-    StoreError, UpdateChannelCommand, UpdateTemplateCommand, UpdateVerificationPolicyCommand,
+    CreateEmailAccountCommand, CreateEmailSenderCommand, CreateNotificationCommand,
+    CreateSmsAccountCommand, CreateSmsSignatureCommand, CreateTemplateCommand, MessagingAdminStore,
+    MessagingAdminSubject, PublishAnnouncementCommand, SendOutboundMessageCommand,
+    SendPushMessageCommand, StoreError, UpdateEmailAccountCommand, UpdateEmailSendRuleCommand,
+    UpdateEmailSenderCommand, UpdateSmsAccountCommand, UpdateSmsSendRuleCommand,
+    UpdateSmsSignatureCommand, UpdateTemplateCommand, UpdateVerificationPolicyCommand,
 };
 
 #[derive(Clone)]
@@ -30,20 +33,37 @@ impl<S: Send + Sync> FromRequestParts<S> for MessagingAdminSubject {
     type Rejection = Response;
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        let context = parts
-            .extensions
-            .get::<WebRequestContext>()
-            .ok_or_else(|| problem_response(StatusCode::UNAUTHORIZED, "Unauthorized", "authenticated request context is required"))?;
+        let context = parts.extensions.get::<WebRequestContext>().ok_or_else(|| {
+            problem_response(
+                StatusCode::UNAUTHORIZED,
+                "Unauthorized",
+                "authenticated request context is required",
+            )
+        })?;
         let tenant_id = context
             .tenant_id()
-            .ok_or_else(|| problem_response(StatusCode::UNAUTHORIZED, "Unauthorized", "authenticated request context is missing tenant scope"))?
+            .ok_or_else(|| {
+                problem_response(
+                    StatusCode::UNAUTHORIZED,
+                    "Unauthorized",
+                    "authenticated request context is missing tenant scope",
+                )
+            })?
             .parse::<i64>()
-            .map_err(|_| problem_response(StatusCode::UNAUTHORIZED, "Unauthorized", "tenant scope is not numeric"))?;
+            .map_err(|_| {
+                problem_response(
+                    StatusCode::UNAUTHORIZED,
+                    "Unauthorized",
+                    "tenant scope is not numeric",
+                )
+            })?;
         let organization_id = context
             .organization_id()
             .and_then(|value| value.parse::<i64>().ok())
             .unwrap_or(0);
-        let operator_id = context.user_id().and_then(|value| value.parse::<i64>().ok());
+        let operator_id = context
+            .user_id()
+            .and_then(|value| value.parse::<i64>().ok());
         Ok(MessagingAdminSubject {
             tenant_id,
             organization_id,
@@ -65,13 +85,27 @@ pub fn success_response(status: StatusCode, data: Value) -> Response {
     response
 }
 
+/// Numeric platform error code (API_SPEC §15.3) for a problem status.
+fn problem_code(status: StatusCode) -> i64 {
+    match status.as_u16() {
+        400 => 40003,
+        401 => 40101,
+        403 => 40301,
+        404 => 40401,
+        409 => 40901,
+        429 => 42901,
+        _ => 50001,
+    }
+}
+
 pub fn problem_response(status: StatusCode, title: &str, detail: impl Into<String>) -> Response {
     let mut response = Json(json!({
         "type": "about:blank",
         "title": title,
         "status": status.as_u16(),
+        "code": problem_code(status),
         "detail": detail.into(),
-        "requestId": uuid(),
+        "traceId": uuid(),
     }))
     .into_response();
     *response.status_mut() = status;
@@ -96,7 +130,7 @@ fn page_info(page: i64, page_size: i64, total_items: i64) -> Value {
 }
 
 fn resource_response(status: StatusCode, item: Value) -> Response {
-    success_response(status, json!({ "item": item, "requestId": uuid() }))
+    success_response(status, json!({ "item": item }))
 }
 
 fn list_response(items: Vec<Value>, page: i64, page_size: i64, total_items: i64) -> Response {
@@ -105,7 +139,6 @@ fn list_response(items: Vec<Value>, page: i64, page_size: i64, total_items: i64)
         json!({
             "items": items,
             "pageInfo": page_info(page, page_size, total_items),
-            "requestId": uuid(),
         }),
     )
 }
@@ -119,18 +152,28 @@ fn store_error_response(error: StoreError) -> Response {
         StoreError::Invalid(detail) => {
             problem_response(StatusCode::BAD_REQUEST, "Bad Request", detail)
         }
-        StoreError::Unavailable(detail) => {
-            problem_response(StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error", detail)
-        }
+        StoreError::Unavailable(detail) => problem_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Internal Server Error",
+            detail,
+        ),
     }
 }
 
+// Axum handler helpers return `Result<_, Response>` so handlers can bubble a
+// rendered problem response; `Response` is internally boxed, so the large-err
+// lint is a false cost signal here.
+#[allow(clippy::result_large_err)]
 fn idempotency_key(headers: &axum::http::HeaderMap) -> Result<String, Response> {
     match headers.get("Idempotency-Key") {
         Some(value) => {
-            let value = value
-                .to_str()
-                .map_err(|_| problem_response(StatusCode::BAD_REQUEST, "Bad Request", "Idempotency-Key must be a valid header value"))?;
+            let value = value.to_str().map_err(|_| {
+                problem_response(
+                    StatusCode::BAD_REQUEST,
+                    "Bad Request",
+                    "Idempotency-Key must be a valid header value",
+                )
+            })?;
             if value.len() < 8 || value.len() > 256 {
                 return Err(problem_response(
                     StatusCode::BAD_REQUEST,
@@ -149,22 +192,42 @@ fn idempotency_key(headers: &axum::http::HeaderMap) -> Result<String, Response> 
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct PageQuery {
     page: Option<i64>,
     page_size: Option<i64>,
 }
 
-fn page_bounds(query: &PageQuery) -> (i64, i64) {
-    let page = query.page.unwrap_or(1).clamp(1, i64::MAX);
-    let page_size = query.page_size.unwrap_or(20).clamp(1, 200);
-    (page, page_size)
+/// §16.2: reject out-of-range pagination input with 40003 instead of
+/// silently clamping; pre-launch authorities also reject unknown aliases
+/// via `deny_unknown_fields`.
+#[allow(clippy::result_large_err)]
+fn page_bounds(query: &PageQuery) -> Result<(i64, i64), Response> {
+    let page = query.page.unwrap_or(1);
+    let page_size = query.page_size.unwrap_or(20);
+    if page < 1 {
+        return Err(problem_response(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "page must be at least 1",
+        ));
+    }
+    if !(1..=200).contains(&page_size) {
+        return Err(problem_response(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "page_size must be between 1 and 200",
+        ));
+    }
+    Ok((page, page_size))
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct TemplateListQuery {
     channel: Option<String>,
     status: Option<String>,
-    keyword: Option<String>,
+    q: Option<String>,
     page: Option<i64>,
     page_size: Option<i64>,
 }
@@ -200,8 +263,60 @@ pub fn admin_messaging_router_with_store(
             put(update_verification_policy),
         )
         .route(
-            "/backend/v3/api/messaging/channels/{channel}",
-            get(retrieve_channel).put(update_channel),
+            "/backend/v3/api/messaging/email/accounts",
+            get(list_email_accounts).post(create_email_account),
+        )
+        .route(
+            "/backend/v3/api/messaging/email/accounts/{accountId}",
+            get(retrieve_email_account)
+                .put(update_email_account)
+                .delete(delete_email_account),
+        )
+        .route(
+            "/backend/v3/api/messaging/email/senders",
+            get(list_email_senders).post(create_email_sender),
+        )
+        .route(
+            "/backend/v3/api/messaging/email/senders/{senderId}",
+            get(retrieve_email_sender)
+                .put(update_email_sender)
+                .delete(delete_email_sender),
+        )
+        .route(
+            "/backend/v3/api/messaging/email/send_rules",
+            get(list_email_send_rules),
+        )
+        .route(
+            "/backend/v3/api/messaging/email/send_rules/{scenario}",
+            put(update_email_send_rule),
+        )
+        .route(
+            "/backend/v3/api/messaging/sms/accounts",
+            get(list_sms_accounts).post(create_sms_account),
+        )
+        .route(
+            "/backend/v3/api/messaging/sms/accounts/{accountId}",
+            get(retrieve_sms_account)
+                .put(update_sms_account)
+                .delete(delete_sms_account),
+        )
+        .route(
+            "/backend/v3/api/messaging/sms/signatures",
+            get(list_sms_signatures).post(create_sms_signature),
+        )
+        .route(
+            "/backend/v3/api/messaging/sms/signatures/{signatureId}",
+            get(retrieve_sms_signature)
+                .put(update_sms_signature)
+                .delete(delete_sms_signature),
+        )
+        .route(
+            "/backend/v3/api/messaging/sms/send_rules",
+            get(list_sms_send_rules),
+        )
+        .route(
+            "/backend/v3/api/messaging/sms/send_rules/{scenario}",
+            put(update_sms_send_rule),
         )
         .route(
             "/backend/v3/api/messaging/templates",
@@ -209,14 +324,22 @@ pub fn admin_messaging_router_with_store(
         )
         .route(
             "/backend/v3/api/messaging/templates/{templateId}",
-            get(retrieve_template).put(update_template).delete(delete_template),
+            get(retrieve_template)
+                .put(update_template)
+                .delete(delete_template),
         )
         .with_state(MessagingRouterState { store })
 }
 
+#[allow(clippy::result_large_err)]
 async fn parse_body<T: for<'de> Deserialize<'de>>(body: axum::body::Bytes) -> Result<T, Response> {
-    serde_json::from_slice(&body)
-        .map_err(|error| problem_response(StatusCode::BAD_REQUEST, "Bad Request", format!("invalid request body: {error}")))
+    serde_json::from_slice(&body).map_err(|error| {
+        problem_response(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            format!("invalid request body: {error}"),
+        )
+    })
 }
 
 // ------------------------------------------------------------ notifications
@@ -226,7 +349,10 @@ async fn list_notifications(
     subject: MessagingAdminSubject,
     Query(query): Query<PageQuery>,
 ) -> Response {
-    let (page, page_size) = page_bounds(&query);
+    let (page, page_size) = match page_bounds(&query) {
+        Ok(bounds) => bounds,
+        Err(response) => return response,
+    };
     match state
         .store
         .list_notifications(&subject, page, page_size)
@@ -282,7 +408,10 @@ async fn list_announcements(
     subject: MessagingAdminSubject,
     Query(query): Query<PageQuery>,
 ) -> Response {
-    let (page, page_size) = page_bounds(&query);
+    let (page, page_size) = match page_bounds(&query) {
+        Ok(bounds) => bounds,
+        Err(response) => return response,
+    };
     match state
         .store
         .list_announcements(&subject, page, page_size)
@@ -315,7 +444,11 @@ async fn publish_announcement(
         Err(response) => return response,
     };
     if command.audiences.is_empty() {
-        return problem_response(StatusCode::BAD_REQUEST, "Bad Request", "audiences must not be empty");
+        return problem_response(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "audiences must not be empty",
+        );
     }
     for audience in &command.audiences {
         if let Err(error) = crate::ports::parse_audience_kind(&audience.kind) {
@@ -349,7 +482,10 @@ async fn list_push_messages(
     subject: MessagingAdminSubject,
     Query(query): Query<PageQuery>,
 ) -> Response {
-    let (page, page_size) = page_bounds(&query);
+    let (page, page_size) = match page_bounds(&query) {
+        Ok(bounds) => bounds,
+        Err(response) => return response,
+    };
     match state
         .store
         .list_push_messages(&subject, page, page_size)
@@ -405,7 +541,10 @@ async fn list_outbound_messages(
     subject: MessagingAdminSubject,
     Query(query): Query<PageQuery>,
 ) -> Response {
-    let (page, page_size) = page_bounds(&query);
+    let (page, page_size) = match page_bounds(&query) {
+        Ok(bounds) => bounds,
+        Err(response) => return response,
+    };
     match state
         .store
         .list_outbound_messages(&subject, page, page_size)
@@ -464,7 +603,10 @@ async fn list_verification_policies(
     subject: MessagingAdminSubject,
     Query(query): Query<PageQuery>,
 ) -> Response {
-    let (page, page_size) = page_bounds(&query);
+    let (page, page_size) = match page_bounds(&query) {
+        Ok(bounds) => bounds,
+        Err(response) => return response,
+    };
     match state
         .store
         .list_verification_policies(&subject, page, page_size)
@@ -514,33 +656,37 @@ async fn update_verification_policy(
     }
 }
 
-// ------------------------------------------------------------------- channels
+// -------------------------------------------------------------- email accounts
 
-async fn retrieve_channel(
+async fn list_email_accounts(
     State(state): State<MessagingRouterState>,
     subject: MessagingAdminSubject,
-    Path(channel): Path<String>,
+    Query(query): Query<PageQuery>,
 ) -> Response {
-    if let Err(error) = crate::ports::parse_channel(&channel) {
-        return problem_response(StatusCode::BAD_REQUEST, "Bad Request", error);
-    }
-    match state.store.retrieve_channel(&subject, &channel).await {
-        Ok(item) => match serde_json::to_value(item) {
-            Ok(value) => resource_response(StatusCode::OK, value),
-            Err(_) => problem_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Internal Server Error",
-                "failed to serialize channel",
-            ),
-        },
+    let (page, page_size) = match page_bounds(&query) {
+        Ok(bounds) => bounds,
+        Err(response) => return response,
+    };
+    match state
+        .store
+        .list_email_accounts(&subject, page, page_size)
+        .await
+    {
+        Ok(result) => {
+            let items = result
+                .items
+                .into_iter()
+                .map(|item| serde_json::to_value(item).unwrap_or(Value::Null))
+                .collect();
+            list_response(items, result.page, result.page_size, result.total_items)
+        }
         Err(error) => store_error_response(error),
     }
 }
 
-async fn update_channel(
+async fn create_email_account(
     State(state): State<MessagingRouterState>,
     subject: MessagingAdminSubject,
-    Path(channel): Path<String>,
     headers: axum::http::HeaderMap,
     body: axum::body::Bytes,
 ) -> Response {
@@ -548,19 +694,38 @@ async fn update_channel(
         Ok(key) => key,
         Err(response) => return response,
     };
-    if let Err(error) = crate::ports::parse_channel(&channel) {
-        return problem_response(StatusCode::BAD_REQUEST, "Bad Request", error);
-    }
-    let command: UpdateChannelCommand = match parse_body(body).await {
+    let command: CreateEmailAccountCommand = match parse_body(body).await {
         Ok(command) => command,
         Err(response) => return response,
     };
-    if let Err(error) = crate::ports::parse_channel_provider(&channel, &command.provider) {
+    if let Err(error) = crate::ports::parse_email_provider(&command.provider) {
         return problem_response(StatusCode::BAD_REQUEST, "Bad Request", error);
     }
     match state
         .store
-        .update_channel(&subject, &channel, &command, &idempotency_key)
+        .create_email_account(&subject, &command, &idempotency_key)
+        .await
+    {
+        Ok(item) => match serde_json::to_value(item) {
+            Ok(value) => resource_response(StatusCode::CREATED, value),
+            Err(_) => problem_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "failed to serialize email account",
+            ),
+        },
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn retrieve_email_account(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(account_id): Path<i64>,
+) -> Response {
+    match state
+        .store
+        .retrieve_email_account(&subject, account_id)
         .await
     {
         Ok(item) => match serde_json::to_value(item) {
@@ -568,7 +733,631 @@ async fn update_channel(
             Err(_) => problem_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Internal Server Error",
-                "failed to serialize channel",
+                "failed to serialize email account",
+            ),
+        },
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn update_email_account(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(account_id): Path<i64>,
+    headers: axum::http::HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let idempotency_key = match idempotency_key(&headers) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+    let command: UpdateEmailAccountCommand = match parse_body(body).await {
+        Ok(command) => command,
+        Err(response) => return response,
+    };
+    if let Err(error) = crate::ports::parse_email_provider(&command.provider) {
+        return problem_response(StatusCode::BAD_REQUEST, "Bad Request", error);
+    }
+    match state
+        .store
+        .update_email_account(&subject, account_id, &command, &idempotency_key)
+        .await
+    {
+        Ok(item) => match serde_json::to_value(item) {
+            Ok(value) => resource_response(StatusCode::OK, value),
+            Err(_) => problem_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "failed to serialize email account",
+            ),
+        },
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn delete_email_account(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(account_id): Path<i64>,
+    headers: axum::http::HeaderMap,
+    _body: axum::body::Bytes,
+) -> Response {
+    let idempotency_key = match idempotency_key(&headers) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+    match state
+        .store
+        .delete_email_account(&subject, account_id, &idempotency_key)
+        .await
+    {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(error) => store_error_response(error),
+    }
+}
+
+// --------------------------------------------------------------- email senders
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct EmailSenderListQuery {
+    account_id: Option<String>,
+    page: Option<i64>,
+    page_size: Option<i64>,
+}
+
+async fn list_email_senders(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Query(query): Query<EmailSenderListQuery>,
+) -> Response {
+    let (page, page_size) = match page_bounds(&PageQuery {
+        page: query.page,
+        page_size: query.page_size,
+    }) {
+        Ok(bounds) => bounds,
+        Err(response) => return response,
+    };
+    let account_id = match query.account_id.as_deref() {
+        Some(raw) => match raw.parse::<i64>() {
+            Ok(value) if value > 0 => Some(value),
+            _ => {
+                return problem_response(
+                    StatusCode::BAD_REQUEST,
+                    "Bad Request",
+                    "accountId must be a positive numeric id",
+                );
+            }
+        },
+        None => None,
+    };
+    match state
+        .store
+        .list_email_senders(&subject, account_id, page, page_size)
+        .await
+    {
+        Ok(result) => {
+            let items = result
+                .items
+                .into_iter()
+                .map(|item| serde_json::to_value(item).unwrap_or(Value::Null))
+                .collect();
+            list_response(items, result.page, result.page_size, result.total_items)
+        }
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn create_email_sender(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    headers: axum::http::HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let idempotency_key = match idempotency_key(&headers) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+    let command: CreateEmailSenderCommand = match parse_body(body).await {
+        Ok(command) => command,
+        Err(response) => return response,
+    };
+    if let Err(error) = crate::ports::parse_email_address(&command.from_address) {
+        return problem_response(StatusCode::BAD_REQUEST, "Bad Request", error);
+    }
+    match state
+        .store
+        .create_email_sender(&subject, &command, &idempotency_key)
+        .await
+    {
+        Ok(item) => match serde_json::to_value(item) {
+            Ok(value) => resource_response(StatusCode::CREATED, value),
+            Err(_) => problem_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "failed to serialize email sender",
+            ),
+        },
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn retrieve_email_sender(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(sender_id): Path<i64>,
+) -> Response {
+    match state.store.retrieve_email_sender(&subject, sender_id).await {
+        Ok(item) => match serde_json::to_value(item) {
+            Ok(value) => resource_response(StatusCode::OK, value),
+            Err(_) => problem_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "failed to serialize email sender",
+            ),
+        },
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn update_email_sender(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(sender_id): Path<i64>,
+    headers: axum::http::HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let idempotency_key = match idempotency_key(&headers) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+    let command: UpdateEmailSenderCommand = match parse_body(body).await {
+        Ok(command) => command,
+        Err(response) => return response,
+    };
+    if let Err(error) = crate::ports::parse_email_address(&command.from_address) {
+        return problem_response(StatusCode::BAD_REQUEST, "Bad Request", error);
+    }
+    match state
+        .store
+        .update_email_sender(&subject, sender_id, &command, &idempotency_key)
+        .await
+    {
+        Ok(item) => match serde_json::to_value(item) {
+            Ok(value) => resource_response(StatusCode::OK, value),
+            Err(_) => problem_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "failed to serialize email sender",
+            ),
+        },
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn delete_email_sender(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(sender_id): Path<i64>,
+    headers: axum::http::HeaderMap,
+    _body: axum::body::Bytes,
+) -> Response {
+    let idempotency_key = match idempotency_key(&headers) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+    match state
+        .store
+        .delete_email_sender(&subject, sender_id, &idempotency_key)
+        .await
+    {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(error) => store_error_response(error),
+    }
+}
+
+// ------------------------------------------------------------- email send rules
+
+async fn list_email_send_rules(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+) -> Response {
+    match state.store.list_email_send_rules(&subject).await {
+        Ok(items) => {
+            let total = items.len() as i64;
+            let values = items
+                .into_iter()
+                .map(|item| serde_json::to_value(item).unwrap_or(Value::Null))
+                .collect();
+            list_response(values, 1, 20, total)
+        }
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn update_email_send_rule(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(scenario): Path<String>,
+    headers: axum::http::HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let idempotency_key = match idempotency_key(&headers) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+    if let Err(error) = crate::ports::parse_send_rule_scenario(&scenario) {
+        return problem_response(StatusCode::BAD_REQUEST, "Bad Request", error);
+    }
+    let command: UpdateEmailSendRuleCommand = match parse_body(body).await {
+        Ok(command) => command,
+        Err(response) => return response,
+    };
+    match state
+        .store
+        .update_email_send_rule(&subject, &scenario, &command, &idempotency_key)
+        .await
+    {
+        Ok(item) => match serde_json::to_value(item) {
+            Ok(value) => resource_response(StatusCode::OK, value),
+            Err(_) => problem_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "failed to serialize email send rule",
+            ),
+        },
+        Err(error) => store_error_response(error),
+    }
+}
+
+// ---------------------------------------------------------------- sms accounts
+
+async fn list_sms_accounts(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Query(query): Query<PageQuery>,
+) -> Response {
+    let (page, page_size) = match page_bounds(&query) {
+        Ok(bounds) => bounds,
+        Err(response) => return response,
+    };
+    match state
+        .store
+        .list_sms_accounts(&subject, page, page_size)
+        .await
+    {
+        Ok(result) => {
+            let items = result
+                .items
+                .into_iter()
+                .map(|item| serde_json::to_value(item).unwrap_or(Value::Null))
+                .collect();
+            list_response(items, result.page, result.page_size, result.total_items)
+        }
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn create_sms_account(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    headers: axum::http::HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let idempotency_key = match idempotency_key(&headers) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+    let command: CreateSmsAccountCommand = match parse_body(body).await {
+        Ok(command) => command,
+        Err(response) => return response,
+    };
+    if let Err(error) = crate::ports::parse_sms_provider(&command.provider) {
+        return problem_response(StatusCode::BAD_REQUEST, "Bad Request", error);
+    }
+    match state
+        .store
+        .create_sms_account(&subject, &command, &idempotency_key)
+        .await
+    {
+        Ok(item) => match serde_json::to_value(item) {
+            Ok(value) => resource_response(StatusCode::CREATED, value),
+            Err(_) => problem_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "failed to serialize sms account",
+            ),
+        },
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn retrieve_sms_account(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(account_id): Path<i64>,
+) -> Response {
+    match state.store.retrieve_sms_account(&subject, account_id).await {
+        Ok(item) => match serde_json::to_value(item) {
+            Ok(value) => resource_response(StatusCode::OK, value),
+            Err(_) => problem_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "failed to serialize sms account",
+            ),
+        },
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn update_sms_account(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(account_id): Path<i64>,
+    headers: axum::http::HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let idempotency_key = match idempotency_key(&headers) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+    let command: UpdateSmsAccountCommand = match parse_body(body).await {
+        Ok(command) => command,
+        Err(response) => return response,
+    };
+    if let Err(error) = crate::ports::parse_sms_provider(&command.provider) {
+        return problem_response(StatusCode::BAD_REQUEST, "Bad Request", error);
+    }
+    match state
+        .store
+        .update_sms_account(&subject, account_id, &command, &idempotency_key)
+        .await
+    {
+        Ok(item) => match serde_json::to_value(item) {
+            Ok(value) => resource_response(StatusCode::OK, value),
+            Err(_) => problem_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "failed to serialize sms account",
+            ),
+        },
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn delete_sms_account(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(account_id): Path<i64>,
+    headers: axum::http::HeaderMap,
+    _body: axum::body::Bytes,
+) -> Response {
+    let idempotency_key = match idempotency_key(&headers) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+    match state
+        .store
+        .delete_sms_account(&subject, account_id, &idempotency_key)
+        .await
+    {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(error) => store_error_response(error),
+    }
+}
+
+// -------------------------------------------------------------- sms signatures
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SmsSignatureListQuery {
+    account_id: Option<String>,
+    page: Option<i64>,
+    page_size: Option<i64>,
+}
+
+async fn list_sms_signatures(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Query(query): Query<SmsSignatureListQuery>,
+) -> Response {
+    let (page, page_size) = match page_bounds(&PageQuery {
+        page: query.page,
+        page_size: query.page_size,
+    }) {
+        Ok(bounds) => bounds,
+        Err(response) => return response,
+    };
+    let account_id = match query.account_id.as_deref() {
+        Some(raw) => match raw.parse::<i64>() {
+            Ok(value) if value > 0 => Some(value),
+            _ => {
+                return problem_response(
+                    StatusCode::BAD_REQUEST,
+                    "Bad Request",
+                    "accountId must be a positive numeric id",
+                );
+            }
+        },
+        None => None,
+    };
+    match state
+        .store
+        .list_sms_signatures(&subject, account_id, page, page_size)
+        .await
+    {
+        Ok(result) => {
+            let items = result
+                .items
+                .into_iter()
+                .map(|item| serde_json::to_value(item).unwrap_or(Value::Null))
+                .collect();
+            list_response(items, result.page, result.page_size, result.total_items)
+        }
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn create_sms_signature(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    headers: axum::http::HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let idempotency_key = match idempotency_key(&headers) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+    let command: CreateSmsSignatureCommand = match parse_body(body).await {
+        Ok(command) => command,
+        Err(response) => return response,
+    };
+    if let Err(error) = crate::ports::parse_sms_sign_name(&command.sign_name) {
+        return problem_response(StatusCode::BAD_REQUEST, "Bad Request", error);
+    }
+    match state
+        .store
+        .create_sms_signature(&subject, &command, &idempotency_key)
+        .await
+    {
+        Ok(item) => match serde_json::to_value(item) {
+            Ok(value) => resource_response(StatusCode::CREATED, value),
+            Err(_) => problem_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "failed to serialize sms signature",
+            ),
+        },
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn retrieve_sms_signature(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(signature_id): Path<i64>,
+) -> Response {
+    match state
+        .store
+        .retrieve_sms_signature(&subject, signature_id)
+        .await
+    {
+        Ok(item) => match serde_json::to_value(item) {
+            Ok(value) => resource_response(StatusCode::OK, value),
+            Err(_) => problem_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "failed to serialize sms signature",
+            ),
+        },
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn update_sms_signature(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(signature_id): Path<i64>,
+    headers: axum::http::HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let idempotency_key = match idempotency_key(&headers) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+    let command: UpdateSmsSignatureCommand = match parse_body(body).await {
+        Ok(command) => command,
+        Err(response) => return response,
+    };
+    if let Err(error) = crate::ports::parse_sms_sign_name(&command.sign_name) {
+        return problem_response(StatusCode::BAD_REQUEST, "Bad Request", error);
+    }
+    match state
+        .store
+        .update_sms_signature(&subject, signature_id, &command, &idempotency_key)
+        .await
+    {
+        Ok(item) => match serde_json::to_value(item) {
+            Ok(value) => resource_response(StatusCode::OK, value),
+            Err(_) => problem_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "failed to serialize sms signature",
+            ),
+        },
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn delete_sms_signature(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(signature_id): Path<i64>,
+    headers: axum::http::HeaderMap,
+    _body: axum::body::Bytes,
+) -> Response {
+    let idempotency_key = match idempotency_key(&headers) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+    match state
+        .store
+        .delete_sms_signature(&subject, signature_id, &idempotency_key)
+        .await
+    {
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(error) => store_error_response(error),
+    }
+}
+
+// ------------------------------------------------------------- sms send rules
+
+async fn list_sms_send_rules(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+) -> Response {
+    match state.store.list_sms_send_rules(&subject).await {
+        Ok(items) => {
+            let total = items.len() as i64;
+            let values = items
+                .into_iter()
+                .map(|item| serde_json::to_value(item).unwrap_or(Value::Null))
+                .collect();
+            list_response(values, 1, 20, total)
+        }
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn update_sms_send_rule(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(scenario): Path<String>,
+    headers: axum::http::HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let idempotency_key = match idempotency_key(&headers) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+    if let Err(error) = crate::ports::parse_send_rule_scenario(&scenario) {
+        return problem_response(StatusCode::BAD_REQUEST, "Bad Request", error);
+    }
+    let command: UpdateSmsSendRuleCommand = match parse_body(body).await {
+        Ok(command) => command,
+        Err(response) => return response,
+    };
+    match state
+        .store
+        .update_sms_send_rule(&subject, &scenario, &command, &idempotency_key)
+        .await
+    {
+        Ok(item) => match serde_json::to_value(item) {
+            Ok(value) => resource_response(StatusCode::OK, value),
+            Err(_) => problem_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "failed to serialize sms send rule",
             ),
         },
         Err(error) => store_error_response(error),
@@ -582,17 +1371,20 @@ async fn list_templates(
     subject: MessagingAdminSubject,
     Query(query): Query<TemplateListQuery>,
 ) -> Response {
-    let (page, page_size) = page_bounds(&PageQuery {
+    let (page, page_size) = match page_bounds(&PageQuery {
         page: query.page,
         page_size: query.page_size,
-    });
+    }) {
+        Ok(bounds) => bounds,
+        Err(response) => return response,
+    };
     match state
         .store
         .list_templates(
             &subject,
             query.channel.as_deref(),
             query.status.as_deref(),
-            query.keyword.as_deref(),
+            query.q.as_deref(),
             page,
             page_size,
         )
@@ -710,14 +1502,7 @@ async fn delete_template(
         .delete_template(&subject, template_id, &idempotency_key)
         .await
     {
-        Ok(()) => success_response(
-            StatusCode::OK,
-            json!({
-                "templateId": template_id.to_string(),
-                "deleted": true,
-                "requestId": uuid(),
-            }),
-        ),
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(error) => store_error_response(error),
     }
 }
