@@ -8,7 +8,7 @@ use sdkwork_routes_messaging_backend_api::{
     MessageIdGenerator, MessagingAdminStore,
 };
 use sdkwork_web_bootstrap::{
-    ApiAssemblyContribution, PgPoolReadinessCheck, ReadinessCheck, WebModule,
+    ApiAssemblyContribution, DatabasePoolReadinessCheck, ReadinessCheck, WebModule,
 };
 use sdkwork_web_core::HttpRouteManifest;
 
@@ -17,9 +17,9 @@ use sdkwork_web_core::HttpRouteManifest;
 pub type ApiAssembly = ApiAssemblyContribution;
 
 pub(crate) fn readiness_check(pool: &DatabasePool) -> Arc<dyn ReadinessCheck> {
-    // PostgreSQL-only by DATABASE_SPEC; see allocate_admin_store.
-    let DatabasePool::Postgres(pool, _) = pool;
-    Arc::new(PgPoolReadinessCheck::new(pool.clone()))
+    // PostgreSQL-only by DATABASE_SPEC; the canonical pool check keeps the
+    // assembly compiling when the unified feature graph enables sqlite.
+    Arc::new(DatabasePoolReadinessCheck::new(pool.clone()))
 }
 
 /// Allocates the process-shared platform snowflake generator (§6.1/DB049)
@@ -29,8 +29,10 @@ async fn allocate_admin_store(
     pool: DatabasePool,
 ) -> Result<Arc<dyn MessagingAdminStore + Send + Sync>, String> {
     // PostgreSQL-only by DATABASE_SPEC (authoritative-server persistence);
-    // a sqlite-enabled build of this workspace fails to compile here by design.
-    let DatabasePool::Postgres(pool, context) = pool;
+    // other engines are rejected at runtime instead of failing to compile.
+    let DatabasePool::Postgres(pool, context) = pool else {
+        return Err("messaging requires a PostgreSQL database pool".to_owned());
+    };
 
     let wrapped_pool = DatabasePool::Postgres(pool.clone(), context.clone());
     let generator: Arc<dyn MessageIdGenerator> =
