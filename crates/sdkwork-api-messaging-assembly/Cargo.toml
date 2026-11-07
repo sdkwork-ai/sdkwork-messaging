@@ -20,3 +20,4 @@ sdkwork-web-core.workspace = true
 sdkwork-database-sqlx.workspace = true
 sdkwork-messaging-database-host.workspace = true
 sdkwork-routes-messaging-backend-api.workspace = true
+sdkwork-database-id.workspace = true

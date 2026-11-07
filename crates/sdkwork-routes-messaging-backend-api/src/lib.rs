@@ -10,7 +10,9 @@ pub mod web_bootstrap;
 
 pub use http_route_manifest::{backend_route_manifest, route_definitions};
 pub use infrastructure::postgres::admin_store::PostgresMessagingAdminStore;
-pub use infrastructure::runtime_id::MessagingRuntimeIdGenerator;
+pub use infrastructure::runtime_id::{
+    LocalMonotonicIdGenerator, MessageIdGenerator, PlatformSnowflakeIdGenerator,
+};
 pub use ports::{MessagingAdminStore, MessagingAdminSubject, StoreError};
 pub use routes::admin_messaging_router_with_store;
 pub use web_bootstrap::{

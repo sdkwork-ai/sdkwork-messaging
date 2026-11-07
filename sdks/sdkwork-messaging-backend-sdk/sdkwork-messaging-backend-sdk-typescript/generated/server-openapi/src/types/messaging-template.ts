@@ -9,6 +9,7 @@ export interface MessagingTemplate {
   approvalStatus: 'not_applicable' | 'pending' | 'approved' | 'rejected';
   approvalNote?: string;
   status: 'draft' | 'active' | 'disabled';
+  version: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: string;

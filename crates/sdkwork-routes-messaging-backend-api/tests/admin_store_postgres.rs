@@ -65,9 +65,9 @@ async fn drop_test_database(admin: &mut PgConnection, name: &str) {
     // Parallel test binaries keep reconnecting between terminate and drop;
     // a bounded retry absorbs the window.
     for attempt in 0..10 {
-        let result = sqlx::raw_sql(sqlx::AssertSqlSafe(format!(
-            "DROP DATABASE IF EXISTS {name}"
-        ).as_str()))
+        let result = sqlx::raw_sql(sqlx::AssertSqlSafe(
+            format!("DROP DATABASE IF EXISTS {name}").as_str(),
+        ))
         .execute(&mut *admin)
         .await;
         match result {
@@ -294,7 +294,6 @@ async fn account_update_enforces_optimistic_concurrency() {
         .create_email_account(&test.subject_t1o1, &email_account_command("并发"), "it-key")
         .await
         .expect("create account");
-
 
     let current = sdkwork_routes_messaging_backend_api::ports::UpdateEmailAccountCommand {
         name: "并发-成功".to_owned(),

@@ -4,4 +4,5 @@ export interface MessagingVerificationPolicyUpdateRequest {
   messageSubject?: string;
   messageBodyPattern: string;
   enabled?: boolean;
+  expectedVersion: string;
 }

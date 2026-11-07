@@ -4,10 +4,12 @@ use std::sync::Arc;
 
 use sdkwork_database_sqlx::DatabasePool;
 use sdkwork_routes_messaging_backend_api::{
-    gateway_route_manifest, gateway_mount, wrap_router_with_web_framework_from_env,
-    MessagingAdminStore, PostgresMessagingAdminStore,
+    gateway_mount, gateway_route_manifest, wrap_router_with_web_framework_from_env,
+    MessageIdGenerator, MessagingAdminStore,
 };
-use sdkwork_web_bootstrap::{ApiAssemblyContribution, PgPoolReadinessCheck, ReadinessCheck, WebModule};
+use sdkwork_web_bootstrap::{
+    ApiAssemblyContribution, PgPoolReadinessCheck, ReadinessCheck, WebModule,
+};
 use sdkwork_web_core::HttpRouteManifest;
 
 /// Indivisible host-neutral API assembly contribution (web-bootstrap contract,
@@ -15,12 +17,47 @@ use sdkwork_web_core::HttpRouteManifest;
 pub type ApiAssembly = ApiAssemblyContribution;
 
 pub(crate) fn readiness_check(pool: &DatabasePool) -> Arc<dyn ReadinessCheck> {
-    match pool {
-        DatabasePool::Postgres(pool, _) => Arc::new(PgPoolReadinessCheck::new(pool.clone())),
-        _ => unreachable!(
-            "messaging server assembly requires a PostgreSQL pool (DATABASE_SPEC: authoritative-server persistence is PostgreSQL only)"
+    // PostgreSQL-only by DATABASE_SPEC; see allocate_admin_store.
+    let DatabasePool::Postgres(pool, _) = pool;
+    Arc::new(PgPoolReadinessCheck::new(pool.clone()))
+}
+
+/// Allocates the process-shared platform snowflake generator (§6.1/DB049)
+/// and falls back to the documented local generator when the node registry
+/// is unavailable, so bootstrapping never hard-fails on ID infrastructure.
+async fn allocate_admin_store(
+    pool: DatabasePool,
+) -> Result<Arc<dyn MessagingAdminStore + Send + Sync>, String> {
+    // PostgreSQL-only by DATABASE_SPEC (authoritative-server persistence);
+    // a sqlite-enabled build of this workspace fails to compile here by design.
+    let DatabasePool::Postgres(pool, context) = pool;
+
+    let wrapped_pool = DatabasePool::Postgres(pool.clone(), context.clone());
+    let generator: Arc<dyn MessageIdGenerator> =
+        match sdkwork_database_id::SnowflakeNodeAllocator::allocate_process_generator(
+            &wrapped_pool,
+            &sdkwork_database_id::NodeAllocatorConfig::from_service_name("messaging"),
+        )
+        .await
+        {
+            Ok((generator, _lease)) => Arc::new(
+                sdkwork_routes_messaging_backend_api::PlatformSnowflakeIdGenerator::new(generator),
+            ),
+            Err(error) => {
+                eprintln!(
+                    "messaging: platform ID node allocation unavailable ({error}); \
+                     using the local monotonic generator fallback"
+                );
+                Arc::new(sdkwork_routes_messaging_backend_api::LocalMonotonicIdGenerator::new())
+            }
+        };
+
+    Ok(Arc::new(
+        sdkwork_routes_messaging_backend_api::PostgresMessagingAdminStore::with_id_generator(
+            pool.clone(),
+            generator,
         ),
-    }
+    ))
 }
 
 pub async fn assemble_business_routes() -> Result<ApiAssembly, String> {
@@ -29,17 +66,10 @@ pub async fn assemble_business_routes() -> Result<ApiAssembly, String> {
         .map_err(|error| format!("bootstrap messaging database failed: {error}"))?;
     let pool = host.pool();
 
-    let admin_store: Arc<dyn MessagingAdminStore + Send + Sync> = match pool {
-        DatabasePool::Postgres(pool, _) => Arc::new(PostgresMessagingAdminStore::new(pool.clone())),
-        _ => unreachable!(
-            "messaging server assembly requires a PostgreSQL pool (DATABASE_SPEC: authoritative-server persistence is PostgreSQL only)"
-        ),
-    };
+    let admin_store = allocate_admin_store(pool.clone()).await?;
 
     let router = wrap_router_with_web_framework_from_env(gateway_mount(admin_store)).await;
-    let routes = gateway_route_manifest()
-        .routes()
-        .to_vec();
+    let routes = gateway_route_manifest().routes().to_vec();
 
     ApiAssemblyContribution::from_manifest(
         "sdkwork-messaging",

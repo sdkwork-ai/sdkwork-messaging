@@ -480,7 +480,7 @@ function schemas() {
       remainingAttempts: { type: "integer", minimum: 0 },
       requestId,
     }),
-    MessagingVerificationPolicy: object(["id", "sceneCode", "channel", "ttlSeconds", "maxAttempts", "enabled"], {
+    MessagingVerificationPolicy: object(["id", "sceneCode", "channel", "ttlSeconds", "maxAttempts", "enabled", "version"], {
       id,
       sceneCode: { type: "string", minLength: 1, maxLength: 160 },
       channel: directChannel,
@@ -489,13 +489,15 @@ function schemas() {
       messageSubject: { type: "string" },
       messageBodyPattern: { type: "string", minLength: 1 },
       enabled: { type: "boolean" },
+      version: int64,
     }),
-    MessagingVerificationPolicyUpdateRequest: object(["messageBodyPattern"], {
+    MessagingVerificationPolicyUpdateRequest: object(["messageBodyPattern", "expectedVersion"], {
       ttlSeconds: { type: "integer", minimum: 30 },
       maxAttempts: { type: "integer", minimum: 1, maximum: 20 },
       messageSubject: { type: "string" },
       messageBodyPattern: { type: "string", minLength: 1 },
       enabled: { type: "boolean" },
+      expectedVersion: int64,
     }),
     MessagingVerificationPolicyResponse: object(["item", "requestId"], {
       item: { $ref: "#/components/schemas/MessagingVerificationPolicy" },
@@ -682,7 +684,7 @@ function schemas() {
       requestId,
     }),
     MessagingEmailSendRuleListResponse: envelope("MessagingEmailSendRuleListResponse", "MessagingEmailSendRule"),
-    MessagingTemplate: object(["id", "channel", "templateCode", "name", "content", "approvalStatus", "status"], {
+    MessagingTemplate: object(["id", "channel", "templateCode", "name", "content", "approvalStatus", "status", "version"], {
       id,
       channel: directChannel,
       templateCode: { type: "string", minLength: 1, maxLength: 128 },
@@ -693,6 +695,7 @@ function schemas() {
       approvalStatus: { type: "string", enum: ["not_applicable", "pending", "approved", "rejected"] },
       approvalNote: { type: "string" },
       status: { type: "string", enum: ["draft", "active", "disabled"] },
+      version: int64,
       createdAt: { type: "string", format: "date-time" },
       updatedAt: { type: "string", format: "date-time" },
       createdBy: { type: "string" },
@@ -708,7 +711,7 @@ function schemas() {
       approvalNote: { type: "string" },
       status: { type: "string", enum: ["draft", "active", "disabled"] },
     }),
-    MessagingTemplateUpdateRequest: object(["name", "content"], {
+    MessagingTemplateUpdateRequest: object(["name", "content", "expectedVersion"], {
       name: { type: "string", minLength: 1, maxLength: 192 },
       subject: { type: "string" },
       content: { type: "string", minLength: 1 },
@@ -716,6 +719,7 @@ function schemas() {
       approvalStatus: { type: "string", enum: ["not_applicable", "pending", "approved", "rejected"] },
       approvalNote: { type: "string" },
       status: { type: "string", enum: ["draft", "active", "disabled"] },
+      expectedVersion: int64,
     }),
     MessagingTemplateResponse: object(["item", "requestId"], {
       item: { $ref: "#/components/schemas/MessagingTemplate" },

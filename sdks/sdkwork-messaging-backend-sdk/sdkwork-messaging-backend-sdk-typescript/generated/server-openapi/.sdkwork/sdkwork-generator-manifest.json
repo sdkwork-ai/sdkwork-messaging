@@ -348,11 +348,11 @@
     },
     {
       "path": "src/types/messaging-template-update-request.ts",
-      "sha256": "2ea4744c70f59e44fa0159110ae78e40bcd012b08484f7dc8dfd112d1d0e841f"
+      "sha256": "4931dd8ccf505979973b46b8f82eb3caa291b1110f8748ae47d99ce0fced1f15"
     },
     {
       "path": "src/types/messaging-template.ts",
-      "sha256": "41687a7b3cc489be6bda614b5ef8d0c0fda92a900a5a09936df374fc19589bf5"
+      "sha256": "4337b7ee76cd2e7f671376e6dc8c2157c4f4e54dea70ff501676f95dfa153f53"
     },
     {
       "path": "src/types/messaging-verification-policy-list-response.ts",
@@ -364,11 +364,11 @@
     },
     {
       "path": "src/types/messaging-verification-policy-update-request.ts",
-      "sha256": "72f22032f6a6a2e8bbe0705fe8c84f44088bf4d60f5242422520385e6bd5fa94"
+      "sha256": "267dcca34c9426bd49bd4fb461670e3468dd0d7948e2087684a6eed67b612696"
     },
     {
       "path": "src/types/messaging-verification-policy.ts",
-      "sha256": "22281fd5b58ea804d5ade48ae7d6d43121b11bb3dc8b31e3bb57406ddd5ddc4c"
+      "sha256": "bbb1c1c6c42b00757897d70edb51a6ca276982d6af5190a598f8128d56306145"
     },
     {
       "path": "src/types/notifications-create-response201.ts",

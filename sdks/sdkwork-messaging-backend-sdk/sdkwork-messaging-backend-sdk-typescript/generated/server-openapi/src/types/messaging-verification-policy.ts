@@ -7,4 +7,5 @@ export interface MessagingVerificationPolicy {
   messageSubject?: string;
   messageBodyPattern?: string;
   enabled: boolean;
+  version: string;
 }

@@ -158,6 +158,7 @@ pub struct VerificationPolicyItem {
     pub message_subject: Option<String>,
     pub message_body_pattern: String,
     pub enabled: bool,
+    pub version: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -168,6 +169,8 @@ pub struct UpdateVerificationPolicyCommand {
     pub message_subject: Option<String>,
     pub message_body_pattern: Option<String>,
     pub enabled: Option<bool>,
+    /// Optimistic concurrency guard (DATABASE_SPEC §17).
+    pub expected_version: String,
 }
 
 // ------------------------------------------------------------- email accounts
@@ -405,6 +408,7 @@ pub struct TemplateItem {
     pub approval_status: String,
     pub approval_note: Option<String>,
     pub status: String,
+    pub version: String,
     pub created_at: String,
     pub updated_at: String,
     pub created_by: Option<String>,
@@ -434,6 +438,8 @@ pub struct UpdateTemplateCommand {
     pub approval_status: Option<String>,
     pub approval_note: Option<String>,
     pub status: Option<String>,
+    /// Optimistic concurrency guard (DATABASE_SPEC §17).
+    pub expected_version: String,
 }
 
 // -------------------------------------------------------------------- store

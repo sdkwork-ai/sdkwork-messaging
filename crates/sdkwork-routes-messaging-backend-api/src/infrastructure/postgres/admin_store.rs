@@ -11,7 +11,7 @@ use sqlx::{PgPool, Row};
 use crate::application::messaging_secret_codec::{
     AesGcmMessagingSecretCodec, MessagingSecretCodec, MessagingSecretContext,
 };
-use crate::infrastructure::runtime_id::MessagingRuntimeIdGenerator;
+use crate::infrastructure::runtime_id::{LocalMonotonicIdGenerator, MessageIdGenerator};
 use crate::ports::{
     mask_secret, mask_target, AnnouncementItem, CreateEmailAccountCommand,
     CreateEmailSenderCommand, CreateNotificationCommand, CreateSmsAccountCommand,
@@ -27,15 +27,22 @@ use crate::ports::{
 
 pub struct PostgresMessagingAdminStore {
     pool: PgPool,
-    id_generator: Arc<MessagingRuntimeIdGenerator>,
+    id_generator: Arc<dyn MessageIdGenerator>,
     secret_codec: Arc<dyn MessagingSecretCodec + Send + Sync>,
 }
 
 impl PostgresMessagingAdminStore {
     pub fn new(pool: PgPool) -> Self {
+        Self::with_id_generator(pool, Arc::new(LocalMonotonicIdGenerator::new()))
+    }
+
+    /// Production wiring: pass the platform allocator's generator
+    /// (§6.1/DB049). `with_codec` and `new` fall back to the local
+    /// monotonic generator for tests and tooling.
+    pub fn with_id_generator(pool: PgPool, id_generator: Arc<dyn MessageIdGenerator>) -> Self {
         Self {
             pool,
-            id_generator: Arc::new(MessagingRuntimeIdGenerator::new()),
+            id_generator,
             secret_codec: Arc::new(AesGcmMessagingSecretCodec::from_env()),
         }
     }
@@ -44,11 +51,16 @@ impl PostgresMessagingAdminStore {
         pool: PgPool,
         secret_codec: Arc<dyn MessagingSecretCodec + Send + Sync>,
     ) -> Self {
-        Self {
-            pool,
-            id_generator: Arc::new(MessagingRuntimeIdGenerator::new()),
-            secret_codec,
-        }
+        Self::with_id_generator(pool, Arc::new(LocalMonotonicIdGenerator::new()))
+            .with_codec_inner(secret_codec)
+    }
+
+    fn with_codec_inner(
+        mut self,
+        secret_codec: Arc<dyn MessagingSecretCodec + Send + Sync>,
+    ) -> Self {
+        self.secret_codec = secret_codec;
+        self
     }
 
     fn next_id(&self) -> i64 {
@@ -1006,7 +1018,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .map_err(|error| StoreError::Unavailable(error.to_string()))?;
 
         let rows = sqlx::query(
-            "SELECT id, scene_code, channel, ttl_seconds, max_attempts, message_subject, message_body_pattern, enabled \
+            "SELECT id, scene_code, channel, ttl_seconds, max_attempts, message_subject, message_body_pattern, enabled, version \
              FROM messaging_verification_policy \
              WHERE tenant_id = $1 AND organization_id = $2 \
              ORDER BY created_at DESC \
@@ -1031,6 +1043,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
                 message_subject: row.get("message_subject"),
                 message_body_pattern: row.get("message_body_pattern"),
                 enabled: row.get("enabled"),
+                version: row.get::<i64, _>("version").to_string(),
             })
             .collect();
 
@@ -1077,10 +1090,12 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
                 message_subject = $5, \
                 message_body_pattern = COALESCE($6, message_body_pattern), \
                 enabled = COALESCE($7, enabled), \
+                updated_by = $8, \
                 updated_at = CURRENT_TIMESTAMP, \
                 version = version + 1 \
-             WHERE id = $1 AND tenant_id = $2 \
-             RETURNING id, scene_code, channel, ttl_seconds, max_attempts, message_subject, message_body_pattern, enabled",
+             WHERE id = $1 AND tenant_id = $2 AND organization_id = $9 \
+               AND version = $10 \
+             RETURNING id, scene_code, channel, ttl_seconds, max_attempts, message_subject, message_body_pattern, enabled, version",
         )
         .bind(policy_id)
         .bind(subject.tenant_id)
@@ -1089,10 +1104,25 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .bind(&command.message_subject)
         .bind(&command.message_body_pattern)
         .bind(command.enabled)
+        .bind(subject.operator_id)
+        .bind(subject.organization_id)
+        .bind(parse_expected_version(&command.expected_version)?)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|error| StoreError::Unavailable(error.to_string()))?
-        .ok_or_else(|| StoreError::NotFound("verification policy not found".to_owned()))?;
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        let row = match row {
+            Some(row) => row,
+            None => {
+                return Err(self
+                    .version_conflict_or_missing(
+                        "messaging_verification_policy",
+                        policy_id,
+                        subject,
+                        "verification policy",
+                    )
+                    .await);
+            }
+        };
 
         Ok(VerificationPolicyItem {
             id: row.get::<i64, _>("id").to_string(),
@@ -1103,6 +1133,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
             message_subject: row.get("message_subject"),
             message_body_pattern: row.get("message_body_pattern"),
             enabled: row.get("enabled"),
+            version: row.get::<i64, _>("version").to_string(),
         })
     }
 
@@ -1512,9 +1543,11 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
                 from_address = $4, \
                 from_name = $5, \
                 enabled = $6, \
+                updated_by = $7, \
                 updated_at = CURRENT_TIMESTAMP, \
                 version = version + 1 \
              WHERE id = $1 AND tenant_id = $2 AND organization_id = $3 AND deleted_at IS NULL \
+               AND version = $8 \
              RETURNING id",
         )
         .bind(sender_id)
@@ -1523,6 +1556,8 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .bind(from_address)
         .bind(trim_optional(&command.from_name))
         .bind(command.enabled)
+        .bind(subject.operator_id)
+        .bind(parse_expected_version(&command.expected_version)?)
         .fetch_optional(&self.pool)
         .await
         .map_err(|error| {
@@ -1533,8 +1568,20 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
             } else {
                 StoreError::Unavailable(error.to_string())
             }
-        })?
-        .ok_or_else(|| StoreError::NotFound("email sender not found".to_owned()))?;
+        })?;
+        let updated = match updated {
+            Some(updated) => updated,
+            None => {
+                return Err(self
+                    .version_conflict_or_missing(
+                        "messaging_email_sender",
+                        sender_id,
+                        subject,
+                        "email sender",
+                    )
+                    .await);
+            }
+        };
         self.load_email_sender(subject, updated.get::<i64, _>("id"))
             .await
     }
@@ -1689,15 +1736,15 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
 
         let row = sqlx::query(
             "INSERT INTO messaging_email_send_rule \
-             (id, uuid, tenant_id, organization_id, scenario, chain_json, enabled, created_by) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) \
+             (id, uuid, tenant_id, organization_id, scenario, chain_json, enabled, created_by, updated_by) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) \
              ON CONFLICT (tenant_id, organization_id, scenario) WHERE deleted_at IS NULL DO UPDATE SET \
                 chain_json = EXCLUDED.chain_json, \
                 enabled = EXCLUDED.enabled, \
                 updated_by = EXCLUDED.updated_by, \
                 updated_at = CURRENT_TIMESTAMP, \
                 version = messaging_email_send_rule.version + 1 \
-             WHERE messaging_email_send_rule.version = $9 \
+             WHERE messaging_email_send_rule.version = $10 \
              RETURNING id, scenario, chain_json, enabled, updated_at, version",
         )
         .bind(self.next_id())
@@ -1707,6 +1754,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .bind(scenario)
         .bind(&chain_json)
         .bind(command.enabled)
+        .bind(subject.operator_id)
         .bind(subject.operator_id)
         .bind(parse_expected_version(&command.expected_version)?)
         .fetch_optional(&self.pool)
@@ -2332,15 +2380,15 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
 
         let row = sqlx::query(
             "INSERT INTO messaging_sms_send_rule \
-             (id, uuid, tenant_id, organization_id, scenario, chain_json, enabled, created_by) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) \
+             (id, uuid, tenant_id, organization_id, scenario, chain_json, enabled, created_by, updated_by) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) \
              ON CONFLICT (tenant_id, organization_id, scenario) WHERE deleted_at IS NULL DO UPDATE SET \
                 chain_json = EXCLUDED.chain_json, \
                 enabled = EXCLUDED.enabled, \
                 updated_by = EXCLUDED.updated_by, \
                 updated_at = CURRENT_TIMESTAMP, \
                 version = messaging_sms_send_rule.version + 1 \
-             WHERE messaging_sms_send_rule.version = $9 \
+             WHERE messaging_sms_send_rule.version = $10 \
              RETURNING id, scenario, chain_json, enabled, updated_at, version",
         )
         .bind(self.next_id())
@@ -2350,6 +2398,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .bind(scenario)
         .bind(&chain_json)
         .bind(command.enabled)
+        .bind(subject.operator_id)
         .bind(subject.operator_id)
         .bind(parse_expected_version(&command.expected_version)?)
         .fetch_optional(&self.pool)
@@ -2418,7 +2467,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .map_err(|error| StoreError::Unavailable(error.to_string()))?;
 
         let rows = sqlx::query(
-            "SELECT id, uuid, channel, template_code, name, subject, content, variables_json, approval_status, approval_note, status, created_at, updated_at, created_by \
+            "SELECT id, uuid, channel, template_code, name, subject, content, variables_json, approval_status, approval_note, status, version, created_at, updated_at, created_by \
              FROM messaging_template \
              WHERE tenant_id = $1 AND organization_id = $2 AND deleted_at IS NULL \
                AND ($3::text IS NULL OR channel = $3) \
@@ -2498,7 +2547,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
             "INSERT INTO messaging_template \
              (id, uuid, tenant_id, organization_id, channel, template_code, name, subject, content, variables_json, approval_status, approval_note, status, created_by) \
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) \
-             RETURNING id, uuid, channel, template_code, name, subject, content, variables_json, approval_status, approval_note, status, created_at, updated_at, created_by",
+             RETURNING id, uuid, channel, template_code, name, subject, content, variables_json, approval_status, approval_note, status, version, created_at, updated_at, created_by",
         )
         .bind(id)
         .bind(&template_uuid)
@@ -2533,7 +2582,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         template_id: i64,
     ) -> Result<TemplateItem, StoreError> {
         let row = sqlx::query(
-            "SELECT id, uuid, channel, template_code, name, subject, content, variables_json, approval_status, approval_note, status, created_at, updated_at, created_by \
+            "SELECT id, uuid, channel, template_code, name, subject, content, variables_json, approval_status, approval_note, status, version, created_at, updated_at, created_by \
              FROM messaging_template \
              WHERE id = $1 AND tenant_id = $2 AND organization_id = $3 AND deleted_at IS NULL",
         )
@@ -2577,10 +2626,12 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
                 approval_status = COALESCE($8, approval_status), \
                 approval_note = COALESCE($9, approval_note), \
                 status = $10, \
+                updated_by = $11, \
                 updated_at = CURRENT_TIMESTAMP, \
                 version = version + 1 \
              WHERE id = $1 AND tenant_id = $2 AND organization_id = $3 AND deleted_at IS NULL \
-             RETURNING id, uuid, channel, template_code, name, subject, content, variables_json, approval_status, approval_note, status, created_at, updated_at, created_by",
+               AND version = $12 \
+             RETURNING id, uuid, channel, template_code, name, subject, content, variables_json, approval_status, approval_note, status, version, created_at, updated_at, created_by",
         )
         .bind(template_id)
         .bind(subject.tenant_id)
@@ -2597,10 +2648,24 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .bind(&command.approval_status)
         .bind(&command.approval_note)
         .bind(status)
+        .bind(subject.operator_id)
+        .bind(parse_expected_version(&command.expected_version)?)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|error| StoreError::Unavailable(error.to_string()))?
-        .ok_or_else(|| StoreError::NotFound("template not found".to_owned()))?;
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        let row = match row {
+            Some(row) => row,
+            None => {
+                return Err(self
+                    .version_conflict_or_missing(
+                        "messaging_template",
+                        template_id,
+                        subject,
+                        "template",
+                    )
+                    .await);
+            }
+        };
 
         template_item_from_row(row).map_err(|error| StoreError::Unavailable(error.to_string()))
     }
@@ -2702,6 +2767,7 @@ fn template_item_from_row(row: sqlx::postgres::PgRow) -> Result<TemplateItem, sq
         approval_status: row.get("approval_status"),
         approval_note: row.get("approval_note"),
         status: row.get("status"),
+        version: row.get::<i64, _>("version").to_string(),
         created_at: rfc3339(row.get("created_at")),
         updated_at: rfc3339(row.get("updated_at")),
         created_by: row

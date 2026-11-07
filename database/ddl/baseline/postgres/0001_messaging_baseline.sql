@@ -21,14 +21,13 @@ CREATE TABLE IF NOT EXISTS messaging_notification (
     idempotency_key VARCHAR(256) NOT NULL,
     payload_hash VARCHAR(128) NOT NULL,
     created_by BIGINT,
+    updated_by BIGINT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     version BIGINT NOT NULL DEFAULT 0,
     deleted_at TIMESTAMPTZ,
     deleted_by BIGINT,
-    CONSTRAINT ck_messaging_notification_priority CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
-    CONSTRAINT uk_messaging_notification_idempotency UNIQUE (tenant_id, organization_id, idempotency_key),
-    CONSTRAINT uk_messaging_notification_key UNIQUE (tenant_id, organization_id, notification_key)
+    CONSTRAINT ck_messaging_notification_priority CHECK (priority IN ('low', 'normal', 'high', 'urgent'))
 );
 
 CREATE TABLE IF NOT EXISTS messaging_notification_recipient (
@@ -68,6 +67,7 @@ CREATE TABLE IF NOT EXISTS messaging_announcement (
     idempotency_key VARCHAR(256) NOT NULL,
     payload_hash VARCHAR(128) NOT NULL,
     created_by BIGINT,
+    updated_by BIGINT,
     published_by BIGINT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -75,9 +75,7 @@ CREATE TABLE IF NOT EXISTS messaging_announcement (
     deleted_at TIMESTAMPTZ,
     deleted_by BIGINT,
     CONSTRAINT ck_messaging_announcement_status CHECK (status IN ('draft', 'scheduled', 'published', 'expired', 'cancelled')),
-    CONSTRAINT ck_messaging_announcement_window CHECK (expire_at IS NULL OR publish_at IS NULL OR expire_at > publish_at),
-    CONSTRAINT uk_messaging_announcement_idempotency UNIQUE (tenant_id, organization_id, idempotency_key),
-    CONSTRAINT uk_messaging_announcement_key UNIQUE (tenant_id, organization_id, announcement_key)
+    CONSTRAINT ck_messaging_announcement_window CHECK (expire_at IS NULL OR publish_at IS NULL OR expire_at > publish_at)
 );
 
 CREATE TABLE IF NOT EXISTS messaging_announcement_audience (
@@ -133,8 +131,7 @@ CREATE TABLE IF NOT EXISTS messaging_push_device (
     version BIGINT NOT NULL DEFAULT 0,
     deleted_at TIMESTAMPTZ,
     deleted_by BIGINT,
-    CONSTRAINT ck_messaging_push_device_platform CHECK (platform IN ('ios', 'android', 'web')),
-    CONSTRAINT uk_messaging_push_device_key UNIQUE (tenant_id, organization_id, user_id, device_key)
+    CONSTRAINT ck_messaging_push_device_platform CHECK (platform IN ('ios', 'android', 'web'))
 );
 
 CREATE TABLE IF NOT EXISTS messaging_push_message (
@@ -153,13 +150,14 @@ CREATE TABLE IF NOT EXISTS messaging_push_message (
     status VARCHAR(32) NOT NULL DEFAULT 'accepted',
     scheduled_at TIMESTAMPTZ,
     created_by BIGINT,
+    updated_by BIGINT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     version BIGINT NOT NULL DEFAULT 0,
+    deleted_at TIMESTAMPTZ,
+    deleted_by BIGINT,
     CONSTRAINT ck_messaging_push_message_badge_non_negative CHECK (badge IS NULL OR badge >= 0),
-    CONSTRAINT ck_messaging_push_message_status CHECK (status IN ('accepted', 'queued', 'sent', 'delivered', 'failed', 'opened', 'cancelled', 'expired')),
-    CONSTRAINT uk_messaging_push_message_key UNIQUE (tenant_id, organization_id, push_key),
-    CONSTRAINT uk_messaging_push_message_idempotency UNIQUE (tenant_id, organization_id, idempotency_key)
+    CONSTRAINT ck_messaging_push_message_status CHECK (status IN ('accepted', 'queued', 'sent', 'delivered', 'failed', 'opened', 'cancelled', 'expired'))
 );
 
 CREATE TABLE IF NOT EXISTS messaging_push_delivery (
@@ -205,13 +203,15 @@ CREATE TABLE IF NOT EXISTS messaging_outbound_message (
     payload_hash VARCHAR(128) NOT NULL,
     status VARCHAR(32) NOT NULL DEFAULT 'accepted',
     created_by BIGINT,
+    updated_by BIGINT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     version BIGINT NOT NULL DEFAULT 0,
+    deleted_at TIMESTAMPTZ,
+    deleted_by BIGINT,
     CONSTRAINT ck_messaging_outbound_message_channel CHECK (channel IN ('sms', 'email')),
     CONSTRAINT ck_messaging_outbound_message_status CHECK (status IN ('accepted', 'queued', 'sent', 'delivered', 'failed', 'opened', 'cancelled', 'expired')),
-    CONSTRAINT uk_messaging_outbound_message_key UNIQUE (tenant_id, organization_id, message_key),
-    CONSTRAINT uk_messaging_outbound_message_idempotency UNIQUE (tenant_id, organization_id, idempotency_key)
+    CONSTRAINT uk_messaging_outbound_message_key UNIQUE (tenant_id, organization_id, message_key)
 );
 
 CREATE TABLE IF NOT EXISTS messaging_outbound_delivery (
@@ -249,6 +249,7 @@ CREATE TABLE IF NOT EXISTS messaging_verification_policy (
     message_subject TEXT,
     message_body_pattern TEXT NOT NULL,
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    updated_by BIGINT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     version BIGINT NOT NULL DEFAULT 0,
@@ -322,6 +323,7 @@ CREATE TABLE IF NOT EXISTS messaging_template (
     approval_note VARCHAR(512),
     status VARCHAR(32) NOT NULL DEFAULT 'draft',
     created_by BIGINT,
+    updated_by BIGINT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     version BIGINT NOT NULL DEFAULT 0,
@@ -329,8 +331,7 @@ CREATE TABLE IF NOT EXISTS messaging_template (
     deleted_by BIGINT,
     CONSTRAINT ck_messaging_template_channel CHECK (channel IN ('sms', 'email')),
     CONSTRAINT ck_messaging_template_approval_status CHECK (approval_status IN ('not_applicable', 'pending', 'approved', 'rejected')),
-    CONSTRAINT ck_messaging_template_status CHECK (status IN ('draft', 'active', 'disabled')),
-    CONSTRAINT uk_messaging_template_scope_code UNIQUE (tenant_id, organization_id, channel, template_code)
+    CONSTRAINT ck_messaging_template_status CHECK (status IN ('draft', 'active', 'disabled'))
 );
 
 CREATE TABLE IF NOT EXISTS messaging_email_account (
@@ -487,7 +488,7 @@ CREATE INDEX IF NOT EXISTS idx_messaging_verification_challenge_expiry
     ON messaging_verification_challenge (tenant_id, organization_id, status, expires_at);
 
 CREATE INDEX IF NOT EXISTS idx_messaging_template_channel_status
-    ON messaging_template (tenant_id, organization_id, channel, status, updated_at);
+    ON messaging_template (tenant_id, organization_id, channel, status, updated_at, id);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_email_account_scope_name
     ON messaging_email_account (tenant_id, organization_id, name)
@@ -513,20 +514,56 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_sms_send_rule_scope_scenario
     ON messaging_sms_send_rule (tenant_id, organization_id, scenario)
     WHERE deleted_at IS NULL;
 
+CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_notification_idempotency
+    ON messaging_notification (tenant_id, organization_id, idempotency_key)
+    WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_notification_key
+    ON messaging_notification (tenant_id, organization_id, notification_key)
+    WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_announcement_idempotency
+    ON messaging_announcement (tenant_id, organization_id, idempotency_key)
+    WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_announcement_key
+    ON messaging_announcement (tenant_id, organization_id, announcement_key)
+    WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_push_device_key
+    ON messaging_push_device (tenant_id, organization_id, user_id, device_key)
+    WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_template_scope_code
+    ON messaging_template (tenant_id, organization_id, channel, template_code)
+    WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_push_message_idempotency
+    ON messaging_push_message (tenant_id, organization_id, idempotency_key)
+    WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_push_message_key
+    ON messaging_push_message (tenant_id, organization_id, push_key)
+    WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_outbound_message_idempotency
+    ON messaging_outbound_message (tenant_id, organization_id, idempotency_key)
+    WHERE deleted_at IS NULL;
+
 CREATE INDEX IF NOT EXISTS idx_messaging_email_account_scope_enabled
-    ON messaging_email_account (tenant_id, organization_id, enabled, updated_at);
+    ON messaging_email_account (tenant_id, organization_id, enabled, updated_at, id);
 
 CREATE INDEX IF NOT EXISTS idx_messaging_email_sender_scope_account
-    ON messaging_email_sender (tenant_id, organization_id, account_id, enabled, updated_at);
+    ON messaging_email_sender (tenant_id, organization_id, account_id, enabled, updated_at, id);
 
 CREATE INDEX IF NOT EXISTS idx_messaging_email_send_rule_scope_scenario
     ON messaging_email_send_rule (tenant_id, organization_id, scenario, enabled);
 
 CREATE INDEX IF NOT EXISTS idx_messaging_sms_account_scope_enabled
-    ON messaging_sms_account (tenant_id, organization_id, enabled, updated_at);
+    ON messaging_sms_account (tenant_id, organization_id, enabled, updated_at, id);
 
 CREATE INDEX IF NOT EXISTS idx_messaging_sms_signature_scope_account
-    ON messaging_sms_signature (tenant_id, organization_id, account_id, enabled, updated_at);
+    ON messaging_sms_signature (tenant_id, organization_id, account_id, enabled, updated_at, id);
 
 CREATE INDEX IF NOT EXISTS idx_messaging_sms_send_rule_scope_scenario
     ON messaging_sms_send_rule (tenant_id, organization_id, scenario, enabled);

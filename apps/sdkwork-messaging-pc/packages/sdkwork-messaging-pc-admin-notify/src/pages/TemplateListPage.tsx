@@ -17,6 +17,7 @@ import {
 } from "../components/form";
 import {
   defaultNotifyAdminService,
+  isConflictError,
   extractTemplateVariables,
   type MessagingTemplateStatus,
   type NotifyAdminService,
@@ -148,7 +149,10 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
         status: form.status as MessagingTemplateStatus,
       };
       if (editing) {
-        await admin.updateTemplate(editing.id, base);
+        await admin.updateTemplate(editing.id, {
+          ...base,
+          expectedVersion: editing.version,
+        });
       } else {
         await admin.createTemplate({
           ...base,
@@ -158,8 +162,14 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
       }
       await load(page);
       closePanel();
-    } catch {
-      setError(t("admin.notify.common.saveFailed"));
+    } catch (error) {
+      if (isConflictError(error)) {
+        setError(t("admin.notify.common.conflict"));
+        await load(page);
+        closePanel();
+      } else {
+        setError(t("admin.notify.common.saveFailed"));
+      }
     } finally {
       setSaving(false);
     }

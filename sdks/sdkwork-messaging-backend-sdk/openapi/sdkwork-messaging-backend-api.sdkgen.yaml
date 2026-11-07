@@ -7737,7 +7737,8 @@
           "name",
           "content",
           "approvalStatus",
-          "status"
+          "status",
+          "version"
         ],
         "properties": {
           "id": {
@@ -7793,6 +7794,13 @@
               "active",
               "disabled"
             ]
+          },
+          "version": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[0-9]+$",
+            "x-sdkwork-int64-string": true,
+            "x-sdkwork-rust-type": "i64"
           },
           "createdAt": {
             "type": "string",
@@ -7906,7 +7914,8 @@
         "additionalProperties": false,
         "required": [
           "name",
-          "content"
+          "content",
+          "expectedVersion"
         ],
         "properties": {
           "name": {
@@ -7946,6 +7955,13 @@
               "active",
               "disabled"
             ]
+          },
+          "expectedVersion": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[0-9]+$",
+            "x-sdkwork-int64-string": true,
+            "x-sdkwork-rust-type": "i64"
           }
         }
       },
@@ -7958,7 +7974,8 @@
           "channel",
           "ttlSeconds",
           "maxAttempts",
-          "enabled"
+          "enabled",
+          "version"
         ],
         "properties": {
           "id": {
@@ -7995,6 +8012,13 @@
           },
           "enabled": {
             "type": "boolean"
+          },
+          "version": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[0-9]+$",
+            "x-sdkwork-int64-string": true,
+            "x-sdkwork-rust-type": "i64"
           }
         }
       },
@@ -8034,7 +8058,8 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "messageBodyPattern"
+          "messageBodyPattern",
+          "expectedVersion"
         ],
         "properties": {
           "ttlSeconds": {
@@ -8055,6 +8080,13 @@
           },
           "enabled": {
             "type": "boolean"
+          },
+          "expectedVersion": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[0-9]+$",
+            "x-sdkwork-int64-string": true,
+            "x-sdkwork-rust-type": "i64"
           }
         }
       },

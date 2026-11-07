@@ -22,6 +22,7 @@ sqlx.workspace = true
 tokio.workspace = true
 async-trait.workspace = true
 sdkwork-utils-rust.workspace = true
+sdkwork-database-id.workspace = true
 sdkwork-messaging-delivery-service.workspace = true
 sdkwork-web-core.workspace = true
 sdkwork-web-axum.workspace = true

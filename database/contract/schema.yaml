@@ -8,64 +8,178 @@ compliance_level: L2
 engines:
   - postgres
 table_prefix: messaging_
+# ID provider (DATABASE_SPEC §6.1/§31): production row ids allocate through
+# the platform snowflake service (sdkwork-database-id, DB-backed node lease);
+# the local monotonic generator is the documented fallback only.
+id_provider: sdkwork-database-id/snowflake
+# JSONB validation strategy (§13/DB011): config/chain/payload JSON columns are
+# schema-checked in the Rust store layer (typed serde DTOs + existence
+# guards); none carry lifecycle/status core fields (DB040).
+jsonb_validation_strategy: application-serde-typed
+# Retention (§15/§23): verification challenges/attempts are purge-oriented;
+# the purge owner is the messaging delivery worker (write path pending) and
+# the retention window is the challenge TTL + 30 days.
+retention_policies:
+  messaging_verification_challenge: challenge_ttl_plus_30d
+  messaging_verification_attempt: challenge_ttl_plus_30d
 tables:
   - name: messaging_notification
+    domain: messaging
+    profile: entity_events
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: "soft_delete"
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_notification_recipient
+    domain: messaging
+    profile: entity_events
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: null
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_announcement
+    domain: messaging
+    profile: entity_events
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: "soft_delete"
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_announcement_audience
+    domain: messaging
+    profile: entity_events
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: null
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_announcement_receipt
+    domain: messaging
+    profile: entity_events
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: null
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_push_device
+    domain: messaging
+    profile: device_registry
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: "soft_delete"
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_push_message
+    domain: messaging
+    profile: entity_events
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: "soft_delete"
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_push_delivery
+    domain: messaging
+    profile: delivery_ledger
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: null
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_outbound_message
+    domain: messaging
+    profile: delivery_ledger
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: "soft_delete"
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_outbound_delivery
+    domain: messaging
+    profile: delivery_ledger
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: null
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_verification_policy
+    domain: messaging
+    profile: configuration
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: null
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_verification_challenge
+    domain: messaging
+    profile: security_token
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: "purge_ttl"
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_verification_attempt
+    domain: messaging
+    profile: security_token
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: "purge_ttl"
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_template
+    domain: messaging
+    profile: configuration
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: "soft_delete"
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_email_account
+    domain: messaging
+    profile: configuration
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: "soft_delete"
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_email_sender
+    domain: messaging
+    profile: configuration
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: "soft_delete"
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_email_send_rule
+    domain: messaging
+    profile: configuration
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: "soft_delete"
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_sms_account
+    domain: messaging
+    profile: configuration
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: "soft_delete"
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_sms_signature
+    domain: messaging
+    profile: configuration
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: "soft_delete"
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_sms_send_rule
+    domain: messaging
+    profile: configuration
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: "soft_delete"
     lifecycle_status: active
     owner: messaging-platform

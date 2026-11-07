@@ -1989,6 +1989,7 @@ name = "sdkwork-api-messaging-assembly"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "sdkwork-database-id",
  "sdkwork-database-sqlx",
  "sdkwork-messaging-database-host",
  "sdkwork-routes-messaging-backend-api",
@@ -2190,6 +2191,7 @@ dependencies = [
  "async-trait",
  "axum",
  "chrono",
+ "sdkwork-database-id",
  "sdkwork-iam-web-adapter",
  "sdkwork-messaging-delivery-service",
  "sdkwork-utils-rust",

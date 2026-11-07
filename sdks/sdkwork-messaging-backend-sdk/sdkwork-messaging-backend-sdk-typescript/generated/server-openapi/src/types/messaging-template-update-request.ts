@@ -6,4 +6,5 @@ export interface MessagingTemplateUpdateRequest {
   approvalStatus?: 'not_applicable' | 'pending' | 'approved' | 'rejected';
   approvalNote?: string;
   status?: 'draft' | 'active' | 'disabled';
+  expectedVersion: string;
 }
