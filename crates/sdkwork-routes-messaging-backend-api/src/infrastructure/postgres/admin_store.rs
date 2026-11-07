@@ -1126,7 +1126,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .map_err(|error| StoreError::Unavailable(error.to_string()))?;
 
         let rows = sqlx::query(
-            "SELECT id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at, version \
+            "SELECT id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at, version, version \
              FROM messaging_email_account \
              WHERE tenant_id = $1 AND organization_id = $2 AND deleted_at IS NULL \
              ORDER BY updated_at DESC, id DESC \
@@ -1175,7 +1175,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
             "INSERT INTO messaging_email_account \
              (id, uuid, tenant_id, organization_id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_by) \
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) \
-             RETURNING id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at",
+             RETURNING id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at, version",
         )
         .bind(self.next_id())
         .bind(uuid())
@@ -1213,7 +1213,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         account_id: i64,
     ) -> Result<EmailAccountItem, StoreError> {
         let row = sqlx::query(
-            "SELECT id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at, version \
+            "SELECT id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at, version, version \
              FROM messaging_email_account \
              WHERE id = $1 AND tenant_id = $2 AND organization_id = $3 AND deleted_at IS NULL",
         )
@@ -1261,7 +1261,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
                 version = version + 1 \
              WHERE id = $1 AND tenant_id = $2 AND organization_id = $3 AND deleted_at IS NULL \
                AND version = $12 \
-             RETURNING id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at, version",
+             RETURNING id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at, version, version",
         )
         .bind(account_id)
         .bind(subject.tenant_id)
@@ -1758,7 +1758,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .map_err(|error| StoreError::Unavailable(error.to_string()))?;
 
         let rows = sqlx::query(
-            "SELECT id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at \
+            "SELECT id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at, version \
              FROM messaging_sms_account \
              WHERE tenant_id = $1 AND organization_id = $2 AND deleted_at IS NULL \
              ORDER BY updated_at DESC, id DESC \
@@ -1807,7 +1807,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
             "INSERT INTO messaging_sms_account \
              (id, uuid, tenant_id, organization_id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_by) \
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) \
-             RETURNING id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at",
+             RETURNING id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at, version",
         )
         .bind(self.next_id())
         .bind(uuid())
@@ -1845,7 +1845,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         account_id: i64,
     ) -> Result<SmsAccountItem, StoreError> {
         let row = sqlx::query(
-            "SELECT id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at \
+            "SELECT id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at, version \
              FROM messaging_sms_account \
              WHERE id = $1 AND tenant_id = $2 AND organization_id = $3 AND deleted_at IS NULL",
         )
@@ -1893,7 +1893,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
                 version = version + 1 \
              WHERE id = $1 AND tenant_id = $2 AND organization_id = $3 AND deleted_at IS NULL \
                AND version = $12 \
-             RETURNING id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at, version",
+             RETURNING id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at, version, version",
         )
         .bind(account_id)
         .bind(subject.tenant_id)
@@ -2095,7 +2095,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         let row = sqlx::query(
             "INSERT INTO messaging_sms_signature \
              (id, uuid, tenant_id, organization_id, account_id, sign_name, enabled, created_by) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) \
              RETURNING id",
         )
         .bind(self.next_id())

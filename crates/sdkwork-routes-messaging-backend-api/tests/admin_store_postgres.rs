@@ -16,8 +16,12 @@ use std::sync::Arc;
 use sdkwork_routes_messaging_backend_api::{
     MessagingAdminStore, MessagingAdminSubject, PostgresMessagingAdminStore, StoreError,
 };
+use std::sync::atomic::{AtomicU64, Ordering};
+
 use sqlx::postgres::PgConnection;
 use sqlx::{Connection, Row};
+
+static DB_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 const BASELINE_DDL: &str =
     include_str!("../../../database/ddl/baseline/postgres/0001_messaging_baseline.sql");
@@ -29,11 +33,15 @@ fn admin_url() -> String {
 }
 
 async fn create_test_database(admin: &mut PgConnection) -> String {
-    // Identifier is generated here (timestamp, never user input) — asserted
-    // safe via AssertSqlSafe per the sqlx dynamic-SQL audit rule.
+    // Identifier is generated here (nanos + pid + sequence; never user
+    // input) — asserted safe via AssertSqlSafe per the sqlx dynamic-SQL
+    // audit rule. The suffixes keep parallel test binaries/threads from
+    // colliding on the same name.
     let name = format!(
-        "sdkwork_messaging_it_{}",
-        chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
+        "sdkwork_messaging_it_{}_{}_{}",
+        chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default(),
+        std::process::id(),
+        DB_SEQUENCE.fetch_add(1, Ordering::Relaxed),
     );
     sqlx::raw_sql(sqlx::AssertSqlSafe(
         format!("CREATE DATABASE {name} TEMPLATE template0").as_str(),
@@ -46,12 +54,37 @@ async fn create_test_database(admin: &mut PgConnection) -> String {
 
 async fn drop_test_database(admin: &mut PgConnection, name: &str) {
     // Same: identifiers come from create_test_database, never user input.
+    // DROP DATABASE cannot run inside a transaction block, so the terminate
+    // and the drop are separate simple-protocol batches.
     sqlx::raw_sql(sqlx::AssertSqlSafe(format!(
-        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{name}' AND pid <> pg_backend_pid(); DROP DATABASE IF EXISTS {name}"
+        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{name}' AND pid <> pg_backend_pid()"
     ).as_str()))
     .execute(&mut *admin)
     .await
-    .expect("drop integration test database");
+    .ok();
+    // Parallel test binaries keep reconnecting between terminate and drop;
+    // a bounded retry absorbs the window.
+    for attempt in 0..10 {
+        let result = sqlx::raw_sql(sqlx::AssertSqlSafe(format!(
+            "DROP DATABASE IF EXISTS {name}"
+        ).as_str()))
+        .execute(&mut *admin)
+        .await;
+        match result {
+            Ok(_) => return,
+            Err(error) if attempt < 9 => {
+                eprintln!("drop retry {attempt}: {error}");
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+                sqlx::raw_sql(sqlx::AssertSqlSafe(format!(
+                    "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{name}' AND pid <> pg_backend_pid()"
+                ).as_str()))
+                .execute(&mut *admin)
+                .await
+                .ok();
+            }
+            Err(error) => panic!("drop integration test database: {error}"),
+        }
+    }
 }
 
 struct TestStore {
@@ -262,27 +295,6 @@ async fn account_update_enforces_optimistic_concurrency() {
         .await
         .expect("create account");
 
-    let stale = sdkwork_routes_messaging_backend_api::ports::UpdateEmailAccountCommand {
-        name: "并发-冲突".to_owned(),
-        provider: "smtp".to_owned(),
-        config: serde_json::json!({ "host": "smtp2.example.com" }),
-        secret: None,
-        enabled: true,
-        expected_version: "0".to_owned(),
-    };
-    let conflict = test
-        .store
-        .update_email_account(
-            &test.subject_t1o1,
-            account.id.parse().unwrap(),
-            &stale,
-            "it-key",
-        )
-        .await;
-    assert!(
-        matches!(conflict, Err(StoreError::Conflict(_))),
-        "stale version must conflict, got {conflict:?}"
-    );
 
     let current = sdkwork_routes_messaging_backend_api::ports::UpdateEmailAccountCommand {
         name: "并发-成功".to_owned(),
@@ -303,6 +315,29 @@ async fn account_update_enforces_optimistic_concurrency() {
         .await
         .expect("update with fresh version");
     assert_eq!(updated.version, "1", "version must increment");
+
+    // The pre-update version is now stale → Conflict (§17).
+    let stale = sdkwork_routes_messaging_backend_api::ports::UpdateEmailAccountCommand {
+        name: "并发-冲突".to_owned(),
+        provider: "smtp".to_owned(),
+        config: serde_json::json!({ "host": "smtp3.example.com" }),
+        secret: None,
+        enabled: true,
+        expected_version: account.version.clone(),
+    };
+    let conflict = test
+        .store
+        .update_email_account(
+            &test.subject_t1o1,
+            account.id.parse().unwrap(),
+            &stale,
+            "it-key",
+        )
+        .await;
+    assert!(
+        matches!(conflict, Err(StoreError::Conflict(_))),
+        "stale version must conflict, got {conflict:?}"
+    );
     assert!(
         updated.key_display_masked.contains('*'),
         "secret mask must survive a secret-less update"

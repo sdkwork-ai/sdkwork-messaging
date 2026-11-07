@@ -494,7 +494,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_email_account_scope_name
     WHERE deleted_at IS NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_email_sender_address
-    ON messaging_email_sender_address (tenant_id, organization_id, account_id, from_address)
+    ON messaging_email_sender (tenant_id, organization_id, account_id, from_address)
     WHERE deleted_at IS NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_email_send_rule_scope_scenario
