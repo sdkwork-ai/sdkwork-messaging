@@ -512,15 +512,7 @@ export function createNotifyAdminService(): NotifyAdminService {
  */
 export const defaultNotifyAdminService: NotifyAdminService = createNotifyAdminService();
 
-export function extractTemplateVariables(content: string): string[] {
-  const variables: string[] = [];
-  const regex = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/gu;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(content)) !== null) {
-    const name = match[1];
-    if (!variables.includes(name)) {
-      variables.push(name);
-    }
-  }
-  return variables;
-}
+// Template variable extraction lives in the dependency-free presentation
+// helpers so previews and tests share one implementation.
+export { extractTemplateVariables } from "./templatePreview";
+

@@ -1,11 +1,19 @@
 //! Lightweight Tailwind form primitives shared by the notify admin pages.
 
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import { useTranslation } from "react-i18next";
 
-export function PageHeader({ title, description }: { title: string; description?: string }) {
+export function PageHeader({
+  title,
+  description,
+  className = "mb-6",
+}: {
+  title: string;
+  description?: string;
+  className?: string;
+}) {
   return (
-    <div className="mb-6">
+    <div className={className}>
       <h1 className="text-xl font-semibold text-slate-800 dark:text-white">{title}</h1>
       {description ? <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{description}</p> : null}
     </div>
@@ -109,14 +117,19 @@ export function TextAreaInput(props: {
   onChange: (value: string) => void;
   rows?: number;
   placeholder?: string;
+  inputRef?: Ref<HTMLTextAreaElement>;
+  className?: string;
+  ariaLabel?: string;
 }) {
   return (
     <textarea
+      ref={props.inputRef}
       value={props.value}
       rows={props.rows ?? 6}
       placeholder={props.placeholder}
+      aria-label={props.ariaLabel}
       onChange={(event) => props.onChange(event.target.value)}
-      className={`${inputClass} font-mono`}
+      className={`${inputClass} font-mono ${props.className ?? ""}`.trim()}
     />
   );
 }

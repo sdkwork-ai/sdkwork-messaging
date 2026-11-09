@@ -1,27 +1,32 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Edit3, Plus, Search, Trash2, X } from "lucide-react";
+import { CheckCircle2, Mail, MessageSquareText, Plus, X } from "lucide-react";
 
 import {
-  ActionBar,
   ErrorState,
-  Field,
-  LoadingState,
   PageHeader,
   PrimaryButton,
-  SecondaryButton,
-  SelectInput,
-  StatusPill,
-  TextAreaInput,
-  TextInput,
 } from "../components/form";
+import { PageErrorBoundary } from "../components/page-error-boundary";
+import { ConfirmDialog } from "../components/confirm-dialog";
+import { TemplateEditorPanel } from "../components/template-editor-panel";
+import { TemplateListPanel } from "../components/template-list-panel";
 import {
   defaultNotifyAdminService,
   isConflictError,
-  extractTemplateVariables,
+  type MessagingTemplateApprovalStatus,
   type MessagingTemplateStatus,
   type NotifyAdminService,
 } from "../notifyAdminService";
+import { extractTemplateVariables } from "../templatePreview";
+import {
+  emptyTemplateForm,
+  formFromTemplate,
+  templateFormSignature,
+  validateTemplateForm,
+  type TemplateEditorMode,
+  type TemplateFormState,
+} from "../templateWorkspace";
 import type { MessagingTemplate } from "@sdkwork/messaging-pc-core";
 
 export interface SdkworkMessagingTemplateListPageProps {
@@ -29,57 +34,69 @@ export interface SdkworkMessagingTemplateListPageProps {
   service?: NotifyAdminService;
 }
 
-const STATUS_OPTIONS = [
-  { value: "", label: "all" },
-  { value: "draft", label: "draft" },
-  { value: "active", label: "active" },
-  { value: "disabled", label: "disabled" },
-] as const;
-
 const PAGE_SIZE = 20;
 const KEYWORD_DEBOUNCE_MS = 300;
 
-interface TemplateFormState {
-  templateCode: string;
-  name: string;
-  subject: string;
-  content: string;
-  status: string;
+interface PendingConfirmation {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  tone: "default" | "danger";
+  action: () => void;
 }
-
-const EMPTY_FORM: TemplateFormState = {
-  templateCode: "",
-  name: "",
-  subject: "",
-  content: "",
-  status: "draft",
-};
 
 export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateListPageProps) {
   const { t } = useTranslation();
   const admin = service ?? defaultNotifyAdminService;
+
   const [items, setItems] = useState<MessagingTemplate[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [hasMore, setHasMore] = useState(false);
-  const [statusFilter, setStatusFilter] = useState("");
   const [keyword, setKeyword] = useState("");
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState<MessagingTemplate | null>(null);
-  const [form, setForm] = useState<TemplateFormState>(EMPTY_FORM);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const [mode, setMode] = useState<"idle" | TemplateEditorMode>("idle");
+  const [editingTemplate, setEditingTemplate] = useState<MessagingTemplate | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editorSession, setEditorSession] = useState(0);
+  const [form, setForm] = useState<TemplateFormState>(() => emptyTemplateForm(channel));
+  const [baseline, setBaseline] = useState<string>(() =>
+    templateFormSignature(emptyTemplateForm(channel)),
+  );
+  const [samples, setSamples] = useState<Record<string, string>>({});
+  const [showValidation, setShowValidation] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [variables, setVariables] = useState<string[]>([]);
-  const [panelOpen, setPanelOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmation, setConfirmation] = useState<PendingConfirmation | null>(null);
+  const loadSequence = useRef(0);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedKeyword(keyword.trim()), KEYWORD_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [keyword]);
 
+  // Channel changes are only reachable through a different route element, but
+  // resetting keeps a host that reuses the component instance honest.
+  useEffect(() => {
+    setMode("idle");
+    setEditingTemplate(null);
+    setSelectedId(null);
+    setSamples({});
+    setShowValidation(false);
+  }, [channel]);
+
   const load = useCallback(
     async (targetPage: number) => {
+      // Fast typing/filter changes can resolve out of order; only the newest
+      // request may write list state.
+      const sequence = loadSequence.current + 1;
+      loadSequence.current = sequence;
       setLoading(true);
       setError(null);
       try {
@@ -90,14 +107,22 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
           page: targetPage,
           pageSize: PAGE_SIZE,
         });
+        if (loadSequence.current !== sequence) {
+          return;
+        }
         setItems(result.items);
+        setTotalItems(result.totalItems);
         setPage(result.page);
         setTotalPages(result.totalPages);
         setHasMore(result.hasMore);
       } catch {
-        setError(t("admin.notify.common.loadFailed"));
+        if (loadSequence.current === sequence) {
+          setError(t("admin.notify.common.loadFailed"));
+        }
       } finally {
-        setLoading(false);
+        if (loadSequence.current === sequence) {
+          setLoading(false);
+        }
       }
     },
     [admin, channel, debouncedKeyword, statusFilter, t],
@@ -107,66 +132,171 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
     void load(1);
   }, [load]);
 
-  const closePanel = useCallback(() => {
-    setEditing(null);
-    setPanelOpen(false);
-  }, []);
+  const variables = useMemo(() => extractTemplateVariables(form.content), [form.content]);
+  const errors = useMemo(
+    () => validateTemplateForm(channel, mode === "create" ? "create" : "edit", form),
+    [channel, form, mode],
+  );
+  const dirty = mode !== "idle" && baseline !== templateFormSignature(form);
+  const hasErrors = Object.keys(errors).length > 0;
+
+  useEffect(() => {
+    if (!dirty) {
+      return;
+    }
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty]);
+
+  const requestDiscard = useCallback(
+    (after: () => void) => {
+      if (!dirty) {
+        after();
+        return;
+      }
+      setConfirmation({
+        title: t("admin.notify.templates.discardTitle"),
+        description: t("admin.notify.templates.discardConfirm"),
+        confirmLabel: t("admin.notify.templates.discardAction"),
+        tone: "default",
+        action: after,
+      });
+    },
+    [dirty, t],
+  );
+
+  const applySelection = (item: MessagingTemplate) => {
+    const nextForm = formFromTemplate(item);
+    setMode("edit");
+    setEditingTemplate(item);
+    setSelectedId(item.id);
+    setEditorSession((current) => current + 1);
+    setForm(nextForm);
+    setBaseline(templateFormSignature(nextForm));
+    setSamples({});
+    setShowValidation(false);
+    setNotice(null);
+    setError(null);
+  };
+
+  const selectTemplate = (item: MessagingTemplate) => {
+    if (item.id === selectedId) {
+      return;
+    }
+    requestDiscard(() => applySelection(item));
+  };
+
+  const openCreateEditor = () => {
+    const nextForm = emptyTemplateForm(channel);
+    setMode("create");
+    setEditingTemplate(null);
+    setSelectedId(null);
+    setEditorSession((current) => current + 1);
+    setForm(nextForm);
+    setBaseline(templateFormSignature(nextForm));
+    setSamples({});
+    setShowValidation(false);
+    setNotice(null);
+    setError(null);
+  };
 
   const beginCreate = () => {
-    setEditing(null);
-    setForm(EMPTY_FORM);
-    setVariables([]);
-    setPanelOpen(true);
+    requestDiscard(openCreateEditor);
   };
 
-  const beginEdit = (item: MessagingTemplate) => {
-    setEditing(item);
-    setForm({
-      templateCode: item.templateCode,
-      name: item.name,
-      subject: item.subject ?? "",
-      content: item.content,
-      status: item.status,
+  const closeEditor = () => {
+    requestDiscard(() => {
+      setMode("idle");
+      setEditingTemplate(null);
+      setSelectedId(null);
+      setShowValidation(false);
     });
-    setVariables(item.variables ?? []);
-    setPanelOpen(true);
   };
 
-  const updateContent = (content: string) => {
-    setForm((current) => ({ ...current, content }));
-    setVariables(extractTemplateVariables(content));
+  const updateForm = (patch: Partial<TemplateFormState>) => {
+    setForm((current) => ({ ...current, ...patch }));
+  };
+
+  const updateSample = (variable: string, value: string) => {
+    setSamples((current) => ({ ...current, [variable]: value }));
   };
 
   const save = async () => {
+    if (mode === "idle" || (mode === "edit" && !editingTemplate)) {
+      return;
+    }
+    if (mode === "edit" && !dirty) {
+      return;
+    }
+    setShowValidation(true);
+    if (hasErrors) {
+      return;
+    }
     setSaving(true);
     setError(null);
+    setNotice(null);
+    const saveVariables = extractTemplateVariables(form.content);
+    const base = {
+      name: form.name.trim(),
+      subject: channel === "email" ? form.subject.trim() : undefined,
+      content: form.content,
+      variables: saveVariables,
+      status: form.status,
+      approvalStatus:
+        channel === "sms"
+          ? (form.approvalStatus as MessagingTemplateApprovalStatus)
+          : undefined,
+      approvalNote: channel === "sms" ? form.approvalNote.trim() : undefined,
+    };
     try {
-      const base = {
-        name: form.name,
-        subject: channel === "email" ? form.subject : undefined,
-        content: form.content,
-        variables: variables.length > 0 ? variables : undefined,
-        status: form.status as MessagingTemplateStatus,
-      };
-      if (editing) {
-        await admin.updateTemplate(editing.id, {
-          ...base,
-          expectedVersion: editing.version,
-        });
-      } else {
-        await admin.createTemplate({
-          ...base,
-          channel,
-          templateCode: form.templateCode,
-        });
-      }
-      await load(page);
-      closePanel();
-    } catch (error) {
-      if (isConflictError(error)) {
-        setError(t("admin.notify.common.conflict"));
+      const saved =
+        mode === "create"
+          ? await admin.createTemplate({
+              ...base,
+              channel,
+              templateCode: form.templateCode.trim(),
+            })
+          : await admin.updateTemplate(editingTemplate!.id, {
+              ...base,
+              expectedVersion: editingTemplate!.version,
+            });
+      const nextForm = formFromTemplate(saved);
+      setMode("edit");
+      setEditingTemplate(saved);
+      setSelectedId(saved.id);
+      setEditorSession((current) => current + 1);
+      setForm(nextForm);
+      setBaseline(templateFormSignature(nextForm));
+      setSamples({});
+      setShowValidation(false);
+      setNotice(t("admin.notify.templates.saveSuccess"));
+      await load(mode === "create" ? 1 : page);
+    } catch (caught) {
+      if (isConflictError(caught)) {
+        if (mode === "create") {
+          setError(t("admin.notify.templates.validation.codeTaken"));
+        } else {
+          // Someone else saved first: keep the operator's edits, refresh the
+          // optimistic-concurrency token so the next save can land.
+          setError(t("admin.notify.common.conflict"));
+          try {
+            const latest = await admin.retrieveTemplate(editingTemplate!.id);
+            setEditingTemplate(latest);
+          } catch {
+            // The row may be gone; the list refresh below makes that visible.
+          }
+          await load(page);
+        }
+      } else if ((caught as { httpStatus?: unknown }).httpStatus === 404) {
+        setError(t("admin.notify.templates.notFound"));
+        setMode("idle");
+        setEditingTemplate(null);
+        setSelectedId(null);
         await load(page);
-        closePanel();
       } else {
         setError(t("admin.notify.common.saveFailed"));
       }
@@ -175,226 +305,184 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
     }
   };
 
-  const remove = async (item: MessagingTemplate) => {
+  const performDelete = async (template: MessagingTemplate) => {
+    setDeleting(true);
     setError(null);
+    setNotice(null);
     try {
-      await admin.deleteTemplate(item.id);
+      await admin.deleteTemplate(template.id);
+      setMode("idle");
+      setEditingTemplate(null);
+      setSelectedId(null);
+      setShowValidation(false);
+      setNotice(t("admin.notify.templates.deleteSuccess"));
       await load(page > 1 && items.length === 1 ? page - 1 : page);
     } catch {
       setError(t("admin.notify.common.deleteFailed"));
+    } finally {
+      setDeleting(false);
     }
   };
 
-  return (
-    <div className="mx-auto max-w-5xl">
-      <PageHeader
-        title={
-          channel === "email"
-            ? t("admin.notify.emailTemplates.title")
-            : t("admin.notify.smsTemplates.title")
-        }
-        description={
-          channel === "email"
-            ? t("admin.notify.emailTemplates.description")
-            : t("admin.notify.smsTemplates.description")
-        }
-      />
-      <div className="mb-4 flex items-center gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
-          <input
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
-            placeholder={t("admin.notify.templates.searchPlaceholder")}
-            className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-sky-500 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
-          />
-        </div>
-        <SelectInput
-          value={statusFilter}
-          onChange={setStatusFilter}
-          options={STATUS_OPTIONS.map((option) => ({
-            value: option.value,
-            label:
-              option.value === "" ? t("admin.notify.templates.allStatus") : t(`admin.notify.status.${option.value}`),
-          }))}
-        />
-        <PrimaryButton onClick={beginCreate}>
-          <span className="inline-flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            {t("admin.notify.templates.create")}
-          </span>
-        </PrimaryButton>
-      </div>
-      {error ? <ErrorState message={error} /> : null}
-      {loading && items.length === 0 ? (
-        <LoadingState label={t("admin.notify.common.loading")} />
-      ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#1a1a1a]">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-              <tr>
-                <th className="px-4 py-3 font-medium">{t("admin.notify.templates.code")}</th>
-                <th className="px-4 py-3 font-medium">{t("admin.notify.templates.name")}</th>
-                {channel === "email" ? (
-                  <th className="px-4 py-3 font-medium">{t("admin.notify.templates.subject")}</th>
-                ) : null}
-                <th className="px-4 py-3 font-medium">{t("admin.notify.templates.variables")}</th>
-                {channel === "sms" ? (
-                  <th className="px-4 py-3 font-medium">{t("admin.notify.templates.approval")}</th>
-                ) : null}
-                <th className="px-4 py-3 font-medium">{t("admin.notify.templates.status")}</th>
-                <th className="px-4 py-3 text-right font-medium">{t("admin.notify.templates.actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 dark:border-white/5 dark:hover:bg-white/5">
-                  <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">{item.templateCode}</td>
-                  <td className="px-4 py-3 text-slate-800 dark:text-slate-100">{item.name}</td>
-                  {channel === "email" ? (
-                    <td className="max-w-[220px] truncate px-4 py-3 text-slate-500 dark:text-slate-400">{item.subject ?? "—"}</td>
-                  ) : null}
-                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
-                    {(item.variables ?? []).length > 0 ? (
-                      <span className="font-mono text-xs">{item.variables!.join(", ")}</span>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  {channel === "sms" ? (
-                    <td className="px-4 py-3">
-                      <StatusPill status={item.approvalStatus} />
-                      {item.approvalNote ? (
-                        <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">{item.approvalNote}</span>
-                      ) : null}
-                    </td>
-                  ) : null}
-                  <td className="px-4 py-3">
-                    <StatusPill status={item.status} />
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => beginEdit(item)}
-                      className="mr-2 inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-sky-600 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-500/10"
-                    >
-                      <Edit3 className="h-3.5 w-3.5" />
-                      {t("admin.notify.common.edit")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void remove(item)}
-                      className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      {t("admin.notify.common.delete")}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {items.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-slate-400 dark:text-slate-500">
-                    {t("admin.notify.templates.empty")}
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <div className="mt-4 flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
-        <span>
-          {t("admin.notify.templates.page")} {page} / {totalPages}
-        </span>
-        <div className="flex gap-2">
-          <SecondaryButton onClick={() => void load(page - 1)} disabled={page <= 1}>
-            {t("admin.notify.common.previous")}
-          </SecondaryButton>
-          <SecondaryButton onClick={() => void load(page + 1)} disabled={!hasMore}>
-            {t("admin.notify.common.next")}
-          </SecondaryButton>
-        </div>
-      </div>
+  const requestDelete = () => {
+    const template = editingTemplate;
+    if (!template) {
+      return;
+    }
+    setConfirmation({
+      title: t("admin.notify.templates.deleteTitle"),
+      description: t("admin.notify.templates.deleteConfirm", { name: template.name }),
+      confirmLabel: t("admin.notify.common.delete"),
+      tone: "danger",
+      action: () => void performDelete(template),
+    });
+  };
 
-      {panelOpen ? (
-        <div className="fixed inset-0 z-40 flex justify-end bg-slate-900/30">
-          <div className="flex h-full w-full max-w-xl flex-col bg-white shadow-xl dark:bg-[#1a1a1a]">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-white/10">
-              <h2 className="text-base font-semibold text-slate-800 dark:text-white">
-                {editing
-                  ? t("admin.notify.templates.editTitle")
-                  : t("admin.notify.templates.createTitle")}
-              </h2>
-              <button
-                type="button"
-                onClick={closePanel}
-                className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-slate-200"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
-              {editing ? null : (
-                <Field label={t("admin.notify.templates.code")} hint={t("admin.notify.templates.codeHint")}>
-                  <TextInput
-                    value={form.templateCode}
-                    onChange={(value) => setForm((current) => ({ ...current, templateCode: value }))}
-                  />
-                </Field>
-              )}
-              <Field label={t("admin.notify.templates.name")}>
-                <TextInput value={form.name} onChange={(value) => setForm((current) => ({ ...current, name: value }))} />
-              </Field>
-              {channel === "email" ? (
-                <Field label={t("admin.notify.templates.subject")}>
-                  <TextInput value={form.subject} onChange={(value) => setForm((current) => ({ ...current, subject: value }))} />
-                </Field>
-              ) : null}
-              <Field
-                label={t("admin.notify.templates.content")}
-                hint={t("admin.notify.templates.variableHint")}
-              >
-                <TextAreaInput value={form.content} onChange={updateContent} rows={10} />
-              </Field>
-              {variables.length > 0 ? (
-                <div>
-                  <p className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-200">
-                    {t("admin.notify.templates.detectedVariables")}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {variables.map((variable) => (
-                      <span key={variable} className="rounded bg-sky-50 px-2 py-1 font-mono text-xs text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">
-                        {"{{"}{variable}{"}}"}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-              <Field label={t("admin.notify.templates.status")}>
-                <SelectInput
-                  value={form.status}
-                  onChange={(value) => setForm((current) => ({ ...current, status: value }))}
-                  options={STATUS_OPTIONS.slice(1).map((option) => ({
-                    value: option.value,
-                    label: t(`admin.notify.status.${option.value}`),
-                  }))}
-                />
-              </Field>
-            </div>
-            <div className="border-t border-slate-200 px-6 py-4 dark:border-white/10">
-              <ActionBar>
-                <SecondaryButton onClick={closePanel}>
-                  {t("admin.notify.common.cancel")}
-                </SecondaryButton>
-                <PrimaryButton onClick={() => void save()} disabled={saving}>
-                  {saving ? t("admin.notify.common.saving") : t("admin.notify.common.save")}
-                </PrimaryButton>
-              </ActionBar>
-            </div>
-          </div>
+  const duplicateCurrent = () => {
+    requestDiscard(() => {
+      const nextForm: TemplateFormState = {
+        ...form,
+        templateCode: `${form.templateCode.trim()}_copy`,
+        name: `${form.name.trim()} ${t("admin.notify.templates.duplicateSuffix")}`.trim(),
+        status: "draft",
+        approvalStatus: channel === "sms" ? "pending" : "not_applicable",
+        approvalNote: "",
+      };
+      setMode("create");
+      setEditingTemplate(null);
+      setSelectedId(null);
+      setEditorSession((current) => current + 1);
+      setForm(nextForm);
+      setBaseline(templateFormSignature(nextForm));
+      setSamples({});
+      setShowValidation(false);
+      setNotice(null);
+      setError(null);
+    });
+  };
+
+  const headerTitle =
+    channel === "email"
+      ? t("admin.notify.emailTemplates.title")
+      : t("admin.notify.smsTemplates.title");
+  const headerDescription =
+    channel === "email"
+      ? t("admin.notify.emailTemplates.description")
+      : t("admin.notify.smsTemplates.description");
+
+  return (
+    <PageErrorBoundary>
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <PageHeader
+            className="min-w-0"
+            title={headerTitle}
+            description={headerDescription}
+          />
+          <PrimaryButton onClick={beginCreate}>
+            <span className="inline-flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              {t("admin.notify.templates.create")}
+            </span>
+          </PrimaryButton>
         </div>
-      ) : null}
-    </div>
+
+        {error ? <ErrorState message={error} onRetry={() => void load(page)} /> : null}
+        {notice ? (
+          <div
+            role="status"
+            className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"
+          >
+            <span className="inline-flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              {notice}
+            </span>
+            <button
+              type="button"
+              onClick={() => setNotice(null)}
+              aria-label={t("admin.notify.common.close")}
+              className="rounded p-0.5 text-emerald-600 hover:bg-emerald-100 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ) : null}
+
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 lg:flex-row">
+          <div className="flex min-h-0 w-full shrink-0 flex-col max-lg:h-[44vh] lg:w-auto">
+            <TemplateListPanel
+              items={items}
+              totalItems={totalItems}
+              page={page}
+              totalPages={totalPages}
+              hasMore={hasMore}
+              loading={loading}
+              keyword={keyword}
+              statusFilter={statusFilter}
+              selectedId={selectedId}
+              onKeywordChange={setKeyword}
+              onStatusFilterChange={setStatusFilter}
+              onSelect={selectTemplate}
+              onRefresh={() => void load(page)}
+              onPageChange={(targetPage) => void load(targetPage)}
+            />
+          </div>
+
+          {mode === "idle" ? (
+            <section className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white/60 px-8 py-12 text-center dark:border-white/10 dark:bg-white/[0.02]">
+              <span className="rounded-2xl bg-slate-100 p-3 text-slate-400 dark:bg-white/10 dark:text-slate-500">
+                {channel === "email" ? (
+                  <Mail className="h-7 w-7" />
+                ) : (
+                  <MessageSquareText className="h-7 w-7" />
+                )}
+              </span>
+              <h2 className="text-base font-semibold text-slate-800 dark:text-white">
+                {t("admin.notify.templates.selectTitle")}
+              </h2>
+              <p className="max-w-md text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                {t("admin.notify.templates.selectDescription")}
+              </p>
+            </section>
+          ) : (
+            <TemplateEditorPanel
+              channel={channel}
+              mode={mode === "create" ? "create" : "edit"}
+              templateKey={`${channel}-${editorSession}`}
+              form={form}
+              variables={variables}
+              samples={samples}
+              errors={errors}
+              showValidation={showValidation}
+              dirty={dirty}
+              saving={saving}
+              deleting={deleting}
+              onChange={updateForm}
+              onSampleChange={updateSample}
+              onSave={() => void save()}
+              onCancel={closeEditor}
+              onDelete={mode === "edit" ? requestDelete : undefined}
+              onDuplicate={mode === "edit" ? duplicateCurrent : undefined}
+            />
+          )}
+        </div>
+
+        <ConfirmDialog
+          open={confirmation !== null}
+          title={confirmation?.title ?? ""}
+          description={confirmation?.description ?? ""}
+          confirmLabel={confirmation?.confirmLabel ?? ""}
+          cancelLabel={t("admin.notify.common.cancel")}
+          tone={confirmation?.tone ?? "default"}
+          busy={deleting}
+          onConfirm={() => {
+            const action = confirmation?.action;
+            setConfirmation(null);
+            action?.();
+          }}
+          onCancel={() => setConfirmation(null)}
+        />
+      </div>
+    </PageErrorBoundary>
   );
 }
