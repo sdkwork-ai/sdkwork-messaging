@@ -27,6 +27,7 @@ import {
 import { SlideOver } from "../components/slide-over";
 import { ListPager } from "../components/list-pager";
 import { PageErrorBoundary } from "../components/page-error-boundary";
+import { ChannelTabs } from "../components/channel-tabs";
 import {
   NOTIFY_PAGE_SIZE as PAGE_SIZE,
   usePagedList,
@@ -1070,27 +1071,12 @@ export function SmsChannelPage({ service }: SdkworkMessagingSmsChannelPageProps)
           title={t("admin.notify.sms.title")}
           description={t("admin.notify.sms.description")}
         />
-        <div
-          role="tablist"
-          className="flex w-full min-w-0 gap-1 rounded-lg border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-[#1a1a1a]"
-        >
-          {SMS_TABS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              aria-selected={tab === item.id}
-              onClick={() => setTab(item.id)}
-              className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition ${
-                tab === item.id
-                  ? "bg-emerald-600 text-white shadow-sm dark:bg-emerald-500"
-                  : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"
-              }`}
-            >
-              {t(item.labelKey)}
-            </button>
-          ))}
-        </div>
+        <ChannelTabs
+          ariaLabel={t("admin.notify.sms.tabsAria")}
+          activeId={tab}
+          onChange={setTab}
+          items={SMS_TABS.map((item) => ({ id: item.id, label: t(item.labelKey) }))}
+        />
         <div className="min-h-0 flex-1 overflow-y-auto pb-2 pr-0.5">
           {tab === "accounts" ? <AccountsPanel admin={admin} /> : null}
           {tab === "signatures" ? <SignaturesPanel admin={admin} /> : null}
