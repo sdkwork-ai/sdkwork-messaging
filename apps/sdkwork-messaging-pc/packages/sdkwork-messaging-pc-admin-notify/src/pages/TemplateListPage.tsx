@@ -77,6 +77,10 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
   const loadSequence = useRef(0);
 
   useEffect(() => {
+    if (keyword.trim() === "") {
+      setDebouncedKeyword("");
+      return;
+    }
     const timer = window.setTimeout(() => setDebouncedKeyword(keyword.trim()), KEYWORD_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [keyword]);
@@ -282,7 +286,6 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
         } else {
           // Someone else saved first: keep the operator's edits, refresh the
           // optimistic-concurrency token so the next save can land.
-          setError(t("admin.notify.common.conflict"));
           try {
             const latest = await admin.retrieveTemplate(editingTemplate!.id);
             setEditingTemplate(latest);
@@ -290,13 +293,14 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
             // The row may be gone; the list refresh below makes that visible.
           }
           await load(page);
+          setError(t("admin.notify.common.conflict"));
         }
       } else if ((caught as { httpStatus?: unknown }).httpStatus === 404) {
-        setError(t("admin.notify.templates.notFound"));
         setMode("idle");
         setEditingTemplate(null);
         setSelectedId(null);
         await load(page);
+        setError(t("admin.notify.templates.notFound"));
       } else {
         setError(t("admin.notify.common.saveFailed"));
       }
