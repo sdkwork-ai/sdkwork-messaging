@@ -1,0 +1,140 @@
+-- Default SMS channel initialization data for the canonical installation
+-- tenant (100001) / organization (0), matching the messaging PC application
+-- manifest (`apps/sdkwork-messaging-pc/agent.app.config.json#backend`).
+--
+-- Purpose: a fresh installation already lists every supported SMS provider in
+-- `/admin/notify/sms`, each with the provider's documented endpoint and region,
+-- a placeholder signature bound to its account, and the four scenario routing
+-- chains. The operator only edits the per-tenant identifiers (AccessKey ID,
+-- SecretId, SdkAppId, account SID, ...), replaces the placeholder signature
+-- with an approved one, and flips the switches — no connection profile is
+-- typed from scratch.
+--
+-- Contract rules honored here:
+--   * DATABASE_SPEC §6.4 — reserved, deterministic ids in the dedicated
+--     `9500000xxxxx` block (far below the runtime snowflake space) and stable
+--     uuids, so upgrades and retries stay idempotent.
+--   * DATABASE_SPEC §6.5 — system-actor audit columns stay NULL and `version`
+--     starts at 0, matching the optimistic-concurrency baseline.
+--   * DATABASE_FRAMEWORK_SPEC §8.3 — every statement is idempotent
+--     (`ON CONFLICT DO NOTHING`); re-seeding never overwrites operator edits.
+--   * DATABASE_FRAMEWORK_SPEC §8.2 — only language-neutral machine data lives
+--     here; localized provider labels come from the frontend i18n catalog.
+--   * No credential material is seeded: secrets are entered by the operator and
+--     stored only as ciphertext by the backend.
+--
+-- The provider presets below must stay in sync with
+-- `apps/sdkwork-messaging-pc/packages/sdkwork-messaging-pc-admin-notify/src/smsProviderCatalog.ts`
+-- (enforced by `smsProviderCatalog.test.ts`).
+--
+-- Reserved id blocks:
+--   950000000401..950000000408  provider accounts
+--   950000000501..950000000508  signature identities (one per provider account)
+--   950000000601..950000000604  scenario send rules
+
+-- 1. Provider accounts: documented endpoint/region presets, disabled until the
+--    operator supplies the account identifiers and secret.
+INSERT INTO messaging_sms_account (
+    id, uuid, tenant_id, organization_id, name, provider, config_json,
+    enabled, created_at, updated_at
+)
+VALUES
+    (
+        950000000401, 'seed-messaging-sms-account-aliyun', 100001, 0,
+        'Alibaba Cloud SMS', 'aliyun',
+        '{"region":"cn-hangzhou","endpoint":"https://dysmsapi.aliyuncs.com"}'::jsonb,
+        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000000402, 'seed-messaging-sms-account-tencent', 100001, 0,
+        'Tencent Cloud SMS', 'tencent',
+        '{"region":"ap-guangzhou","endpoint":"https://sms.tencentcloudapi.com"}'::jsonb,
+        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000000403, 'seed-messaging-sms-account-huawei', 100001, 0,
+        'Huawei Cloud SMS', 'huawei',
+        '{"region":"cn-north-4","endpoint":"https://smsapi.cn-north-4.myhuaweicloud.com"}'::jsonb,
+        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000000404, 'seed-messaging-sms-account-yuntongxun', 100001, 0,
+        'Ronglian Cloud', 'yuntongxun',
+        '{"endpoint":"https://app.cloopen.com:8883"}'::jsonb,
+        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000000405, 'seed-messaging-sms-account-submail', 100001, 0,
+        'SUBMAIL', 'submail',
+        '{"endpoint":"https://api-v4.mysubmail.com"}'::jsonb,
+        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000000406, 'seed-messaging-sms-account-chuanglan', 100001, 0,
+        'Chuanglan 253', 'chuanglan',
+        '{"endpoint":"https://smssh1.253.com"}'::jsonb,
+        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000000407, 'seed-messaging-sms-account-twilio', 100001, 0,
+        'Twilio', 'twilio',
+        '{"apiBaseUrl":"https://api.twilio.com"}'::jsonb,
+        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000000408, 'seed-messaging-sms-account-generic-http', 100001, 0,
+        'Generic HTTP SMS', 'generic_http',
+        '{}'::jsonb,
+        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    )
+ON CONFLICT DO NOTHING;
+
+-- 2. One signature identity per provider account. `SDKWork` is a placeholder
+--    that must be replaced with the signature approved by the provider; it is
+--    intentionally not enabled.
+INSERT INTO messaging_sms_signature (
+    id, uuid, tenant_id, organization_id, account_id, sign_name, enabled,
+    created_at, updated_at
+)
+VALUES
+    (950000000501, 'seed-messaging-sms-signature-aliyun', 100001, 0, 950000000401, 'SDKWork', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000502, 'seed-messaging-sms-signature-tencent', 100001, 0, 950000000402, 'SDKWork', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000503, 'seed-messaging-sms-signature-huawei', 100001, 0, 950000000403, 'SDKWork', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000504, 'seed-messaging-sms-signature-yuntongxun', 100001, 0, 950000000404, 'SDKWork', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000505, 'seed-messaging-sms-signature-submail', 100001, 0, 950000000405, 'SDKWork', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000506, 'seed-messaging-sms-signature-chuanglan', 100001, 0, 950000000406, 'SDKWork', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000507, 'seed-messaging-sms-signature-twilio', 100001, 0, 950000000407, 'SDKWork', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000508, 'seed-messaging-sms-signature-generic-http', 100001, 0, 950000000408, 'SDKWork', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT DO NOTHING;
+
+-- 3. One ordered fallback chain per scenario over every seeded signature.
+--    Disabled accounts and signatures are skipped at delivery time, so
+--    enabling a single provider and signature makes the scenario routable. The
+--    rules start disabled so an installation never sends through an
+--    unconfigured provider.
+INSERT INTO messaging_sms_send_rule (
+    id, uuid, tenant_id, organization_id, scenario, chain_json, enabled,
+    created_at, updated_at
+)
+VALUES
+    (
+        950000000601, 'seed-messaging-sms-rule-default', 100001, 0, 'default',
+        '["950000000501","950000000502","950000000503","950000000504","950000000505","950000000506","950000000507","950000000508"]'::jsonb,
+        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000000602, 'seed-messaging-sms-rule-verification-code', 100001, 0, 'verification_code',
+        '["950000000501","950000000502","950000000503","950000000504","950000000505","950000000506","950000000507","950000000508"]'::jsonb,
+        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000000603, 'seed-messaging-sms-rule-system-notification', 100001, 0, 'system_notification',
+        '["950000000501","950000000502","950000000503","950000000504","950000000505","950000000506","950000000507","950000000508"]'::jsonb,
+        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000000604, 'seed-messaging-sms-rule-marketing', 100001, 0, 'marketing',
+        '["950000000501","950000000502","950000000503","950000000504","950000000505","950000000506","950000000507","950000000508"]'::jsonb,
+        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    )
+ON CONFLICT DO NOTHING;

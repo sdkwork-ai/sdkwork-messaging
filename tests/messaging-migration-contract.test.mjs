@@ -455,5 +455,55 @@ for (const provider of consumerMailboxProviders) {
   assert.ok(emailSeed.includes(`'${provider}'`), `email channel seed must pre-create ${provider}`);
 }
 
+// ---------------------------------------------------------------------------
+// SMS channel initialization contract (accounts + signatures + scenario rules).
+// DATABASE_SPEC §6.4 reserved ids, §8.2 language-neutral common seeds, §22
+// provider catalog.
+
+const smsProviders = [
+  "aliyun",
+  "tencent",
+  "huawei",
+  "yuntongxun",
+  "submail",
+  "chuanglan",
+  "twilio",
+  "generic_http",
+];
+for (const provider of smsProviders) {
+  assert.ok(
+    baselineDdl.includes(`'${provider}'`),
+    `baseline sms provider constraint must accept ${provider}`,
+  );
+}
+assert.ok(
+  seedManifest.profiles?.standard?.common?.includes("003_sms_provider_defaults.sql"),
+  "standard seed profile must apply the SMS channel initialization data",
+);
+const smsSeed = readFileSync(
+  path.join(ROOT, "database/seeds/common/003_sms_provider_defaults.sql"),
+  "utf8",
+);
+assert.equal(
+  (smsSeed.match(/\nON CONFLICT DO NOTHING;/gu) ?? []).length,
+  3,
+  "SMS channel seed must stay idempotent across accounts, signatures, and rules",
+);
+assert.ok(
+  smsSeed.includes("100001, 0"),
+  "SMS channel seed must target the canonical installation tenant/organization",
+);
+for (const provider of smsProviders) {
+  assert.ok(smsSeed.includes(`'${provider}'`), `SMS channel seed must pre-create ${provider}`);
+}
+assert.ok(
+  smsSeed.includes("INSERT INTO messaging_sms_signature"),
+  "SMS channel seed must initialize signature identities",
+);
+assert.ok(
+  smsSeed.includes("INSERT INTO messaging_sms_send_rule"),
+  "SMS channel seed must initialize scenario send rules",
+);
+
 console.log("sdkwork-messaging migration contract checks passed.");
 
