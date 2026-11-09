@@ -111,7 +111,15 @@ export function buildEmailPreviewDocument({
   values,
   mode,
 }: EmailPreviewDocumentInput): string {
-  const substituted = renderTemplatePreview(content, values);
+  const substituted =
+    mode === "html"
+      ? // Variable values are plain text; escaping them keeps a sample value
+        // from injecting structure into the previewed markup.
+        content.replace(TEMPLATE_VARIABLE_PATTERN, (token, name: string) => {
+          const value = values[name];
+          return value === undefined || value === "" ? token : escapeHtml(value);
+        })
+      : renderTemplatePreview(content, values);
   const body =
     mode === "html"
       ? substituted

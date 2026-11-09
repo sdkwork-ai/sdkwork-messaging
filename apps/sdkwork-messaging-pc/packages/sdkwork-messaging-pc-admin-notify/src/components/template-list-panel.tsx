@@ -45,6 +45,15 @@ function formatUpdatedAt(value: string | undefined): string {
   return Number.isNaN(date.getTime()) ? "" : date.toLocaleString();
 }
 
+/** One-line plain-text teaser: markup and whitespace collapsed. */
+function contentSnippet(content: string): string {
+  const text = content
+    .replace(/<[^>]*>/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+  return text || "—";
+}
+
 export function TemplateListPanel({
   items,
   totalItems,
@@ -209,7 +218,7 @@ export function TemplateListPanel({
                       {item.name}
                     </div>
                     <p className="mt-0.5 truncate text-[11px] leading-relaxed text-slate-400 dark:text-slate-500">
-                      {item.content.replace(/\s+/gu, " ").trim() || "—"}
+                      {contentSnippet(item.content)}
                     </p>
                     <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px] text-slate-400 dark:text-slate-500">
                       <span className="inline-flex items-center gap-1.5">

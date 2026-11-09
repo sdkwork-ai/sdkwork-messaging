@@ -65,6 +65,16 @@ describe("email preview document", () => {
     });
     expect(document).toContain("<p>Hi Alex</p>");
   });
+
+  it("escapes variable values inside html mode while keeping template markup", () => {
+    const document = buildEmailPreviewDocument({
+      content: "<p>{{name}}</p>",
+      values: { name: "<script>alert(1)</script>" },
+      mode: "html",
+    });
+    expect(document).toContain("<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>");
+    expect(document).not.toContain("<script>alert(1)</script>");
+  });
 });
 
 describe("sms segment metrics", () => {
