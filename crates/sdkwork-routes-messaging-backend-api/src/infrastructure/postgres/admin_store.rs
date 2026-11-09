@@ -112,6 +112,7 @@ impl PostgresMessagingAdminStore {
             has_secret: fingerprint.is_some(),
             key_display_masked,
             enabled: row.get("enabled"),
+            receive_enabled: row.get("receive_enabled"),
             version: row.get::<i64, _>("version").to_string(),
             created_at: rfc3339(row.get("created_at")),
             updated_at: rfc3339(row.get("updated_at")),
@@ -1157,7 +1158,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .map_err(|error| StoreError::Unavailable(error.to_string()))?;
 
         let rows = sqlx::query(
-            "SELECT id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at, version, version \
+            "SELECT id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, receive_enabled, created_at, updated_at, version, version \
              FROM messaging_email_account \
              WHERE tenant_id = $1 AND organization_id = $2 AND deleted_at IS NULL \
              ORDER BY updated_at DESC, id DESC \
@@ -1204,9 +1205,9 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
 
         let row = sqlx::query(
             "INSERT INTO messaging_email_account \
-             (id, uuid, tenant_id, organization_id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_by) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) \
-             RETURNING id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at, version",
+             (id, uuid, tenant_id, organization_id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, receive_enabled, created_by) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) \
+             RETURNING id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, receive_enabled, created_at, updated_at, version",
         )
         .bind(self.next_id())
         .bind(uuid())
@@ -1219,6 +1220,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .bind(encoded.as_ref().map(|value| value.key_id.as_str()))
         .bind(encoded.as_ref().map(|value| value.fingerprint.as_str()))
         .bind(command.enabled)
+        .bind(command.receive_enabled)
         .bind(subject.operator_id)
         .fetch_one(&self.pool)
         .await
@@ -1244,7 +1246,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         account_id: i64,
     ) -> Result<EmailAccountItem, StoreError> {
         let row = sqlx::query(
-            "SELECT id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at, version, version \
+            "SELECT id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, receive_enabled, created_at, updated_at, version, version \
              FROM messaging_email_account \
              WHERE id = $1 AND tenant_id = $2 AND organization_id = $3 AND deleted_at IS NULL",
         )
@@ -1284,15 +1286,16 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
                 provider = $5, \
                 config_json = $6, \
                 enabled = $7, \
-                secret_ciphertext = COALESCE($8, secret_ciphertext), \
-                secret_key_id = COALESCE($9, secret_key_id), \
-                secret_fingerprint = COALESCE($10, secret_fingerprint), \
-                updated_by = $11, \
+                receive_enabled = $8, \
+                secret_ciphertext = COALESCE($9, secret_ciphertext), \
+                secret_key_id = COALESCE($10, secret_key_id), \
+                secret_fingerprint = COALESCE($11, secret_fingerprint), \
+                updated_by = $12, \
                 updated_at = CURRENT_TIMESTAMP, \
                 version = version + 1 \
              WHERE id = $1 AND tenant_id = $2 AND organization_id = $3 AND deleted_at IS NULL \
-               AND version = $12 \
-             RETURNING id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at, version, version",
+               AND version = $13 \
+             RETURNING id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, receive_enabled, created_at, updated_at, version, version",
         )
         .bind(account_id)
         .bind(subject.tenant_id)
@@ -1301,6 +1304,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .bind(provider)
         .bind(&command.config)
         .bind(command.enabled)
+        .bind(command.receive_enabled)
         .bind(encoded.as_ref().map(|value| value.ciphertext.as_str()))
         .bind(encoded.as_ref().map(|value| value.key_id.as_str()))
         .bind(encoded.as_ref().map(|value| value.fingerprint.as_str()))

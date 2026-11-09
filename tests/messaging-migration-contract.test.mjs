@@ -388,5 +388,72 @@ const retireMigration = readFileSync(
 assert.ok(retireMigration.includes("DROP TABLE IF EXISTS messaging_channel"), "0004 must drop messaging_channel");
 assert.ok(retireMigration.includes("WHERE deleted_at IS NULL"), "0004 must convert uniqueness to partial indexes");
 
+// ---------------------------------------------------------------------------
+// Email provider expansion (consumer mailbox services) contract.
+// DATABASE_SPEC §6.4 reserved ids, §8.2 language-neutral common seeds, §22
+// provider catalog.
+
+const consumerMailboxProviders = ["tencent_mail", "mail_139", "gmail", "microsoft"];
+
+for (const provider of consumerMailboxProviders) {
+  assert.ok(
+    baselineDdl.includes(`'${provider}'`),
+    `baseline email provider constraint must accept ${provider}`,
+  );
+}
+assert.ok(
+  baselineDdl.includes("receive_enabled BOOLEAN NOT NULL DEFAULT FALSE"),
+  "baseline must keep the inbound switch next to the outbound enabled flag",
+);
+
+const providerExpansionMigrationPath = path.join(
+  ROOT,
+  "database/migrations/postgres/0006_email_provider_expansion.up.sql",
+);
+assert.ok(existsSync(providerExpansionMigrationPath), "0006 email provider expansion migration must exist");
+const providerExpansionMigration = readFileSync(providerExpansionMigrationPath, "utf8");
+assert.ok(
+  providerExpansionMigration.includes("ADD COLUMN IF NOT EXISTS receive_enabled BOOLEAN NOT NULL DEFAULT FALSE"),
+  "0006 must add the inbound switch idempotently",
+);
+assert.ok(
+  providerExpansionMigration.includes("DROP CONSTRAINT IF EXISTS ck_messaging_email_account_provider"),
+  "0006 must replace the provider constraint instead of narrowing it",
+);
+for (const provider of consumerMailboxProviders) {
+  assert.ok(
+    providerExpansionMigration.includes(`'${provider}'`),
+    `0006 provider constraint must accept ${provider}`,
+  );
+}
+for (const legacyProvider of ["smtp", "aliyun", "tencent", "sendgrid", "mailgun", "amazon_ses", "postmark", "resend"]) {
+  assert.ok(
+    providerExpansionMigration.includes(`'${legacyProvider}'`),
+    `0006 must keep the existing ${legacyProvider} provider valid`,
+  );
+}
+
+const seedManifest = readJson("database/seeds/seed.manifest.json");
+assert.ok(
+  seedManifest.profiles?.standard?.common?.includes("002_email_provider_defaults.sql"),
+  "standard seed profile must apply the email channel initialization data",
+);
+const emailSeed = readFileSync(
+  path.join(ROOT, "database/seeds/common/002_email_provider_defaults.sql"),
+  "utf8",
+);
+assert.equal(
+  (emailSeed.match(/\nON CONFLICT DO NOTHING;/gu) ?? []).length,
+  3,
+  "email channel seed must stay idempotent across accounts, senders, and rules",
+);
+assert.ok(
+  emailSeed.includes("100001, 0"),
+  "email channel seed must target the canonical installation tenant/organization",
+);
+for (const provider of consumerMailboxProviders) {
+  assert.ok(emailSeed.includes(`'${provider}'`), `email channel seed must pre-create ${provider}`);
+}
+
 console.log("sdkwork-messaging migration contract checks passed.");
 

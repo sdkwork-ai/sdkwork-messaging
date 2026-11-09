@@ -168,7 +168,7 @@
     },
     {
       "path": "src/types/messaging-email-account-create-request.ts",
-      "sha256": "bfa7dab28f2d81b26bb709bd27f5fdf9e4b8b857237c5827300b146cc16d478e"
+      "sha256": "d013b237aaa74537516b0c887c105cc9618df982261eb078e51b2b42a7b7eaca"
     },
     {
       "path": "src/types/messaging-email-account-list-response.ts",
@@ -180,11 +180,11 @@
     },
     {
       "path": "src/types/messaging-email-account-update-request.ts",
-      "sha256": "7094797253ba002d26605ea97d69fee61f504706111029dd1fb1876cb0307f86"
+      "sha256": "55c4af0a9a37209634a7fa67bb18d500ec5885ebe91762e927a417e6c89e507e"
     },
     {
       "path": "src/types/messaging-email-account.ts",
-      "sha256": "f20bc91da3b77321cbdb7d8a2b08834524edd4dc3357de579678421230fedbac"
+      "sha256": "ac1c30bf59825491e66b63691ff146362c426b9df7d91bfff60bbfcc1834d1ac"
     },
     {
       "path": "src/types/messaging-email-send-rule-list-response.ts",

@@ -121,14 +121,22 @@ export function TextAreaInput(props: {
   );
 }
 
-export function ToggleInput(props: { checked: boolean; onChange: (checked: boolean) => void }) {
+export function ToggleInput(props: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  /** Accessible name; required when several switches share a table row/list. */
+  ariaLabel?: string;
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={props.checked}
+      aria-label={props.ariaLabel}
+      disabled={props.disabled}
       onClick={() => props.onChange(!props.checked)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-50 ${
         props.checked ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"
       }`}
     >

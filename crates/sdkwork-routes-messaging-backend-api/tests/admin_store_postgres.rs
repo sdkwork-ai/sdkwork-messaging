@@ -140,6 +140,7 @@ fn email_account_command(
         config: serde_json::json!({ "host": "smtp.example.com", "port": "465", "encryption": "smtps" }),
         secret: Some("secret-1".to_owned()),
         enabled: true,
+        receive_enabled: false,
     }
 }
 
@@ -301,6 +302,7 @@ async fn account_update_enforces_optimistic_concurrency() {
         config: serde_json::json!({ "host": "smtp2.example.com" }),
         secret: None,
         enabled: true,
+        receive_enabled: true,
         expected_version: account.version.clone(),
     };
     let updated = test
@@ -314,6 +316,10 @@ async fn account_update_enforces_optimistic_concurrency() {
         .await
         .expect("update with fresh version");
     assert_eq!(updated.version, "1", "version must increment");
+    assert!(
+        updated.receive_enabled,
+        "inbound switch must persist through the update"
+    );
 
     // The pre-update version is now stale → Conflict (§17).
     let stale = sdkwork_routes_messaging_backend_api::ports::UpdateEmailAccountCommand {
@@ -322,6 +328,7 @@ async fn account_update_enforces_optimistic_concurrency() {
         config: serde_json::json!({ "host": "smtp3.example.com" }),
         secret: None,
         enabled: true,
+        receive_enabled: false,
         expected_version: account.version.clone(),
     };
     let conflict = test

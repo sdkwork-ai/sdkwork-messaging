@@ -308,6 +308,30 @@ function schemas() {
   const pushStatus = { type: "string", enum: ["accepted", "queued", "sent", "delivered", "failed", "opened", "cancelled", "expired"] };
   const verificationChallengeStatus = { type: "string", enum: ["pending", "verified", "failed", "locked", "expired"] };
   const directChannel = { type: "string", enum: ["sms", "email"] };
+  /**
+   * Email provider catalog. Providers are grouped as (a) consumer mailbox
+   * services configured through SMTP/IMAP/POP3 presets, (b) cloud delivery
+   * APIs, and (c) the generic SMTP fallback. The list is the wire authority for
+   * `messaging_email_account.provider` and must stay in sync with
+   * `database/migrations/postgres/0006_email_provider_expansion.up.sql`.
+   */
+  const emailProvider = {
+    type: "string",
+    enum: [
+      "smtp",
+      "aliyun",
+      "tencent",
+      "tencent_mail",
+      "mail_139",
+      "gmail",
+      "microsoft",
+      "sendgrid",
+      "mailgun",
+      "amazon_ses",
+      "postmark",
+      "resend",
+    ],
+  };
 
   return {
     ProblemDetail: {
@@ -592,31 +616,34 @@ function schemas() {
       requestId,
     }),
     MessagingSmsSendRuleListResponse: envelope("MessagingSmsSendRuleListResponse", "MessagingSmsSendRule"),
-    MessagingEmailAccount: object(["id", "name", "provider", "hasSecret", "enabled", "version"], {
+    MessagingEmailAccount: object(["id", "name", "provider", "hasSecret", "enabled", "receiveEnabled", "version"], {
       id,
       name: { type: "string", minLength: 1, maxLength: 128 },
-      provider: { type: "string", enum: ["smtp", "aliyun", "tencent", "sendgrid", "mailgun", "amazon_ses", "postmark", "resend"] },
+      provider: emailProvider,
       config: { type: "object", additionalProperties: true },
       hasSecret: { type: "boolean" },
       keyDisplayMasked: { type: "string", readOnly: true },
       enabled: { type: "boolean" },
+      receiveEnabled: { type: "boolean" },
       createdAt: { type: "string", format: "date-time" },
       updatedAt: { type: "string", format: "date-time" },
       version: int64,
     }),
     MessagingEmailAccountCreateRequest: object(["name", "provider", "config", "enabled"], {
       name: { type: "string", minLength: 1, maxLength: 128 },
-      provider: { type: "string", enum: ["smtp", "aliyun", "tencent", "sendgrid", "mailgun", "amazon_ses", "postmark", "resend"] },
+      provider: emailProvider,
       config: { type: "object", additionalProperties: true },
       secret: { type: "string", writeOnly: true, "x-sensitive": true },
       enabled: { type: "boolean" },
+      receiveEnabled: { type: "boolean" },
     }),
     MessagingEmailAccountUpdateRequest: object(["name", "provider", "config", "enabled", "expectedVersion"], {
       name: { type: "string", minLength: 1, maxLength: 128 },
-      provider: { type: "string", enum: ["smtp", "aliyun", "tencent", "sendgrid", "mailgun", "amazon_ses", "postmark", "resend"] },
+      provider: emailProvider,
       config: { type: "object", additionalProperties: true },
       secret: { type: "string", writeOnly: true, "x-sensitive": true },
       enabled: { type: "boolean" },
+      receiveEnabled: { type: "boolean" },
       expectedVersion: int64,
     }),
     MessagingEmailAccountResponse: object(["item", "requestId"], {

@@ -4,10 +4,12 @@ import {
   ArrowDown,
   ArrowUp,
   Building2,
+  Inbox,
   KeyRound,
   Mail,
   Plus,
   Route,
+  Send,
   Trash2,
 } from "lucide-react";
 
@@ -32,16 +34,28 @@ import {
   usePagedList,
 } from "../components/use-paged-list";
 import {
+  activeReceiveEndpoint,
+  formatEndpoint,
+  normalizeEncryption,
+  parseEmailAccountConfig,
+  serializeEmailAccountConfig,
+  type EmailAccountConfig,
+  type EmailEncryption,
+  type EmailEndpoint,
+  type EmailReceiveProtocol,
+} from "../emailAccountConfig";
+import {
   EMAIL_PROVIDER_CATALOG,
   EMAIL_SEND_SCENARIOS,
   emailProviderCatalogEntry,
+  providerConfigDefaults,
+  type EmailProviderCatalogEntry,
 } from "../emailProviderCatalog";
 import {
   defaultNotifyAdminService,
   isConflictError,
   type MessagingEmailAccount,
   type MessagingEmailProvider,
-  type MessagingEmailSendRule,
   type MessagingEmailSendScenario,
   type MessagingEmailSender,
   type NotifyAdminService,
@@ -59,11 +73,12 @@ const EMAIL_TABS: readonly { id: EmailTab; labelKey: string }[] = [
   { id: "rules", labelKey: "admin.notify.email.tab.rules" },
 ];
 
+const ENCRYPTION_OPTIONS: readonly EmailEncryption[] = ["ssl", "starttls", "none"];
 
-function readConfig(config: Record<string, unknown> | undefined, key: string): string {
-  const value = config?.[key];
-  return typeof value === "string" ? value : "";
-}
+const RECEIVE_PROTOCOL_OPTIONS: readonly EmailReceiveProtocol[] = ["imap", "pop3", "none"];
+
+/** Translation function type derived from the hook, kept free of a direct i18next dependency. */
+type Translate = ReturnType<typeof useTranslation>["t"];
 
 function ProviderBadge({ provider }: { provider: string }) {
   const { t } = useTranslation();
@@ -75,74 +90,134 @@ function ProviderBadge({ provider }: { provider: string }) {
   );
 }
 
-interface AccountFormState {
-  name: string;
-  host: string;
-  port: string;
-  encryption: string;
-  username: string;
-  apiBaseUrl: string;
-  region: string;
-  secret: string;
-  enabled: boolean;
+/**
+ * Send-side summary of an account. HTTP API providers show their endpoint;
+ * SMTP providers show `host:port` plus the TLS mode, or the unconfigured
+ * placeholder when the host has not been filled in yet.
+ */
+function sendSummary(
+  account: MessagingEmailAccount,
+  entry: EmailProviderCatalogEntry | undefined,
+  t: Translate,
+): string {
+  const config = parseEmailAccountConfig(account.config);
+  if (entry?.transport === "http_api" || config.transport === "http_api") {
+    return config.apiBaseUrl
+      ? `API · ${config.apiBaseUrl}`
+      : t("admin.notify.email.notConfigured", { defaultValue: "Not configured" });
+  }
+  if (!config.send?.host) {
+    return t("admin.notify.email.notConfigured", { defaultValue: "Not configured" });
+  }
+  return `SMTP · ${formatEndpoint(config.send)} · ${t(
+    `admin.notify.email.encryption.${config.send.encryption}`,
+    { defaultValue: config.send.encryption },
+  )}`;
 }
 
-function emptyAccountForm(entry: (typeof EMAIL_PROVIDER_CATALOG)[number]): AccountFormState {
+/** Receive-side summary: protocol plus endpoint, or the send-only placeholder. */
+function receiveSummary(account: MessagingEmailAccount, t: Translate): string {
+  const config = parseEmailAccountConfig(account.config);
+  const endpoint = activeReceiveEndpoint(config);
+  if (config.receiveProtocol === "none" || !endpoint?.host) {
+    return t("admin.notify.email.receiveNone", { defaultValue: "Send only" });
+  }
+  return `${config.receiveProtocol.toUpperCase()} · ${formatEndpoint(endpoint)} · ${t(
+    `admin.notify.email.encryption.${endpoint.encryption}`,
+    { defaultValue: endpoint.encryption },
+  )}`;
+}
+
+// --------------------------------------------------------------- account form
+
+interface AccountFormState {
+  name: string;
+  username: string;
+  secret: string;
+  enabled: boolean;
+  receiveEnabled: boolean;
+  sendHost: string;
+  sendPort: string;
+  sendEncryption: EmailEncryption;
+  apiBaseUrl: string;
+  region: string;
+  receiveProtocol: EmailReceiveProtocol;
+  imap: EmailEndpoint;
+  pop3: EmailEndpoint;
+}
+
+function endpointFromPreset(
+  endpoint: EmailEndpoint | undefined,
+  fallbackPort: string,
+): EmailEndpoint {
+  return endpoint ?? { host: "", port: fallbackPort, encryption: "ssl" };
+}
+
+function emptyAccountForm(entry: EmailProviderCatalogEntry): AccountFormState {
+  const config = parseEmailAccountConfig(providerConfigDefaults(entry));
   return {
     name: "",
-    host: entry.configDefaults.host ?? "",
-    port: entry.configDefaults.port ?? "",
-    encryption: entry.configDefaults.encryption ?? "smtps",
     username: "",
-    apiBaseUrl: entry.configDefaults.apiBaseUrl ?? "",
-    region: entry.configDefaults.region ?? "",
     secret: "",
     enabled: true,
+    receiveEnabled: Boolean(entry.receive),
+    sendHost: config.send?.host ?? "",
+    sendPort: config.send?.port ?? "",
+    sendEncryption: config.send?.encryption ?? "ssl",
+    apiBaseUrl: config.apiBaseUrl,
+    region: config.region,
+    receiveProtocol: config.receiveProtocol,
+    imap: endpointFromPreset(config.imap ?? entry.receive?.imap, "993"),
+    pop3: endpointFromPreset(config.pop3 ?? entry.receive?.pop3, "995"),
   };
 }
 
-function accountFormFromItem(account: MessagingEmailAccount): AccountFormState {
+function accountFormFromItem(
+  account: MessagingEmailAccount,
+  entry: EmailProviderCatalogEntry | undefined,
+): AccountFormState {
+  const config = parseEmailAccountConfig(account.config);
   return {
     name: account.name,
-    host: readConfig(account.config, "host"),
-    port: readConfig(account.config, "port") || "465",
-    encryption: readConfig(account.config, "encryption") || "smtps",
-    username: readConfig(account.config, "username"),
-    apiBaseUrl: readConfig(account.config, "apiBaseUrl"),
-    region: readConfig(account.config, "region"),
+    username: config.username,
     secret: "",
     enabled: account.enabled,
+    receiveEnabled: account.receiveEnabled,
+    sendHost: config.send?.host ?? entry?.send?.host ?? "",
+    sendPort: config.send?.port ?? entry?.send?.port ?? "",
+    sendEncryption: normalizeEncryption(
+      config.send?.encryption ?? entry?.send?.encryption ?? "ssl",
+    ),
+    apiBaseUrl: config.apiBaseUrl || entry?.apiBaseUrl || "",
+    region: config.region || entry?.region || "",
+    // A legacy row without an inbound preset starts at the provider preset.
+    receiveProtocol:
+      config.receiveProtocol === "none" && entry?.receive && !config.imap && !config.pop3
+        ? entry.receive.protocol
+        : config.receiveProtocol,
+    imap: config.imap ?? endpointFromPreset(entry?.receive?.imap, "993"),
+    pop3: config.pop3 ?? endpointFromPreset(entry?.receive?.pop3, "995"),
   };
 }
 
 function accountConfigFromForm(
   form: AccountFormState,
-  transport: "smtp" | "http_api",
+  entry: EmailProviderCatalogEntry,
 ): Record<string, string> {
-  if (transport === "smtp") {
-    const config: Record<string, string> = {
-      host: form.host.trim(),
-      port: form.port.trim(),
-      encryption: form.encryption,
-    };
-    if (form.username.trim()) {
-      config.username = form.username.trim();
-    }
-    if (form.region.trim()) {
-      config.region = form.region.trim();
-    }
-    return config;
-  }
-  const config: Record<string, string> = {
-    apiBaseUrl: form.apiBaseUrl.trim(),
+  const config: EmailAccountConfig = {
+    transport: entry.transport,
+    send:
+      entry.transport === "smtp"
+        ? { host: form.sendHost, port: form.sendPort, encryption: form.sendEncryption }
+        : null,
+    apiBaseUrl: form.apiBaseUrl,
+    receiveProtocol: entry.receive ? form.receiveProtocol : "none",
+    imap: entry.receive ? form.imap : null,
+    pop3: entry.receive ? form.pop3 : null,
+    username: form.username,
+    region: form.region,
   };
-  if (form.region.trim()) {
-    config.region = form.region.trim();
-  }
-  if (form.username.trim()) {
-    config.username = form.username.trim();
-  }
-  return config;
+  return serializeEmailAccountConfig(config);
 }
 
 // --------------------------------------------------------------- accounts tab
@@ -217,9 +292,14 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
   };
 
   const beginEdit = (account: MessagingEmailAccount) => {
+    const entry = emailProviderCatalogEntry(account.provider);
+    if (!entry) {
+      setError(t("admin.notify.email.unknownProvider", { provider: account.provider }));
+      return;
+    }
     setEditing(account);
     setPickedProvider(account.provider as MessagingEmailProvider);
-    setForm(accountFormFromItem(account));
+    setForm(accountFormFromItem(account, entry));
     setCatalogOpen(true);
   };
 
@@ -240,7 +320,7 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
     setError(null);
     setNotice(null);
     try {
-      const config = accountConfigFromForm(form, entry.transport);
+      const config = accountConfigFromForm(form, entry);
       if (editing) {
         await admin.updateEmailAccount(editing.id, {
           name,
@@ -248,6 +328,7 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
           config,
           ...(form.secret.trim() ? { secret: form.secret } : {}),
           enabled: form.enabled,
+          receiveEnabled: form.receiveEnabled,
           expectedVersion: editing.version,
         });
       } else {
@@ -257,6 +338,7 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
           config,
           ...(form.secret.trim() ? { secret: form.secret } : {}),
           enabled: form.enabled,
+          receiveEnabled: form.receiveEnabled,
         });
       }
       closeDrawer();
@@ -275,15 +357,19 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
     }
   };
 
-  const toggleAccount = async (account: MessagingEmailAccount, enabled: boolean) => {
+  const updateAccount = async (
+    account: MessagingEmailAccount,
+    patch: { enabled?: boolean; receiveEnabled?: boolean },
+  ) => {
     setError(null);
     setNotice(null);
     try {
       await admin.updateEmailAccount(account.id, {
         name: account.name,
         provider: account.provider as MessagingEmailProvider,
-        config: account.config as Record<string, string>,
-        enabled,
+        config: account.config ?? {},
+        enabled: patch.enabled ?? account.enabled,
+        receiveEnabled: patch.receiveEnabled ?? account.receiveEnabled,
         expectedVersion: account.version,
       });
       setNotice(t("admin.notify.common.saved"));
@@ -322,17 +408,9 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
 
   return (
     <section className="flex min-h-0 w-full flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          {t("admin.notify.email.accountsHint")}
-        </p>
-        <PrimaryButton onClick={beginCreate}>
-          <span className="inline-flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            {t("admin.notify.email.addProvider")}
-          </span>
-        </PrimaryButton>
-      </div>
+      <p className="text-sm text-slate-500 dark:text-slate-400">
+        {t("admin.notify.email.accountsHint")}
+      </p>
       {error ? <ErrorState message={error} onRetry={() => void runLoad(page)} /> : null}
       {notice ? (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
@@ -341,79 +419,127 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
       ) : null}
       {loading ? (
         <LoadingState label={t("admin.notify.common.loading")} />
-      ) : accounts.length === 0 && page === 1 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 px-6 py-12 text-center text-sm text-slate-400 dark:border-white/10 dark:text-slate-500">
-          {t("admin.notify.email.accountsEmpty")}
-        </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
-            {accounts.map((account) => (
-              <article
-                key={account.id}
-                className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#1a1a1a]"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="truncate text-sm font-semibold text-slate-800 dark:text-white">
-                      {account.name}
-                    </h3>
-                    <div className="mt-1.5">
-                      <ProviderBadge provider={account.provider} />
-                    </div>
-                  </div>
-                  <ToggleInput
-                    checked={account.enabled}
-                    onChange={(value) => void toggleAccount(account, value)}
-                  />
-                </div>
-                <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-                  {account.config && Object.keys(account.config).length > 0
-                    ? Object.entries(account.config)
-                        .filter(([, value]) => typeof value === "string" && value)
-                        .slice(0, 3)
-                        .map(([key, value]) => (
-                          <div key={key} className="col-span-2 flex min-w-0 gap-2">
-                            <dt className="shrink-0 font-medium">{key}</dt>
-                            <dd className="truncate font-mono">{String(value)}</dd>
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#1a1a1a]">
+            <table className="w-full min-w-[960px] text-left text-sm">
+              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+                <tr>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t("admin.notify.email.table.provider")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t("admin.notify.email.table.send")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t("admin.notify.email.table.receive")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t("admin.notify.email.table.sendEnabled")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t("admin.notify.email.table.receiveEnabled")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-right font-medium normal-case">
+                    {/* The create entry lives in the list header by contract. */}
+                    <PrimaryButton onClick={beginCreate}>
+                      <span className="inline-flex items-center gap-2">
+                        <Plus className="h-4 w-4" />
+                        {t("admin.notify.email.addProvider")}
+                      </span>
+                    </PrimaryButton>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {accounts.map((account) => {
+                  const entry = emailProviderCatalogEntry(account.provider);
+                  const receiveSupported = Boolean(entry?.receive);
+                  return (
+                    <tr
+                      key={account.id}
+                      className="border-b border-slate-100 last:border-0 align-top hover:bg-slate-50 dark:border-white/5 dark:hover:bg-white/5"
+                    >
+                      <td className="px-4 py-4">
+                        <div className="min-w-0">
+                          <div className="truncate font-medium text-slate-800 dark:text-white">
+                            {account.name}
                           </div>
-                        ))
-                    : null}
-                </dl>
-                <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-400 dark:border-white/5 dark:text-slate-500">
-                  <span className="inline-flex items-center gap-1.5">
-                    {account.hasSecret ? (
-                      <>
-                        <KeyRound className="h-3.5 w-3.5" />
-                        {account.keyDisplayMasked}
-                      </>
-                    ) : (
-                      t("admin.notify.common.secretEmptyHint")
-                    )}
-                  </span>
-                  <span>
-                    {account.updatedAt ? new Date(account.updatedAt).toLocaleString() : "—"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => beginEdit(account)}
-                    className="rounded px-2 py-1 text-xs text-sky-600 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-500/10"
-                  >
-                    {t("admin.notify.common.edit")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void removeAccount(account)}
-                    className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    {t("admin.notify.common.delete")}
-                  </button>
-                </div>
-              </article>
-            ))}
+                          <div className="mt-1.5">
+                            <ProviderBadge provider={account.provider} />
+                          </div>
+                          <div className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
+                            <KeyRound className="h-3.5 w-3.5" />
+                            {account.hasSecret
+                              ? account.keyDisplayMasked
+                              : t("admin.notify.common.secretEmptyHint")}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 font-mono text-xs text-slate-600 dark:text-slate-300">
+                        {sendSummary(account, entry, t)}
+                      </td>
+                      <td className="px-4 py-4 font-mono text-xs text-slate-600 dark:text-slate-300">
+                        <span className={account.receiveEnabled ? "" : "opacity-60"}>
+                          {receiveSummary(account, t)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <ToggleInput
+                          checked={account.enabled}
+                          ariaLabel={t("admin.notify.email.toggleSendAria", {
+                            name: account.name,
+                          })}
+                          onChange={(value) => void updateAccount(account, { enabled: value })}
+                        />
+                      </td>
+                      <td className="px-4 py-4">
+                        {receiveSupported ? (
+                          <ToggleInput
+                            checked={account.receiveEnabled}
+                            ariaLabel={t("admin.notify.email.toggleReceiveAria", {
+                              name: account.name,
+                            })}
+                            onChange={(value) =>
+                              void updateAccount(account, { receiveEnabled: value })
+                            }
+                          />
+                        ) : (
+                          <span className="text-xs text-slate-400 dark:text-slate-500">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => beginEdit(account)}
+                          className="mr-2 rounded px-2 py-1 text-xs text-sky-600 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-500/10"
+                        >
+                          {t("admin.notify.common.edit")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void removeAccount(account)}
+                          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          {t("admin.notify.common.delete")}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {accounts.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-4 py-12 text-center text-slate-400 dark:text-slate-500"
+                    >
+                      {t("admin.notify.email.accountsEmpty")}
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
           </div>
           <ListPager
             page={page}
@@ -479,80 +605,24 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
                   placeholder={t(drawerEntry.nameKey)}
                 />
               </Field>
-              {drawerEntry.transport === "smtp" ? (
-                <>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="col-span-2">
-                      <Field label={t("admin.notify.email.host")}>
-                        <TextInput
-                          value={form.host}
-                          onChange={(value) => setForm({ ...form, host: value })}
-                          placeholder="smtp.example.com"
-                        />
-                      </Field>
-                    </div>
-                    <Field label={t("admin.notify.email.port")}>
-                      <TextInput
-                        value={form.port}
-                        onChange={(value) => setForm({ ...form, port: value })}
-                      />
-                    </Field>
-                  </div>
-                  <Field label={t("admin.notify.email.encryption")}>
-                    <SelectInput
-                      value={form.encryption}
-                      onChange={(value) => setForm({ ...form, encryption: value })}
-                      options={[
-                        { value: "smtps", label: t("admin.notify.email.encryption.smtps") },
-                        { value: "starttls", label: t("admin.notify.email.encryption.starttls") },
-                        { value: "none", label: t("admin.notify.email.encryption.none") },
-                      ]}
-                    />
-                  </Field>
-                  {form.region || drawerEntry.provider === "amazon_ses" ? (
-                    <Field label={t("admin.notify.email.region")}>
-                      <TextInput
-                        value={form.region}
-                        onChange={(value) => setForm({ ...form, region: value })}
-                        placeholder="us-east-1"
-                      />
-                    </Field>
-                  ) : null}
-                  <Field label={t("admin.notify.email.username")}>
-                    <TextInput
-                      value={form.username}
-                      onChange={(value) => setForm({ ...form, username: value })}
-                    />
-                  </Field>
-                </>
-              ) : (
-                <>
-                  <Field label={t("admin.notify.email.apiBaseUrl")}>
-                    <TextInput
-                      value={form.apiBaseUrl}
-                      onChange={(value) => setForm({ ...form, apiBaseUrl: value })}
-                    />
-                  </Field>
-                  {drawerEntry.provider === "mailgun" ? (
-                    <Field label={t("admin.notify.email.region")}>
-                      <SelectInput
-                        value={form.region || "us"}
-                        onChange={(value) => setForm({ ...form, region: value })}
-                        options={[
-                          { value: "us", label: "US" },
-                          { value: "eu", label: "EU" },
-                        ]}
-                      />
-                    </Field>
-                  ) : null}
-                </>
-              )}
+              <Field
+                label={t("admin.notify.email.username")}
+                hint={t("admin.notify.email.usernameHint")}
+              >
+                <TextInput
+                  value={form.username}
+                  onChange={(value) => setForm({ ...form, username: value })}
+                  placeholder="no-reply@example.com"
+                />
+              </Field>
               <Field
                 label={t(drawerEntry.secretLabelKey)}
                 hint={
-                  editing?.hasSecret
-                    ? t("admin.notify.common.secretConfiguredHint")
-                    : t("admin.notify.common.secretEmptyHint")
+                  drawerEntry.setupHintKey
+                    ? t(drawerEntry.setupHintKey)
+                    : editing?.hasSecret
+                      ? t("admin.notify.common.secretConfiguredHint")
+                      : t("admin.notify.common.secretEmptyHint")
                 }
               >
                 <div className="relative">
@@ -567,25 +637,195 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
                   ) : null}
                 </div>
               </Field>
-              <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3 dark:bg-white/5">
-                <div>
-                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                    {t("admin.notify.common.enabled")}
+
+              <section className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-white/10">
+                <header className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-white">
+                  <Send className="h-4 w-4 text-sky-500" />
+                  {t("admin.notify.email.section.send")}
+                </header>
+                {drawerEntry.transport === "smtp" ? (
+                  <>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="col-span-2">
+                        <Field label={t("admin.notify.email.host")}>
+                          <TextInput
+                            value={form.sendHost}
+                            onChange={(value) => setForm({ ...form, sendHost: value })}
+                            placeholder="smtp.example.com"
+                          />
+                        </Field>
+                      </div>
+                      <Field label={t("admin.notify.email.port")}>
+                        <TextInput
+                          value={form.sendPort}
+                          onChange={(value) => setForm({ ...form, sendPort: value })}
+                        />
+                      </Field>
+                    </div>
+                    <Field label={t("admin.notify.email.encryption")}>
+                      <SelectInput
+                        value={form.sendEncryption}
+                        onChange={(value) =>
+                          setForm({ ...form, sendEncryption: normalizeEncryption(value) })
+                        }
+                        options={ENCRYPTION_OPTIONS.map((option) => ({
+                          value: option,
+                          label: t(`admin.notify.email.encryption.${option}`, option),
+                        }))}
+                      />
+                    </Field>
+                  </>
+                ) : (
+                  <Field label={t("admin.notify.email.apiBaseUrl")}>
+                    <TextInput
+                      value={form.apiBaseUrl}
+                      onChange={(value) => setForm({ ...form, apiBaseUrl: value })}
+                    />
+                  </Field>
+                )}
+                {form.region || drawerEntry.region || drawerEntry.provider === "amazon_ses" ? (
+                  <Field label={t("admin.notify.email.region")}>
+                    <TextInput
+                      value={form.region}
+                      onChange={(value) => setForm({ ...form, region: value })}
+                      placeholder="us-east-1"
+                    />
+                  </Field>
+                ) : null}
+              </section>
+
+              <section className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-white/10">
+                <header className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-white">
+                  <Inbox className="h-4 w-4 text-emerald-500" />
+                  {t("admin.notify.email.section.receive")}
+                </header>
+                {drawerEntry.receive ? (
+                  <>
+                    <Field
+                      label={t("admin.notify.email.receiveProtocol")}
+                      hint={t("admin.notify.email.receiveProtocolHint")}
+                    >
+                      <SelectInput
+                        value={form.receiveProtocol}
+                        onChange={(value) =>
+                          setForm({
+                            ...form,
+                            receiveProtocol: value as EmailReceiveProtocol,
+                          })
+                        }
+                        options={RECEIVE_PROTOCOL_OPTIONS.map((option) => ({
+                          value: option,
+                          label: t(`admin.notify.email.receiveProtocol.${option}`, option),
+                        }))}
+                      />
+                    </Field>
+                    {form.receiveProtocol === "imap" ? (
+                      <EndpointFields
+                        title="IMAP"
+                        endpoint={form.imap}
+                        onChange={(imap) => setForm({ ...form, imap })}
+                      />
+                    ) : null}
+                    {form.receiveProtocol === "pop3" ? (
+                      <EndpointFields
+                        title="POP3"
+                        endpoint={form.pop3}
+                        onChange={(pop3) => setForm({ ...form, pop3 })}
+                      />
+                    ) : null}
+                  </>
+                ) : (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {t("admin.notify.email.receiveUnsupportedHint")}
                   </p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500">
-                    {t("admin.notify.email.enabledHint")}
-                  </p>
+                )}
+              </section>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3 dark:bg-white/5">
+                  <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                      {t("admin.notify.email.table.sendEnabled")}
+                    </p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">
+                      {t("admin.notify.email.enabledHint")}
+                    </p>
+                  </div>
+                  <ToggleInput
+                    checked={form.enabled}
+                    ariaLabel={t("admin.notify.email.toggleSendAria", { name: form.name })}
+                    onChange={(value) => setForm({ ...form, enabled: value })}
+                  />
                 </div>
-                <ToggleInput
-                  checked={form.enabled}
-                  onChange={(value) => setForm({ ...form, enabled: value })}
-                />
+                {drawerEntry.receive ? (
+                  <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3 dark:bg-white/5">
+                    <div>
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                        {t("admin.notify.email.table.receiveEnabled")}
+                      </p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">
+                        {t("admin.notify.email.receiveEnabledHint")}
+                      </p>
+                    </div>
+                    <ToggleInput
+                      checked={form.receiveEnabled}
+                      ariaLabel={t("admin.notify.email.toggleReceiveAria", { name: form.name })}
+                      onChange={(value) => setForm({ ...form, receiveEnabled: value })}
+                    />
+                  </div>
+                ) : null}
               </div>
             </div>
           ) : null}
         </SlideOver>
       ) : null}
     </section>
+  );
+}
+
+function EndpointFields({
+  title,
+  endpoint,
+  onChange,
+}: {
+  title: string;
+  endpoint: EmailEndpoint;
+  onChange: (endpoint: EmailEndpoint) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-3 rounded-lg bg-slate-50/70 p-3 dark:bg-white/5">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        {title}
+      </p>
+      <div className="grid grid-cols-3 gap-4">
+        <div className="col-span-2">
+          <Field label={t("admin.notify.email.host")}>
+            <TextInput
+              value={endpoint.host}
+              onChange={(value) => onChange({ ...endpoint, host: value })}
+              placeholder="imap.example.com"
+            />
+          </Field>
+        </div>
+        <Field label={t("admin.notify.email.port")}>
+          <TextInput
+            value={endpoint.port}
+            onChange={(value) => onChange({ ...endpoint, port: value })}
+          />
+        </Field>
+      </div>
+      <Field label={t("admin.notify.email.encryption")}>
+        <SelectInput
+          value={endpoint.encryption}
+          onChange={(value) => onChange({ ...endpoint, encryption: normalizeEncryption(value) })}
+          options={ENCRYPTION_OPTIONS.map((option) => ({
+            value: option,
+            label: t(`admin.notify.email.encryption.${option}`, option),
+          }))}
+        />
+      </Field>
+    </div>
   );
 }
 
@@ -794,11 +1034,21 @@ function SendersPanel({ admin }: { admin: NotifyAdminService }) {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
                 <tr>
-                  <th className="px-4 py-3 font-medium">{t("admin.notify.senders.fromAddress")}</th>
-                  <th className="px-4 py-3 font-medium">{t("admin.notify.senders.fromName")}</th>
-                  <th className="px-4 py-3 font-medium">{t("admin.notify.senders.account")}</th>
-                  <th className="px-4 py-3 font-medium">{t("admin.notify.common.enabled")}</th>
-                  <th className="px-4 py-3 text-right font-medium">{t("admin.notify.templates.actions")}</th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t("admin.notify.senders.fromAddress")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t("admin.notify.senders.fromName")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t("admin.notify.senders.account")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t("admin.notify.common.enabled")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-right font-medium">
+                    {t("admin.notify.templates.actions")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -813,7 +1063,9 @@ function SendersPanel({ admin }: { admin: NotifyAdminService }) {
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                       {sender.fromName || "—"}
                     </td>
-                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{sender.accountName}</td>
+                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
+                      {sender.accountName}
+                    </td>
                     <td className="px-4 py-3">
                       <ToggleInput
                         checked={sender.enabled}
@@ -841,7 +1093,10 @@ function SendersPanel({ admin }: { admin: NotifyAdminService }) {
                 ))}
                 {senders.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-10 text-center text-slate-400 dark:text-slate-500">
+                    <td
+                      colSpan={5}
+                      className="px-4 py-10 text-center text-slate-400 dark:text-slate-500"
+                    >
                       {t("admin.notify.senders.empty")}
                     </td>
                   </tr>
@@ -928,9 +1183,9 @@ function SendersPanel({ admin }: { admin: NotifyAdminService }) {
 
 function RulesPanel({ admin }: { admin: NotifyAdminService }) {
   const { t } = useTranslation();
-  const [rules, setRules] = useState<MessagingEmailSendRule[]>([]);
   const [senders, setSenders] = useState<MessagingEmailSender[]>([]);
   const [chains, setChains] = useState<Record<string, string[]>>({});
+  const [ruleEnabled, setRuleEnabled] = useState<Record<string, boolean>>({});
   const [ruleVersions, setRuleVersions] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -942,15 +1197,17 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
       admin.listEmailSendRules(),
       admin.listEmailSenders({ page: 1, pageSize: 100 }),
     ]);
-    setRules(ruleItems);
     setSenders(senderPage.items);
     const nextChains: Record<string, string[]> = {};
+    const nextEnabled: Record<string, boolean> = {};
     const nextVersions: Record<string, string> = {};
     for (const rule of ruleItems) {
       nextChains[rule.scenario] = rule.chain.map((step) => step.senderId);
+      nextEnabled[rule.scenario] = rule.enabled;
       nextVersions[rule.scenario] = rule.version;
     }
     setChains(nextChains);
+    setRuleEnabled(nextEnabled);
     setRuleVersions(nextVersions);
   }, [admin]);
 
@@ -999,7 +1256,7 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
     try {
       await admin.updateEmailSendRule(scenario, {
         senderIds: chains[scenario] ?? [],
-        enabled: true,
+        enabled: ruleEnabled[scenario] ?? false,
         expectedVersion: ruleVersions[scenario] ?? "0",
       });
       setNotice(t("admin.notify.common.saved"));
@@ -1040,14 +1297,32 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
               key={scenario}
               className="flex min-w-0 flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#1a1a1a]"
             >
-              <div>
-                <h3 className="inline-flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-white">
-                  <Route className="h-4 w-4 text-sky-500" />
-                  {t(`admin.notify.rules.scenario.${scenario}`)}
-                </h3>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  {t(`admin.notify.rules.scenario.${scenario}.description`)}
-                </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="inline-flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-white">
+                    <Route className="h-4 w-4 text-sky-500" />
+                    {t(`admin.notify.rules.scenario.${scenario}`)}
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    {t(`admin.notify.rules.scenario.${scenario}.description`)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <ToggleInput
+                    checked={ruleEnabled[scenario] ?? false}
+                    ariaLabel={t("admin.notify.rules.toggleAria", {
+                      scenario: t(`admin.notify.rules.scenario.${scenario}`),
+                    })}
+                    onChange={(value) =>
+                      setRuleEnabled((current) => ({ ...current, [scenario]: value }))
+                    }
+                  />
+                  <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                    {ruleEnabled[scenario]
+                      ? t("admin.notify.common.enabled")
+                      : t("admin.notify.rules.disabledRule")}
+                  </span>
+                </div>
               </div>
               <ol className="flex flex-col gap-2">
                 {chain.map((senderId, index) => {
@@ -1132,7 +1407,10 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
                     </option>
                   ))}
                 </select>
-                <PrimaryButton onClick={() => void saveScenario(scenario)} disabled={savingScenario === scenario}>
+                <PrimaryButton
+                  onClick={() => void saveScenario(scenario)}
+                  disabled={savingScenario === scenario}
+                >
                   {savingScenario === scenario
                     ? t("admin.notify.common.saving")
                     : t("admin.notify.rules.saveScenario")}
