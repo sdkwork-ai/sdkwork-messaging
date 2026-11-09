@@ -6410,6 +6410,7 @@
           "provider",
           "hasSecret",
           "enabled",
+          "receiveEnabled",
           "version"
         ],
         "properties": {
@@ -6428,6 +6429,10 @@
               "smtp",
               "aliyun",
               "tencent",
+              "tencent_mail",
+              "mail_139",
+              "gmail",
+              "microsoft",
               "sendgrid",
               "mailgun",
               "amazon_ses",
@@ -6447,6 +6452,9 @@
             "readOnly": true
           },
           "enabled": {
+            "type": "boolean"
+          },
+          "receiveEnabled": {
             "type": "boolean"
           },
           "createdAt": {
@@ -6487,6 +6495,10 @@
               "smtp",
               "aliyun",
               "tencent",
+              "tencent_mail",
+              "mail_139",
+              "gmail",
+              "microsoft",
               "sendgrid",
               "mailgun",
               "amazon_ses",
@@ -6504,6 +6516,9 @@
             "x-sensitive": true
           },
           "enabled": {
+            "type": "boolean"
+          },
+          "receiveEnabled": {
             "type": "boolean"
           }
         }
@@ -6562,6 +6577,10 @@
               "smtp",
               "aliyun",
               "tencent",
+              "tencent_mail",
+              "mail_139",
+              "gmail",
+              "microsoft",
               "sendgrid",
               "mailgun",
               "amazon_ses",
@@ -6579,6 +6598,9 @@
             "x-sensitive": true
           },
           "enabled": {
+            "type": "boolean"
+          },
+          "receiveEnabled": {
             "type": "boolean"
           },
           "expectedVersion": {

@@ -184,7 +184,10 @@ pub struct EmailAccountItem {
     pub config: Value,
     pub has_secret: bool,
     pub key_display_masked: String,
+    /// Outbound switch: the account participates in email delivery routing.
     pub enabled: bool,
+    /// Inbound switch: the account's IMAP/POP3 receive configuration is active.
+    pub receive_enabled: bool,
     pub created_at: String,
     pub updated_at: String,
     pub version: String,
@@ -198,6 +201,9 @@ pub struct CreateEmailAccountCommand {
     pub config: Value,
     pub secret: Option<String>,
     pub enabled: bool,
+    /// Inbound (IMAP/POP3) switch; omitted means disabled.
+    #[serde(default)]
+    pub receive_enabled: bool,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -208,6 +214,9 @@ pub struct UpdateEmailAccountCommand {
     pub config: Value,
     pub secret: Option<String>,
     pub enabled: bool,
+    /// Inbound (IMAP/POP3) switch; omitted means disabled.
+    #[serde(default)]
+    pub receive_enabled: bool,
     /// Optimistic concurrency guard (DATABASE_SPEC §17): the version read by the
     /// client; the update applies only when it still matches.
     pub expected_version: String,
@@ -727,19 +736,26 @@ pub fn parse_channel(value: &str) -> Result<&'static str, String> {
 
 /// Email provider catalog for `messaging_email_account` rows. The legacy
 /// single-channel endpoint only ever exposed `smtp`; the multi-account
-/// surface accepts the full well-known provider set.
+/// surface accepts the full well-known provider set. Consumer mailbox
+/// services (`tencent_mail`, `mail_139`, `gmail`, `microsoft`) ship ready-made
+/// send and receive presets; cloud delivery providers (`aliyun`, `tencent`,
+/// `sendgrid`, `mailgun`, `amazon_ses`, `postmark`, `resend`) are send-only.
 pub fn parse_email_provider(value: &str) -> Result<&'static str, String> {
     match value {
         "smtp" => Ok("smtp"),
         "aliyun" => Ok("aliyun"),
         "tencent" => Ok("tencent"),
+        "tencent_mail" => Ok("tencent_mail"),
+        "mail_139" => Ok("mail_139"),
+        "gmail" => Ok("gmail"),
+        "microsoft" => Ok("microsoft"),
         "sendgrid" => Ok("sendgrid"),
         "mailgun" => Ok("mailgun"),
         "amazon_ses" => Ok("amazon_ses"),
         "postmark" => Ok("postmark"),
         "resend" => Ok("resend"),
         other => Err(format!(
-            "email provider must be one of: smtp, aliyun, tencent, sendgrid, mailgun, amazon_ses, postmark, resend (found `{other}`)"
+            "email provider must be one of: smtp, aliyun, tencent, tencent_mail, mail_139, gmail, microsoft, sendgrid, mailgun, amazon_ses, postmark, resend (found `{other}`)"
         )),
     }
 }
@@ -906,4 +922,45 @@ pub fn mask_target(target: &str) -> String {
         return "******".to_owned();
     }
     format!("{}****{}", &target[..3], &target[target.len() - 3..])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn email_provider_catalog_accepts_consumer_mailbox_and_delivery_providers() {
+        // Consumer mailbox services ship send + receive presets.
+        for provider in ["tencent_mail", "mail_139", "gmail", "microsoft"] {
+            assert_eq!(
+                parse_email_provider(provider).expect("mailbox provider must be accepted"),
+                provider,
+                "consumer mailbox provider must round-trip"
+            );
+        }
+        // Cloud delivery providers and the generic SMTP fallback stay valid.
+        for provider in [
+            "smtp",
+            "aliyun",
+            "tencent",
+            "sendgrid",
+            "mailgun",
+            "amazon_ses",
+            "postmark",
+            "resend",
+        ] {
+            assert_eq!(
+                parse_email_provider(provider).expect("delivery provider must be accepted"),
+                provider
+            );
+        }
+        // Version 1 of the catalog stays readable after the expansion.
+        assert!(parse_email_provider("mail_139").is_ok());
+        let error =
+            parse_email_provider("exchange").expect_err("unknown provider must be rejected");
+        assert!(
+            error.contains("tencent_mail") && error.contains("microsoft"),
+            "rejection message must enumerate the expanded catalog: {error}"
+        );
+    }
 }

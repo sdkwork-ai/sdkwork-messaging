@@ -27,6 +27,7 @@ import {
 import { SlideOver } from "../components/slide-over";
 import { ListPager } from "../components/list-pager";
 import { PageErrorBoundary } from "../components/page-error-boundary";
+import { ChannelTabs } from "../components/channel-tabs";
 import {
   NOTIFY_PAGE_SIZE as PAGE_SIZE,
   usePagedList,
@@ -35,6 +36,7 @@ import {
   SMS_PROVIDER_CATALOG,
   SMS_SEND_SCENARIOS,
   smsProviderCatalogEntry,
+  smsProviderConfigDefaults,
 } from "../smsProviderCatalog";
 import {
   defaultNotifyAdminService,
@@ -82,9 +84,10 @@ interface AccountFormState {
 }
 
 function emptyAccountForm(entry: (typeof SMS_PROVIDER_CATALOG)[number]): AccountFormState {
+  const defaults = smsProviderConfigDefaults(entry);
   const fields: Record<string, string> = {};
   for (const field of entry.fields) {
-    fields[field.key] = field.preset ?? "";
+    fields[field.key] = defaults[field.key] ?? "";
   }
   return { name: "", fields, secret: "", enabled: true };
 }
@@ -341,6 +344,7 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
                   </div>
                   <ToggleInput
                     checked={account.enabled}
+                    ariaLabel={t("admin.notify.sms.toggleAccountAria", { name: account.name })}
                     onChange={(value) => void toggleAccount(account, value)}
                   />
                 </div>
@@ -727,6 +731,9 @@ function SignaturesPanel({ admin }: { admin: NotifyAdminService }) {
                     <td className="px-4 py-3">
                       <ToggleInput
                         checked={signature.enabled}
+                        ariaLabel={t("admin.notify.signatures.toggleAria", {
+                          name: signature.signName,
+                        })}
                         onChange={(value) => void toggleSignature(signature, value)}
                       />
                     </td>
@@ -837,6 +844,7 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
   const { t } = useTranslation();
   const [signatures, setSignatures] = useState<MessagingSmsSignature[]>([]);
   const [chains, setChains] = useState<Record<string, string[]>>({});
+  const [ruleEnabled, setRuleEnabled] = useState<Record<string, boolean>>({});
   const [ruleVersions, setRuleVersions] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -850,12 +858,15 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
     ]);
     setSignatures(signaturePage.items);
     const nextChains: Record<string, string[]> = {};
+    const nextEnabled: Record<string, boolean> = {};
     const nextVersions: Record<string, string> = {};
     for (const rule of ruleItems) {
       nextChains[rule.scenario] = rule.chain.map((step) => step.signatureId);
+      nextEnabled[rule.scenario] = rule.enabled;
       nextVersions[rule.scenario] = rule.version;
     }
     setChains(nextChains);
+    setRuleEnabled(nextEnabled);
     setRuleVersions(nextVersions);
   }, [admin]);
 
@@ -904,7 +915,7 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
     try {
       await admin.updateSmsSendRule(scenario, {
         signatureIds: chains[scenario] ?? [],
-        enabled: true,
+        enabled: ruleEnabled[scenario] ?? false,
         expectedVersion: ruleVersions[scenario] ?? "0",
       });
       setNotice(t("admin.notify.common.saved"));
@@ -945,14 +956,32 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
               key={scenario}
               className="flex min-w-0 flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#1a1a1a]"
             >
-              <div>
-                <h3 className="inline-flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-white">
-                  <Route className="h-4 w-4 text-emerald-500" />
-                  {t(`admin.notify.rules.scenario.${scenario}`)}
-                </h3>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  {t(`admin.notify.rules.scenario.${scenario}.description`)}
-                </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="inline-flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-white">
+                    <Route className="h-4 w-4 text-emerald-500" />
+                    {t(`admin.notify.rules.scenario.${scenario}`)}
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    {t(`admin.notify.rules.scenario.${scenario}.description`)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <ToggleInput
+                    checked={ruleEnabled[scenario] ?? false}
+                    ariaLabel={t("admin.notify.rules.toggleAria", {
+                      scenario: t(`admin.notify.rules.scenario.${scenario}`),
+                    })}
+                    onChange={(value) =>
+                      setRuleEnabled((current) => ({ ...current, [scenario]: value }))
+                    }
+                  />
+                  <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                    {ruleEnabled[scenario]
+                      ? t("admin.notify.common.enabled")
+                      : t("admin.notify.rules.disabledRule")}
+                  </span>
+                </div>
               </div>
               <ol className="flex flex-col gap-2">
                 {chain.map((signatureId, index) => {
@@ -1070,27 +1099,12 @@ export function SmsChannelPage({ service }: SdkworkMessagingSmsChannelPageProps)
           title={t("admin.notify.sms.title")}
           description={t("admin.notify.sms.description")}
         />
-        <div
-          role="tablist"
-          className="flex w-full min-w-0 gap-1 rounded-lg border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-[#1a1a1a]"
-        >
-          {SMS_TABS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              aria-selected={tab === item.id}
-              onClick={() => setTab(item.id)}
-              className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition ${
-                tab === item.id
-                  ? "bg-emerald-600 text-white shadow-sm dark:bg-emerald-500"
-                  : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"
-              }`}
-            >
-              {t(item.labelKey)}
-            </button>
-          ))}
-        </div>
+        <ChannelTabs
+          ariaLabel={t("admin.notify.sms.tabsAria")}
+          activeId={tab}
+          onChange={setTab}
+          items={SMS_TABS.map((item) => ({ id: item.id, label: t(item.labelKey) }))}
+        />
         <div className="min-h-0 flex-1 overflow-y-auto pb-2 pr-0.5">
           {tab === "accounts" ? <AccountsPanel admin={admin} /> : null}
           {tab === "signatures" ? <SignaturesPanel admin={admin} /> : null}

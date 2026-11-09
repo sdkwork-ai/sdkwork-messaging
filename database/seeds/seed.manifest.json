@@ -24,7 +24,9 @@
     },
     "standard": {
       "common": [
-        "001_bootstrap.sql"
+        "001_bootstrap.sql",
+        "002_email_provider_defaults.sql",
+        "003_sms_provider_defaults.sql"
       ],
       "locales": {
         "zh-CN": []

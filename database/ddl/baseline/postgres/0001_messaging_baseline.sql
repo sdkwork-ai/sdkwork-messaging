@@ -346,6 +346,7 @@ CREATE TABLE IF NOT EXISTS messaging_email_account (
     secret_key_id VARCHAR,
     secret_fingerprint VARCHAR,
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    receive_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     created_by BIGINT,
     updated_by BIGINT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -353,7 +354,7 @@ CREATE TABLE IF NOT EXISTS messaging_email_account (
     version BIGINT NOT NULL DEFAULT 0,
     deleted_at TIMESTAMPTZ,
     deleted_by BIGINT,
-    CONSTRAINT ck_messaging_email_account_provider CHECK (provider IN ('smtp', 'aliyun', 'tencent', 'sendgrid', 'mailgun', 'amazon_ses', 'postmark', 'resend'))
+    CONSTRAINT ck_messaging_email_account_provider CHECK (provider IN ('smtp', 'aliyun', 'tencent', 'tencent_mail', 'mail_139', 'gmail', 'microsoft', 'sendgrid', 'mailgun', 'amazon_ses', 'postmark', 'resend'))
 );
 
 CREATE TABLE IF NOT EXISTS messaging_email_sender (
