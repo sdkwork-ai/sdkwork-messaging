@@ -133,7 +133,7 @@ describe("template workbench layout contract", () => {
 
   it("renders the preview beside the editor instead of inside a drawer", () => {
     expect(editorSource).toContain("<TemplatePreview");
-    expect(editorSource).toContain("xl:sticky");
+    expect(editorSource).toContain("2xl:sticky");
     expect(previewSource).toContain('sandbox=""');
     expect(previewSource).toContain("srcDoc={document}");
   });

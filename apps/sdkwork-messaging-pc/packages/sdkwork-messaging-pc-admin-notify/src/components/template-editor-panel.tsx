@@ -250,7 +250,7 @@ export function TemplateEditorPanel({
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4 xl:p-5">
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] xl:items-start">
+        <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] 2xl:items-start">
           <div className="min-w-0 space-y-4">
             <section className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-white/10">
               <header className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-white">
@@ -453,7 +453,7 @@ export function TemplateEditorPanel({
             </section>
           </div>
 
-          <div className="min-w-0 space-y-4 xl:sticky xl:top-0">
+          <div className="min-w-0 space-y-4 2xl:sticky 2xl:top-0">
             <TemplatePreview
               channel={channel}
               templateKey={templateKey}

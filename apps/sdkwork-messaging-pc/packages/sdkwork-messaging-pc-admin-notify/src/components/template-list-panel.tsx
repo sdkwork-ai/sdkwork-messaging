@@ -96,6 +96,7 @@ export function TemplateListPanel({
             onChange={(event) => onKeywordChange(event.target.value)}
             placeholder={t("admin.notify.templates.searchPlaceholder")}
             aria-label={t("admin.notify.templates.searchPlaceholder")}
+            maxLength={128}
             className="w-full rounded-md border border-slate-300 bg-white py-1.5 pl-8 pr-8 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500 dark:focus:ring-sky-500/20"
           />
           {keyword ? (
