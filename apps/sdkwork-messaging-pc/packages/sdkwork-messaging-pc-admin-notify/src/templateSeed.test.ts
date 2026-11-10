@@ -194,3 +194,35 @@ describe("localized template seed content", () => {
     }
   });
 });
+
+describe("initialization seed id space", () => {
+  function reservedIds(sql: string): string[] {
+    return [...sql.matchAll(/\(\s*(\d{9,}),/gu)].map((match) => match[1]);
+  }
+
+  it("keeps every provider, identity, rule, and template id globally unique", () => {
+    const commonIds = [
+      ...reservedIds(seedFile("common/002_email_provider_defaults.sql")),
+      ...reservedIds(seedFile("common/003_sms_provider_defaults.sql")),
+    ];
+    const templateIds = LOCALES.flatMap(({ file }) => reservedIds(seedFile(file)));
+    const all = [...commonIds, ...templateIds];
+    expect(new Set(all).size).toBe(all.length);
+    for (const id of all) {
+      expect(id.startsWith("9500000"), id).toBe(true);
+    }
+  });
+
+  it("registers every standard-profile seed file on disk", () => {
+    const standard = SEED_MANIFEST.profiles.standard;
+    const files = [
+      ...standard.common.map((file) => `common/${file}`),
+      ...Object.entries(standard.locales).flatMap(([locale, localeFiles]) =>
+        localeFiles.map((file) => `locales/${locale}/${file}`),
+      ),
+    ];
+    for (const relative of files) {
+      expect(() => seedFile(relative), relative).not.toThrow();
+    }
+  });
+});

@@ -45,6 +45,24 @@ pnpm run db:seed      # standard profile, zh-CN by default
 pnpm run db:bootstrap # migrate then seed
 ```
 
+## Locale selection
+
+`db:seed` and `db:bootstrap` default to `zh-CN` / `standard`. The
+`SDKWORK_DATABASE_SEED_LOCALE` topology setting is consumed by boot-time seed
+resolution; the CLI takes the locale and profile as explicit flags. For an
+English installation pass them through pnpm:
+
+```bash
+pnpm run db:seed -- --locale en-US --profile standard
+pnpm run db:bootstrap -- --locale en-US --profile standard
+```
+
+Choose the installation locale before the first seed. Template codes are
+unique per channel, so seeding a second locale over an already seeded scope is
+a safe no-op rather than a translation switch; edit the templates or reset the
+template rows deliberately if an installation has to change language later.
+
+
 ## Verification commands
 
 ```bash
