@@ -555,5 +555,48 @@ for (const locale of ["zh-CN", "en-US"]) {
   assert.ok(localeSeed.includes("'sms',"), `${locale} template seed must include SMS templates`);
 }
 
+// ---------------------------------------------------------------------------
+// Fresh-install migration replay: the consolidated baseline no longer declares
+// the retired `messaging_channel` table, but 0002/0003 still backfill from it.
+// 0000 recreates the compatibility table before those migrations and 0007
+// retires it again for databases that had already applied 0004.
+
+const migrationFiles = readdirSync(path.join(ROOT, "database/migrations/postgres"))
+  .filter((entry) => entry.endsWith(".up.sql"))
+  .sort();
+assert.equal(
+  migrationFiles[0],
+  "0000_legacy_channel_compat.up.sql",
+  "the legacy compatibility migration must run before every other migration",
+);
+const dropIndex = migrationFiles.indexOf("0004_config_hardening.up.sql");
+const compatIndex = migrationFiles.indexOf("0000_legacy_channel_compat.up.sql");
+const compatRetireIndex = migrationFiles.indexOf("0007_drop_legacy_channel_compat.up.sql");
+assert.ok(dropIndex > compatIndex, "0004 must run after the compatibility table exists");
+assert.ok(
+  compatRetireIndex > dropIndex,
+  "0007 must run after the compatibility table and the 0004 retirement",
+);
+const compatMigration = readFileSync(
+  path.join(ROOT, "database/migrations/postgres/0000_legacy_channel_compat.up.sql"),
+  "utf8",
+);
+assert.ok(
+  compatMigration.includes("CREATE TABLE IF NOT EXISTS messaging_channel"),
+  "0000 must recreate the legacy channel table for the 0002/0003 backfills",
+);
+assert.ok(
+  compatMigration.includes("channel VARCHAR(32) NOT NULL"),
+  "0000 must expose the columns the legacy backfills read",
+);
+const compatRetireMigration = readFileSync(
+  path.join(ROOT, "database/migrations/postgres/0007_drop_legacy_channel_compat.up.sql"),
+  "utf8",
+);
+assert.ok(
+  compatRetireMigration.includes("DROP TABLE IF EXISTS messaging_channel"),
+  "0007 must retire the compatibility table on upgraded databases",
+);
+
 console.log("sdkwork-messaging migration contract checks passed.");
 
