@@ -29,7 +29,12 @@
         "003_sms_provider_defaults.sql"
       ],
       "locales": {
-        "zh-CN": []
+        "zh-CN": [
+          "001_message_templates.sql"
+        ],
+        "en-US": [
+          "001_message_templates.sql"
+        ]
       }
     }
   },
@@ -39,14 +44,18 @@
     "zh-CN": {
       "version": "1.0.0",
       "required": true,
-      "checksum": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "files": []
+      "checksum": "sha256:9cedb94971a58d2fdb23a66a416802dad74366d60312a898b8a1becfa3566109",
+      "files": [
+        "001_message_templates.sql"
+      ]
     },
     "en-US": {
       "version": "1.0.0",
       "required": false,
-      "checksum": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-      "files": []
+      "checksum": "sha256:9cedb94971a58d2fdb23a66a416802dad74366d60312a898b8a1becfa3566109",
+      "files": [
+        "001_message_templates.sql"
+      ]
     }
   }
 }

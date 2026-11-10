@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -504,6 +505,55 @@ assert.ok(
   smsSeed.includes("INSERT INTO messaging_sms_send_rule"),
   "SMS channel seed must initialize scenario send rules",
 );
+
+// ---------------------------------------------------------------------------
+// Localized default message templates (DATABASE_FRAMEWORK_SPEC §8.2: default
+// templates are locale-specific initialization data).
+
+for (const locale of ["zh-CN", "en-US"]) {
+  const localeFile = `001_message_templates.sql`;
+  assert.deepEqual(
+    seedManifest.profiles?.standard?.locales?.[locale],
+    [localeFile],
+    `${locale} standard profile must apply the default template seed`,
+  );
+  const localeSet = seedManifest.localeSets?.[locale];
+  assert.ok(localeSet, `${locale} locale set must be declared`);
+  assert.deepEqual(localeSet.files, [localeFile]);
+  const expectedChecksum = `sha256:${createHash("sha256")
+    .update(JSON.stringify(localeSet.files))
+    .digest("hex")}`;
+  assert.equal(
+    localeSet.checksum,
+    expectedChecksum,
+    `${locale} locale set checksum must match its file list`,
+  );
+
+  const localeSeedPath = path.join(
+    ROOT,
+    `database/seeds/locales/${locale}/${localeFile}`,
+  );
+  assert.ok(existsSync(localeSeedPath), `${locale} template seed must exist`);
+  const localeSeed = readFileSync(localeSeedPath, "utf8");
+  assert.ok(
+    localeSeed.includes("INSERT INTO messaging_template"),
+    `${locale} template seed must insert templates`,
+  );
+  assert.ok(
+    localeSeed.includes("100001, 0"),
+    `${locale} template seed must target the canonical installation scope`,
+  );
+  assert.equal(
+    (localeSeed.match(/\nON CONFLICT DO NOTHING;/gu) ?? []).length,
+    1,
+    `${locale} template seed must stay idempotent`,
+  );
+  for (const code of ["verification_code", "order_paid", "quota_warning", "marketing_campaign"]) {
+    assert.ok(localeSeed.includes(`'${code}'`), `${locale} template seed must include ${code}`);
+  }
+  assert.ok(localeSeed.includes("'email',"), `${locale} template seed must include email templates`);
+  assert.ok(localeSeed.includes("'sms',"), `${locale} template seed must include SMS templates`);
+}
 
 console.log("sdkwork-messaging migration contract checks passed.");
 
