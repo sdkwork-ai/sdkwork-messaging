@@ -47,6 +47,13 @@ pub async fn bootstrap_messaging_database(
             .map_err(|error| format!("messaging database migrate failed: {error}"))?;
     }
 
+    if options.seed_on_boot {
+        orchestrator
+            .seed(&options.seed_locale, &options.seed_profile)
+            .await
+            .map_err(|error| format!("messaging database seed failed: {error}"))?;
+    }
+
     Ok(MessagingDatabaseHost { pool, module })
 }
 
