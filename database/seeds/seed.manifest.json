@@ -19,7 +19,8 @@
     "minimal": {
       "common": [],
       "locales": {
-        "zh-CN": []
+        "zh-CN": [],
+        "en-US": []
       }
     },
     "standard": {
@@ -44,17 +45,17 @@
     "zh-CN": {
       "version": "1.0.0",
       "required": true,
-      "checksum": "sha256:9cedb94971a58d2fdb23a66a416802dad74366d60312a898b8a1becfa3566109",
+      "checksum": "sha256:343e25d2c2b39cef95160fa705889710a7722bf776e5efadff049a5365a46845",
       "files": [
-        "001_message_templates.sql"
+        "locales/zh-CN/001_message_templates.sql"
       ]
     },
     "en-US": {
       "version": "1.0.0",
       "required": false,
-      "checksum": "sha256:9cedb94971a58d2fdb23a66a416802dad74366d60312a898b8a1becfa3566109",
+      "checksum": "sha256:ff0efe874660f2238f2efc7c67130ede50ef6c408d8b6814a0e55f43b43ca458",
       "files": [
-        "001_message_templates.sql"
+        "locales/en-US/001_message_templates.sql"
       ]
     }
   }

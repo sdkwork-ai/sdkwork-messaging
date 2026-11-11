@@ -107,7 +107,7 @@ describe("localized template seed manifest", () => {
         .update(JSON.stringify(set.files))
         .digest("hex");
       expect(set.checksum).toBe(`sha256:${expected}`);
-      expect(set.files).toEqual(["001_message_templates.sql"]);
+      expect(set.files).toEqual([`locales/${locale}/001_message_templates.sql`]);
     }
   });
 

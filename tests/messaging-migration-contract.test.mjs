@@ -535,7 +535,7 @@ for (const locale of ["zh-CN", "en-US"]) {
   );
   const localeSet = seedManifest.localeSets?.[locale];
   assert.ok(localeSet, `${locale} locale set must be declared`);
-  assert.deepEqual(localeSet.files, [localeFile]);
+  assert.deepEqual(localeSet.files, [`locales/${locale}/${localeFile}`]);
   const expectedChecksum = `sha256:${createHash("sha256")
     .update(JSON.stringify(localeSet.files))
     .digest("hex")}`;

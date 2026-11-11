@@ -13,11 +13,12 @@ Canonical lifecycle assets for `sdkwork-messaging` per `DATABASE_FRAMEWORK_SPEC.
 - **Baseline anchor**: `database/ddl/baseline/postgres/0001_messaging_baseline.sql`
   is the consolidated DDL snapshot (`messaging_notification` is the anchor table).
 - **Ordered migration range**: `0000_legacy_channel_compat` …
-  `0007_drop_legacy_channel_compat`. A fresh install applies the baseline
-  followed by every ordered migration. `0000` recreates the retired
-  `messaging_channel` shape because the historical `0002`/`0003` backfills still
-  reference it; `0004` retires the table and `0007` retires the compatibility
-  copy on databases that had already applied `0004`.
+  `0008_enterprise_mail_provider`. A fresh install applies the baseline followed
+  by every ordered migration. `0000` recreates the retired `messaging_channel`
+  shape because the historical `0002`/`0003` backfills still reference it;
+  `0004` retires the table and `0007` retires the compatibility copy on
+  databases that had already applied `0004`; `0008` accepts the
+  `enterprise_mail` provider.
 - **Seed profile** (`standard`, default locale `zh-CN`):
   - `common/001_bootstrap.sql` — bootstrap marker.
   - `common/002_email_provider_defaults.sql` — 13 provider accounts, one sender
@@ -41,9 +42,12 @@ Canonical lifecycle assets for `sdkwork-messaging` per `DATABASE_FRAMEWORK_SPEC.
 - **Active seed locales**: `zh-CN`, `en-US`; template rows are locale-specific,
   provider/channel initialization data is language-neutral and lives in
   `seeds/common/`.
-- Seeded business rows are disabled/draft by default so an installation never
-  sends through unconfigured providers; operators only fill credentials,
-  replace placeholder identities, approve SMS templates and flip switches.
+- **Default delivery paths**: the `enterprise_mail` account/sender and the
+  Tencent Cloud SMS account/signature plus their scenario rules are enabled, so
+  deployment only needs the mailbox/SecretId credentials and an approved SMS
+  signature. Every other provider account and identity stays disabled until
+  configured. Email templates are active; SMS templates stay `draft`/`pending`
+  until the carrier approves them.
 - Run `pnpm db:drift:check` before a release.
 
 ## Fresh-install commands
@@ -72,6 +76,19 @@ unique per channel, so seeding a second locale over an already seeded scope is
 a safe no-op rather than a translation switch; edit the templates or reset the
 template rows deliberately if an installation has to change language later.
 
+
+## Contract notes
+
+- Row ids allocate through the platform snowflake service
+  (`sdkwork-database-id`, DB-backed node lease); the local monotonic generator is
+  the documented fallback only.
+- JSONB columns (`config_json`, `chain_json`, payloads) are validated in the Rust
+  store layer with typed serde DTOs and existence guards; none carry
+  lifecycle/status core fields.
+- Verification challenge/attempt retention is `challenge_ttl_plus_30d`, owned by
+  the messaging delivery worker.
+- `database/contract/schema.yaml` and `table-registry.json` are materialized from
+  the baseline; re-run `pnpm db:materialize:contract` after a baseline change.
 
 ## Verification commands
 
