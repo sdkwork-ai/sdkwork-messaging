@@ -184,7 +184,7 @@ export const messagingNotifyAdminMessagesZh = {
   "admin.notify.smsProviders.aliyun.name": "阿里云短信",
   "admin.notify.smsProviders.aliyun.description": "阿里云短信服务（ dysmsapi ），国内验证码与通知主渠道。",
   "admin.notify.smsProviders.tencent.name": "腾讯云短信",
-  "admin.notify.smsProviders.tencent.description": "腾讯云短信（国内/国际），与微信生态联动。",
+  "admin.notify.smsProviders.tencent.description": "腾讯云短信（默认短信服务商），预置接入地址与地域，与微信生态联动。",
   "admin.notify.smsProviders.huawei.name": "华为云短信",
   "admin.notify.smsProviders.huawei.description": "华为云消息通知服务短信通道。",
   "admin.notify.smsProviders.yuntongxun.name": "容联云通讯",

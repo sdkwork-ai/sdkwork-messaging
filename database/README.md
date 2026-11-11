@@ -29,7 +29,11 @@ Canonical lifecycle assets for `sdkwork-messaging` per `DATABASE_FRAMEWORK_SPEC.
     authorization code makes email delivery operational. Every other provider
     stays disabled until configured.
   - `common/003_sms_provider_defaults.sql` — eight provider accounts, one
-    signature per account, four scenario send rules.
+    `BirdCoder` signature per account, four scenario send rules. Tencent Cloud
+    SMS is the default path: its account (`https://sms.tencentcloudapi.com`,
+    `ap-guangzhou`), its signature and the four SMS rules are enabled; the
+    operator supplies SecretId/SdkAppId/SecretKey and an approved signature.
+    Every other SMS provider stays disabled until configured.
   - `locales/zh-CN/001_message_templates.sql` and
     `locales/en-US/001_message_templates.sql` — ten email and ten SMS templates
     per locale (verification, password reset, welcome, payment, subscription,

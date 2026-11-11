@@ -184,7 +184,7 @@ export const messagingNotifyAdminMessagesEn = {
   "admin.notify.smsProviders.aliyun.name": "Aliyun SMS",
   "admin.notify.smsProviders.aliyun.description": "Alibaba Cloud SMS (dysmsapi), the primary domestic channel for verification codes and notifications.",
   "admin.notify.smsProviders.tencent.name": "Tencent Cloud SMS",
-  "admin.notify.smsProviders.tencent.description": "Tencent Cloud SMS (domestic/international), integrated with the WeChat ecosystem.",
+  "admin.notify.smsProviders.tencent.description": "Tencent Cloud SMS (default SMS provider) with preset endpoint and region, integrated with the WeChat ecosystem.",
   "admin.notify.smsProviders.huawei.name": "Huawei Cloud SMS",
   "admin.notify.smsProviders.huawei.description": "Huawei Cloud message & notification SMS channel.",
   "admin.notify.smsProviders.yuntongxun.name": "YunTongXun (Cloopen)",
