@@ -450,6 +450,70 @@ for (const provider of ["enterprise_mail", "tencent_mail", "gmail", "microsoft",
   );
 }
 
+// The database constraint, the seed accounts, and the frontend catalogs must
+// agree on the complete provider sets.
+const emailProviders = [
+  "smtp",
+  "enterprise_mail",
+  "aliyun",
+  "tencent",
+  "tencent_mail",
+  "mail_139",
+  "gmail",
+  "microsoft",
+  "sendgrid",
+  "mailgun",
+  "amazon_ses",
+  "postmark",
+  "resend",
+];
+for (const provider of emailProviders) {
+  assert.ok(
+    baselineDdl.includes(`'${provider}'`),
+    `baseline email provider constraint must accept ${provider}`,
+  );
+  assert.ok(
+    enterpriseProviderMigration.includes(`'${provider}'`),
+    `0008 email provider constraint must accept ${provider}`,
+  );
+}
+const smsProviderIds = [
+  "aliyun",
+  "tencent",
+  "huawei",
+  "yuntongxun",
+  "submail",
+  "chuanglan",
+  "twilio",
+  "generic_http",
+];
+for (const provider of smsProviderIds) {
+  assert.ok(
+    baselineDdl.includes(`'${provider}'`),
+    `baseline SMS provider constraint must accept ${provider}`,
+  );
+}
+const readProviderRows = (sql) =>
+  [...sql.matchAll(/'([a-z0-9_]+)',\s*'\{/gu)].map((match) => match[1]);
+const emailSeedSql = readFileSync(
+  path.join(ROOT, "database/seeds/common/002_email_provider_defaults.sql"),
+  "utf8",
+);
+assert.deepEqual(
+  new Set(readProviderRows(emailSeedSql)),
+  new Set(emailProviders),
+  "email seed must create exactly the catalogued provider accounts",
+);
+const smsSeedSql = readFileSync(
+  path.join(ROOT, "database/seeds/common/003_sms_provider_defaults.sql"),
+  "utf8",
+);
+assert.deepEqual(
+  new Set(readProviderRows(smsSeedSql)),
+  new Set(smsProviderIds),
+  "SMS seed must create exactly the catalogued provider accounts",
+);
+
 const seedManifest = readJson("database/seeds/seed.manifest.json");
 assert.ok(
   seedManifest.profiles?.standard?.common?.includes("002_email_provider_defaults.sql"),

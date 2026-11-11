@@ -174,6 +174,18 @@ describe("localized template seed content", () => {
           expect(metrics.segments, `${row.code} (${metrics.characters} chars)`).toBe(1);
         }
       });
+
+      it("writes each locale in its own script", () => {
+        const cjk = /[\u3400-\u9fff]/u;
+        for (const row of rows) {
+          const text = `${row.name} ${row.subject ?? ""} ${row.content}`;
+          if (locale === "en-US") {
+            expect(cjk.test(text), `${row.code} must be English`).toBe(false);
+          } else {
+            expect(cjk.test(row.content), `${row.code} must be Chinese`).toBe(true);
+          }
+        }
+      });
     });
   }
 
