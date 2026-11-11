@@ -395,8 +395,9 @@ assert.ok(retireMigration.includes("WHERE deleted_at IS NULL"), "0004 must conve
 // provider catalog.
 
 const consumerMailboxProviders = ["tencent_mail", "mail_139", "gmail", "microsoft"];
+const baselineEmailProviders = ["enterprise_mail", ...consumerMailboxProviders];
 
-for (const provider of consumerMailboxProviders) {
+for (const provider of baselineEmailProviders) {
   assert.ok(
     baselineDdl.includes(`'${provider}'`),
     `baseline email provider constraint must accept ${provider}`,
@@ -434,6 +435,21 @@ for (const legacyProvider of ["smtp", "aliyun", "tencent", "sendgrid", "mailgun"
   );
 }
 
+const enterpriseProviderMigration = readFileSync(
+  path.join(ROOT, "database/migrations/postgres/0008_enterprise_mail_provider.up.sql"),
+  "utf8",
+);
+assert.ok(
+  enterpriseProviderMigration.includes("DROP CONSTRAINT IF EXISTS ck_messaging_email_account_provider"),
+  "0008 must replace the provider constraint instead of narrowing it",
+);
+for (const provider of ["enterprise_mail", "tencent_mail", "gmail", "microsoft", "smtp", "tencent", "sendgrid"]) {
+  assert.ok(
+    enterpriseProviderMigration.includes(`'${provider}'`),
+    `0008 provider constraint must accept ${provider}`,
+  );
+}
+
 const seedManifest = readJson("database/seeds/seed.manifest.json");
 assert.ok(
   seedManifest.profiles?.standard?.common?.includes("002_email_provider_defaults.sql"),
@@ -452,7 +468,7 @@ assert.ok(
   emailSeed.includes("100001, 0"),
   "email channel seed must target the canonical installation tenant/organization",
 );
-for (const provider of consumerMailboxProviders) {
+for (const provider of baselineEmailProviders) {
   assert.ok(emailSeed.includes(`'${provider}'`), `email channel seed must pre-create ${provider}`);
 }
 

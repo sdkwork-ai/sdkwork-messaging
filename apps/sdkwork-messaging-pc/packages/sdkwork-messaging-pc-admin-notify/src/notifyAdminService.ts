@@ -50,6 +50,7 @@ export type MessagingChannelType = "sms" | "email";
 
 export type MessagingEmailProvider =
   | "smtp"
+  | "enterprise_mail"
   | "aliyun"
   | "tencent"
   | "tencent_mail"

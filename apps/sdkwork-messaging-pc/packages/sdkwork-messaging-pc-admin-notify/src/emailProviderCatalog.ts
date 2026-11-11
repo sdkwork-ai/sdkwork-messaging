@@ -42,6 +42,12 @@ export interface EmailProviderCatalogEntry {
   secretLabelKey: string;
   /** i18n key of the provider-specific setup step (auth code, app password…). */
   setupHintKey?: string;
+  /**
+   * Default login mailbox pre-filled for the provider. Optional: most
+   * providers cannot know the operator's mailbox, but the default enterprise
+   * mailbox ships with the installation domain.
+   */
+  username?: string;
   /** Send endpoint preset; `null` for HTTP API transports. */
   send: EmailEndpoint | null;
   /** Send API base URL preset; set for HTTP API transports. */
@@ -57,6 +63,11 @@ const STARTTLS = "starttls" satisfies EmailEncryption;
 
 /** Consumer mailbox presets documented by each provider. */
 const MAILBOX_PRESETS = {
+  enterprise_mail: {
+    protocol: "imap",
+    imap: { host: "imap.exmail.qq.com", port: "993", encryption: SSL },
+    pop3: { host: "pop.exmail.qq.com", port: "995", encryption: SSL },
+  },
   tencent_mail: {
     protocol: "imap",
     imap: { host: "imap.qq.com", port: "993", encryption: SSL },
@@ -80,6 +91,20 @@ const MAILBOX_PRESETS = {
 } as const satisfies Record<string, EmailProviderReceivePreset>;
 
 export const EMAIL_PROVIDER_CATALOG: readonly EmailProviderCatalogEntry[] = [
+  {
+    // Default provider for new installations: enterprise mailbox with the
+    // installation domain already filled in. Endpoints default to the
+    // Tencent Exmail profile and stay fully editable for other providers.
+    provider: "enterprise_mail",
+    transport: "smtp",
+    nameKey: "admin.notify.emailProviders.enterprise_mail.name",
+    descriptionKey: "admin.notify.emailProviders.enterprise_mail.description",
+    secretLabelKey: "admin.notify.email.secretLabel.authCode",
+    setupHintKey: "admin.notify.emailProviders.enterprise_mail.setupHint",
+    username: "no-reply@birdcoder.com",
+    send: { host: "smtp.exmail.qq.com", port: "465", encryption: SSL },
+    receive: MAILBOX_PRESETS.enterprise_mail,
+  },
   {
     provider: "tencent_mail",
     transport: "smtp",
@@ -219,6 +244,9 @@ export function providerConfigDefaults(
   }
   if (entry.region) {
     config.region = entry.region;
+  }
+  if (entry.username) {
+    config.username = entry.username;
   }
   config.receiveProtocol = entry.receive ? entry.receive.protocol : "none";
   if (entry.receive) {

@@ -28,6 +28,7 @@ const SEED_ORGANIZATION_ID = 0;
 /** Wire enum of `messaging_email_account.provider` (OpenAPI authority). */
 const WIRE_PROVIDERS = [
   "smtp",
+  "enterprise_mail",
   "aliyun",
   "tencent",
   "tencent_mail",
@@ -41,7 +42,13 @@ const WIRE_PROVIDERS = [
   "resend",
 ] as const;
 
-const MAILBOX_PROVIDERS = ["tencent_mail", "mail_139", "gmail", "microsoft"] as const;
+const MAILBOX_PROVIDERS = [
+  "enterprise_mail",
+  "tencent_mail",
+  "mail_139",
+  "gmail",
+  "microsoft",
+] as const;
 
 interface SeedAccountRow {
   readonly id: string;
@@ -154,6 +161,7 @@ describe("email provider catalog", () => {
       labels.set(entry.secretLabelKey, providers);
     }
     expect(labels.get("admin.notify.email.secretLabel.authCode")).toEqual([
+      "enterprise_mail",
       "tencent_mail",
       "mail_139",
     ]);
@@ -202,9 +210,14 @@ describe("email channel initialization seed", () => {
     for (const row of accounts) {
       expect(row.tenantId).toBe(SEED_TENANT_ID);
       expect(row.organizationId).toBe(SEED_ORGANIZATION_ID);
-      // Nothing is enabled before an operator supplies credentials.
-      expect(row.enabled).toBe("FALSE");
-      expect(row.receiveEnabled).toBe("FALSE");
+      if (row.provider === "enterprise_mail") {
+        // The default enterprise mailbox is ready except for its secret.
+        expect(row.enabled).toBe("TRUE");
+        expect(row.receiveEnabled).toBe("TRUE");
+      } else {
+        expect(row.enabled).toBe("FALSE");
+        expect(row.receiveEnabled).toBe("FALSE");
+      }
     }
   });
 
@@ -221,6 +234,8 @@ describe("email channel initialization seed", () => {
 
   it("seeds one sender identity per provider account plus one chain per scenario", () => {
     const accounts = readSeedAccounts();
+    const enterpriseAccount = accounts.find((row) => row.provider === "enterprise_mail");
+    expect(enterpriseAccount, "enterprise mailbox account").toBeDefined();
     const senders = readSeedSenders();
     expect(senders).toHaveLength(accounts.length);
     const accountIds = accounts.map((row) => row.id);
@@ -228,8 +243,10 @@ describe("email channel initialization seed", () => {
       expect(sender.tenantId).toBe(SEED_TENANT_ID);
       expect(sender.organizationId).toBe(SEED_ORGANIZATION_ID);
       expect(accountIds).toContain(sender.accountId);
-      expect(sender.fromAddress).toMatch(/@example\.com$/u);
-      expect(sender.enabled).toBe("FALSE");
+      expect(sender.fromAddress).toMatch(/^no-reply@birdcoder\.com$/u);
+      expect(sender.enabled).toBe(
+        sender.accountId === enterpriseAccount!.id ? "TRUE" : "FALSE",
+      );
     }
 
     const rules = readSeedRules();
@@ -239,13 +256,44 @@ describe("email channel initialization seed", () => {
       "system_notification",
       "verification_code",
     ]);
-    const senderIds = senders.map((row) => row.id);
+    const enterpriseSender = senders.find(
+      (row) => row.accountId === enterpriseAccount!.id,
+    );
+    expect(enterpriseSender).toBeDefined();
+    const expectedChain = [
+      enterpriseSender!.id,
+      ...senders
+        .filter((row) => row.id !== enterpriseSender!.id)
+        .map((row) => row.id),
+    ];
     for (const rule of rules) {
       expect(rule.tenantId).toBe(SEED_TENANT_ID);
       expect(rule.organizationId).toBe(SEED_ORGANIZATION_ID);
-      expect(rule.chain).toEqual(senderIds);
-      // A chain is only routable once the operator enables accounts/senders.
-      expect(rule.enabled).toBe("FALSE");
+      expect(rule.chain).toEqual(expectedChain);
+      // Enterprise delivery is the enabled default path.
+      expect(rule.enabled).toBe("TRUE");
+    }
+  });
+
+  it("defaults delivery to the birdcoder.com enterprise mailbox", () => {
+    const entry = emailProviderCatalogEntry("enterprise_mail");
+    expect(entry, "enterprise mailbox provider").toBeDefined();
+    const defaults = providerConfigDefaults(entry!);
+    expect(defaults.username).toBe("no-reply@birdcoder.com");
+    expect(defaults.host).toBe("smtp.exmail.qq.com");
+    expect(defaults.imapHost).toBe("imap.exmail.qq.com");
+    expect(defaults.pop3Host).toBe("pop.exmail.qq.com");
+
+    const account = readSeedAccounts().find((row) => row.provider === "enterprise_mail");
+    expect(account?.enabled).toBe("TRUE");
+    expect(account?.config.username).toBe("no-reply@birdcoder.com");
+
+    const sender = readSeedSenders().find((row) => row.accountId === account!.id);
+    expect(sender?.fromAddress).toBe("no-reply@birdcoder.com");
+    expect(sender?.enabled).toBe("TRUE");
+    for (const rule of readSeedRules()) {
+      expect(rule.chain[0]).toBe(sender!.id);
+      expect(rule.enabled).toBe("TRUE");
     }
   });
 

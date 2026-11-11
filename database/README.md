@@ -20,8 +20,14 @@ Canonical lifecycle assets for `sdkwork-messaging` per `DATABASE_FRAMEWORK_SPEC.
   copy on databases that had already applied `0004`.
 - **Seed profile** (`standard`, default locale `zh-CN`):
   - `common/001_bootstrap.sql` — bootstrap marker.
-  - `common/002_email_provider_defaults.sql` — 12 provider accounts, one sender
-    identity per account, four scenario send rules.
+  - `common/002_email_provider_defaults.sql` — 13 provider accounts, one sender
+    identity per account on the `birdcoder.com` domain, four scenario send
+    rules. The `enterprise_mail` account
+    (`smtp.exmail.qq.com` / `imap.exmail.qq.com` / `pop.exmail.qq.com`,
+    login `no-reply@birdcoder.com`), its sender identity and the four email
+    rules are enabled by default; supplying the mailbox password or
+    authorization code makes email delivery operational. Every other provider
+    stays disabled until configured.
   - `common/003_sms_provider_defaults.sql` — eight provider accounts, one
     signature per account, four scenario send rules.
   - `locales/zh-CN/001_message_templates.sql` and
