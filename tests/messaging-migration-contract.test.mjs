@@ -678,5 +678,32 @@ assert.ok(
   "0007 must retire the compatibility table on upgraded databases",
 );
 
+// Generated SDK provider unions must stay aligned with the database contract.
+const generatedProviderUnion = (typeFile) => {
+  const source = readFileSync(
+    path.join(
+      ROOT,
+      "sdks/sdkwork-messaging-backend-sdk/sdkwork-messaging-backend-sdk-typescript/generated/server-openapi/src/types",
+      typeFile,
+    ),
+    "utf8",
+  );
+  const declaration = /provider:\s*([^;]+);/u.exec(source);
+  assert.ok(declaration, `${typeFile} must declare a provider union`);
+  return new Set(
+    [...declaration[1].matchAll(/'([a-z0-9_]+)'/gu)].map((match) => match[1]),
+  );
+};
+assert.deepEqual(
+  generatedProviderUnion("messaging-email-account.ts"),
+  new Set(emailProviders),
+  "generated email provider union must match the database constraint",
+);
+assert.deepEqual(
+  generatedProviderUnion("messaging-sms-account.ts"),
+  new Set(smsProviderIds),
+  "generated SMS provider union must match the database constraint",
+);
+
 console.log("sdkwork-messaging migration contract checks passed.");
 

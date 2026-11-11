@@ -10,12 +10,6 @@ const read = (relative: string) => readFileSync(fileURLToPath(new URL(relative, 
 
 const BASELINE = read("database/ddl/baseline/postgres/0001_messaging_baseline.sql");
 const RUST_PORTS = read("crates/sdkwork-routes-messaging-backend-api/src/ports.rs");
-const EMAIL_ACCOUNT_TYPE = read(
-  "sdks/sdkwork-messaging-backend-sdk/sdkwork-messaging-backend-sdk-typescript/generated/server-openapi/src/types/messaging-email-account.ts",
-);
-const SMS_ACCOUNT_TYPE = read(
-  "sdks/sdkwork-messaging-backend-sdk/sdkwork-messaging-backend-sdk-typescript/generated/server-openapi/src/types/messaging-sms-account.ts",
-);
 
 function constraintProviders(table: string): string[] {
   const constraint = BASELINE.split("\n").find((line) =>
@@ -23,12 +17,6 @@ function constraintProviders(table: string): string[] {
   );
   expect(constraint, `${table} provider constraint`).toBeDefined();
   return [...constraint!.matchAll(/'([a-z0-9_]+)'/gu)].map((match) => match[1]);
-}
-
-function generatedUnion(sql: string): string[] {
-  const declaration = /provider:\s*([^;]+);/u.exec(sql);
-  expect(declaration, "generated provider union").not.toBeNull();
-  return [...declaration![1].matchAll(/'([a-z0-9_]+)'/gu)].map((match) => match[1]);
 }
 
 function rustFunction(name: string): string {
@@ -39,10 +27,9 @@ function rustFunction(name: string): string {
 }
 
 describe("provider wire alignment", () => {
-  it("keeps the email provider enum aligned across catalog, database, Rust, and generated SDK", () => {
+  it("keeps the email provider enum aligned across catalog, database, and Rust", () => {
     const expected = new Set(EMAIL_PROVIDER_IDS);
     expect(new Set(constraintProviders("messaging_email_account"))).toEqual(expected);
-    expect(new Set(generatedUnion(EMAIL_ACCOUNT_TYPE))).toEqual(expected);
     const parser = rustFunction("parse_email_provider");
     for (const provider of expected) {
       expect(parser, `Rust email parser must accept ${provider}`).toContain(
@@ -51,10 +38,9 @@ describe("provider wire alignment", () => {
     }
   });
 
-  it("keeps the SMS provider enum aligned across catalog, database, Rust, and generated SDK", () => {
+  it("keeps the SMS provider enum aligned across catalog, database, and Rust", () => {
     const expected = new Set(SMS_PROVIDER_IDS);
     expect(new Set(constraintProviders("messaging_sms_account"))).toEqual(expected);
-    expect(new Set(generatedUnion(SMS_ACCOUNT_TYPE))).toEqual(expected);
     const parser = rustFunction("parse_sms_provider");
     for (const provider of expected) {
       expect(parser, `Rust SMS parser must accept ${provider}`).toContain(
