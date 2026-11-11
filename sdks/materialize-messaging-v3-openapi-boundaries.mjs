@@ -319,6 +319,7 @@ function schemas() {
     type: "string",
     enum: [
       "smtp",
+      "enterprise_mail",
       "aliyun",
       "tencent",
       "tencent_mail",

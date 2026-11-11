@@ -743,6 +743,7 @@ pub fn parse_channel(value: &str) -> Result<&'static str, String> {
 pub fn parse_email_provider(value: &str) -> Result<&'static str, String> {
     match value {
         "smtp" => Ok("smtp"),
+        "enterprise_mail" => Ok("enterprise_mail"),
         "aliyun" => Ok("aliyun"),
         "tencent" => Ok("tencent"),
         "tencent_mail" => Ok("tencent_mail"),
@@ -755,7 +756,7 @@ pub fn parse_email_provider(value: &str) -> Result<&'static str, String> {
         "postmark" => Ok("postmark"),
         "resend" => Ok("resend"),
         other => Err(format!(
-            "email provider must be one of: smtp, aliyun, tencent, tencent_mail, mail_139, gmail, microsoft, sendgrid, mailgun, amazon_ses, postmark, resend (found `{other}`)"
+            "email provider must be one of: smtp, enterprise_mail, aliyun, tencent, tencent_mail, mail_139, gmail, microsoft, sendgrid, mailgun, amazon_ses, postmark, resend (found `{other}`)"
         )),
     }
 }
@@ -931,7 +932,13 @@ mod tests {
     #[test]
     fn email_provider_catalog_accepts_consumer_mailbox_and_delivery_providers() {
         // Consumer mailbox services ship send + receive presets.
-        for provider in ["tencent_mail", "mail_139", "gmail", "microsoft"] {
+        for provider in [
+            "enterprise_mail",
+            "tencent_mail",
+            "mail_139",
+            "gmail",
+            "microsoft",
+        ] {
             assert_eq!(
                 parse_email_provider(provider).expect("mailbox provider must be accepted"),
                 provider,

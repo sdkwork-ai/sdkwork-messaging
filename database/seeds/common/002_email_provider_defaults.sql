@@ -4,9 +4,11 @@
 --
 -- Purpose: an installation starts with every supported email provider already
 -- present in `/admin/notify/email`. Each account carries the provider's
--- documented send (SMTP or HTTP API) and receive (IMAP/POP3) presets, so the
--- operator only fills in the login account and the authorization
--- code/password and flips the switches. Nothing must be typed from scratch.
+-- documented send (SMTP or HTTP API) and receive (IMAP/POP3) presets. The
+-- enterprise mailbox is the default delivery path: `no-reply@birdcoder.com`
+-- and the enterprise SMTP/IMAP/POP3 endpoints are pre-filled, and its sender
+-- identity plus the four scenario rules start enabled. After deployment the
+-- operator only supplies the mailbox password/authorization code.
 --
 -- Contract rules honored here:
 --   * DATABASE_SPEC §6.4 — reserved, deterministic ids in a dedicated
@@ -26,11 +28,15 @@
 -- (enforced by `emailProviderCatalog.test.ts`).
 --
 -- Reserved id blocks:
---   950000000101..950000000112  provider accounts
---   950000000201..950000000212  sender identities (one per provider account)
+--   950000000101..950000000113  provider accounts
+--   950000000201..950000000213  sender identities (one per provider account)
 --   950000000301..950000000304  scenario send rules
 
--- 1. Provider accounts: presets for send and receive, disabled until configured.
+-- 1. Provider accounts: presets for send and receive. The enterprise mailbox
+--    is the default delivery path for a new installation: its SMTP/IMAP/POP3
+--    endpoints, login mailbox (no-reply@birdcoder.com) and domain are already
+--    filled in, so the operator only supplies the mailbox password/authorization
+--    code. Every other provider stays disabled until it is configured.
 INSERT INTO messaging_email_account (
     id, uuid, tenant_id, organization_id, name, provider, config_json,
     enabled, receive_enabled, created_at, updated_at
@@ -107,35 +113,45 @@ VALUES
         'Generic SMTP', 'smtp',
         '{"transport":"smtp","host":"","port":"465","encryption":"ssl","receiveProtocol":"none"}'::jsonb,
         FALSE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000000113, 'seed-messaging-email-account-enterprise-mail', 100001, 0,
+        'Enterprise Mail', 'enterprise_mail',
+        '{"transport":"smtp","host":"smtp.exmail.qq.com","port":"465","encryption":"ssl","receiveProtocol":"imap","imapHost":"imap.exmail.qq.com","imapPort":"993","imapEncryption":"ssl","pop3Host":"pop.exmail.qq.com","pop3Port":"995","pop3Encryption":"ssl","username":"no-reply@birdcoder.com"}'::jsonb,
+        TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     )
 ON CONFLICT DO NOTHING;
 
--- 2. One sender identity per provider account. The placeholder address uses the
---    RFC 2606 reserved documentation domain and is intentionally not enabled:
---    the operator replaces it with the real mailbox address and enables it.
+-- 2. One sender identity per provider account, all on the installation email
+--    domain (birdcoder.com). The enterprise identity is the active default
+--    sender; every other identity stays disabled until its provider is
+--    configured. The operator replaces the local part only when their mailbox
+--    differs.
 INSERT INTO messaging_email_sender (
     id, uuid, tenant_id, organization_id, account_id, from_address, from_name,
     enabled, created_at, updated_at
 )
 VALUES
-    (950000000201, 'seed-messaging-email-sender-tencent-mail', 100001, 0, 950000000101, 'no-reply@example.com', 'System Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000202, 'seed-messaging-email-sender-mail-139', 100001, 0, 950000000102, 'no-reply@example.com', 'System Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000203, 'seed-messaging-email-sender-gmail', 100001, 0, 950000000103, 'no-reply@example.com', 'System Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000204, 'seed-messaging-email-sender-microsoft', 100001, 0, 950000000104, 'no-reply@example.com', 'System Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000205, 'seed-messaging-email-sender-aliyun', 100001, 0, 950000000105, 'no-reply@example.com', 'System Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000206, 'seed-messaging-email-sender-tencent', 100001, 0, 950000000106, 'no-reply@example.com', 'System Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000207, 'seed-messaging-email-sender-amazon-ses', 100001, 0, 950000000107, 'no-reply@example.com', 'System Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000208, 'seed-messaging-email-sender-sendgrid', 100001, 0, 950000000108, 'no-reply@example.com', 'System Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000209, 'seed-messaging-email-sender-mailgun', 100001, 0, 950000000109, 'no-reply@example.com', 'System Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000210, 'seed-messaging-email-sender-postmark', 100001, 0, 950000000110, 'no-reply@example.com', 'System Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000211, 'seed-messaging-email-sender-resend', 100001, 0, 950000000111, 'no-reply@example.com', 'System Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000212, 'seed-messaging-email-sender-smtp', 100001, 0, 950000000112, 'no-reply@example.com', 'System Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    (950000000201, 'seed-messaging-email-sender-tencent-mail', 100001, 0, 950000000101, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000202, 'seed-messaging-email-sender-mail-139', 100001, 0, 950000000102, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000203, 'seed-messaging-email-sender-gmail', 100001, 0, 950000000103, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000204, 'seed-messaging-email-sender-microsoft', 100001, 0, 950000000104, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000205, 'seed-messaging-email-sender-aliyun', 100001, 0, 950000000105, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000206, 'seed-messaging-email-sender-tencent', 100001, 0, 950000000106, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000207, 'seed-messaging-email-sender-amazon-ses', 100001, 0, 950000000107, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000208, 'seed-messaging-email-sender-sendgrid', 100001, 0, 950000000108, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000209, 'seed-messaging-email-sender-mailgun', 100001, 0, 950000000109, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000210, 'seed-messaging-email-sender-postmark', 100001, 0, 950000000110, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000211, 'seed-messaging-email-sender-resend', 100001, 0, 950000000111, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000212, 'seed-messaging-email-sender-smtp', 100001, 0, 950000000112, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000213, 'seed-messaging-email-sender-enterprise-mail', 100001, 0, 950000000113, 'no-reply@birdcoder.com', 'BirdCoder', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
 
--- 3. One ordered fallback chain per scenario over every seeded sender. Disabled
---    accounts and senders are skipped at delivery time, so enabling a single
---    provider is enough to make the scenario routable. The rules start disabled
---    so an installation never sends through an unconfigured provider.
+-- 3. One ordered fallback chain per scenario, enterprise mailbox first. The
+--    rules are enabled so filling in the enterprise mailbox password is enough
+--    to make email delivery operational; disabled accounts/senders are skipped
+--    at delivery time, so switching providers only needs enabling that account
+--    and identity.
 INSERT INTO messaging_email_send_rule (
     id, uuid, tenant_id, organization_id, scenario, chain_json, enabled,
     created_at, updated_at
@@ -143,22 +159,22 @@ INSERT INTO messaging_email_send_rule (
 VALUES
     (
         950000000301, 'seed-messaging-email-rule-default', 100001, 0, 'default',
-        '["950000000201","950000000202","950000000203","950000000204","950000000205","950000000206","950000000207","950000000208","950000000209","950000000210","950000000211","950000000212"]'::jsonb,
-        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        '["950000000213","950000000201","950000000202","950000000203","950000000204","950000000205","950000000206","950000000207","950000000208","950000000209","950000000210","950000000211","950000000212"]'::jsonb,
+        TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
         950000000302, 'seed-messaging-email-rule-verification-code', 100001, 0, 'verification_code',
-        '["950000000201","950000000202","950000000203","950000000204","950000000205","950000000206","950000000207","950000000208","950000000209","950000000210","950000000211","950000000212"]'::jsonb,
-        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        '["950000000213","950000000201","950000000202","950000000203","950000000204","950000000205","950000000206","950000000207","950000000208","950000000209","950000000210","950000000211","950000000212"]'::jsonb,
+        TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
         950000000303, 'seed-messaging-email-rule-system-notification', 100001, 0, 'system_notification',
-        '["950000000201","950000000202","950000000203","950000000204","950000000205","950000000206","950000000207","950000000208","950000000209","950000000210","950000000211","950000000212"]'::jsonb,
-        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        '["950000000213","950000000201","950000000202","950000000203","950000000204","950000000205","950000000206","950000000207","950000000208","950000000209","950000000210","950000000211","950000000212"]'::jsonb,
+        TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
         950000000304, 'seed-messaging-email-rule-marketing', 100001, 0, 'marketing',
-        '["950000000201","950000000202","950000000203","950000000204","950000000205","950000000206","950000000207","950000000208","950000000209","950000000210","950000000211","950000000212"]'::jsonb,
-        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        '["950000000213","950000000201","950000000202","950000000203","950000000204","950000000205","950000000206","950000000207","950000000208","950000000209","950000000210","950000000211","950000000212"]'::jsonb,
+        TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     )
 ON CONFLICT DO NOTHING;

@@ -9,7 +9,7 @@
     "protocol": "http",
     "packageName": "@sdkwork/messaging-backend-sdk"
   },
-  "changeFingerprint": "ef50e0d45224993a0cb142a47bbf681aed0f690c2c3919274f0672cc5d6794dd",
+  "changeFingerprint": "174fa2db19bbd1e891d297bce4822ae693c28cd83b1915366983aecded75bff1",
   "changes": {
     "createdGeneratedFiles": [
       "bin/publish-core.mjs",

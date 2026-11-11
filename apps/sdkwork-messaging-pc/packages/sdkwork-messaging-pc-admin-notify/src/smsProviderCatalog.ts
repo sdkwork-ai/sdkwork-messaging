@@ -43,21 +43,9 @@ export interface SmsProviderCatalogEntry {
 
 export const SMS_PROVIDER_CATALOG: readonly SmsProviderCatalogEntry[] = [
   {
-    provider: "aliyun",
-    nameKey: "admin.notify.smsProviders.aliyun.name",
-    descriptionKey: "admin.notify.smsProviders.aliyun.description",
-    fields: [
-      { key: "accessKeyId", labelKey: "admin.notify.sms.fields.accessKeyId" },
-      { key: "region", labelKey: "admin.notify.sms.fields.region", preset: "cn-hangzhou" },
-      {
-        key: "endpoint",
-        labelKey: "admin.notify.sms.fields.endpoint",
-        preset: "https://dysmsapi.aliyuncs.com",
-      },
-    ],
-    secretLabelKey: "admin.notify.sms.secretLabel.accessKeySecret",
-  },
-  {
+    // Default SMS provider for new installations. The Tencent Cloud SMS
+    // account, its signature and the scenario rules are enabled by the seed;
+    // only SecretId/SdkAppId/SecretKey and an approved signature are needed.
     provider: "tencent",
     nameKey: "admin.notify.smsProviders.tencent.name",
     descriptionKey: "admin.notify.smsProviders.tencent.description",
@@ -76,6 +64,21 @@ export const SMS_PROVIDER_CATALOG: readonly SmsProviderCatalogEntry[] = [
       },
     ],
     secretLabelKey: "admin.notify.sms.secretLabel.secretKey",
+  },
+  {
+    provider: "aliyun",
+    nameKey: "admin.notify.smsProviders.aliyun.name",
+    descriptionKey: "admin.notify.smsProviders.aliyun.description",
+    fields: [
+      { key: "accessKeyId", labelKey: "admin.notify.sms.fields.accessKeyId" },
+      { key: "region", labelKey: "admin.notify.sms.fields.region", preset: "cn-hangzhou" },
+      {
+        key: "endpoint",
+        labelKey: "admin.notify.sms.fields.endpoint",
+        preset: "https://dysmsapi.aliyuncs.com",
+      },
+    ],
+    secretLabelKey: "admin.notify.sms.secretLabel.accessKeySecret",
   },
   {
     provider: "huawei",

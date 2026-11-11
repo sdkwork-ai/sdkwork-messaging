@@ -107,7 +107,7 @@ describe("localized template seed manifest", () => {
         .update(JSON.stringify(set.files))
         .digest("hex");
       expect(set.checksum).toBe(`sha256:${expected}`);
-      expect(set.files).toEqual(["001_message_templates.sql"]);
+      expect(set.files).toEqual([`locales/${locale}/001_message_templates.sql`]);
     }
   });
 
@@ -172,6 +172,18 @@ describe("localized template seed content", () => {
           const rendered = renderTemplatePreview(row.content, samples);
           const metrics = smsMetrics(rendered);
           expect(metrics.segments, `${row.code} (${metrics.characters} chars)`).toBe(1);
+        }
+      });
+
+      it("writes each locale in its own script", () => {
+        const cjk = /[\u3400-\u9fff]/u;
+        for (const row of rows) {
+          const text = `${row.name} ${row.subject ?? ""} ${row.content}`;
+          if (locale === "en-US") {
+            expect(cjk.test(text), `${row.code} must be English`).toBe(false);
+          } else {
+            expect(cjk.test(row.content), `${row.code} must be Chinese`).toBe(true);
+          }
         }
       });
     });

@@ -14,3 +14,4 @@ See `DOCUMENTATION_SPEC.md` section 2.
 | [troubleshooting.md](troubleshooting.md) / [troubleshooting.en.md](troubleshooting.en.md) | 症状 → doctor 检查 → 处置 |
 | [backup-restore.md](backup-restore.md) / [backup-restore.en.md](backup-restore.en.md) | 备份 / 校验 / 恢复 / 演练（bin/backup.sh） |
 | [log-reference.md](log-reference.md) / [log-reference.en.md](log-reference.en.md) | 健康日志特征与失败签名（bin/docker-deploy.sh logs） |
+| [notify-go-live.md](notify-go-live.md) / [notify-go-live.en.md](notify-go-live.en.md) | 通知数据库初始化、企业邮箱/腾讯云短信配置与商用验收 |

@@ -8,17 +8,8 @@ compliance_level: L2
 engines:
   - postgres
 table_prefix: messaging_
-# ID provider (DATABASE_SPEC §6.1/§31): production row ids allocate through
-# the platform snowflake service (sdkwork-database-id, DB-backed node lease);
-# the local monotonic generator is the documented fallback only.
 id_provider: sdkwork-database-id/snowflake
-# JSONB validation strategy (§13/DB011): config/chain/payload JSON columns are
-# schema-checked in the Rust store layer (typed serde DTOs + existence
-# guards); none carry lifecycle/status core fields (DB040).
 jsonb_validation_strategy: application-serde-typed
-# Retention (§15/§23): verification challenges/attempts are purge-oriented;
-# the purge owner is the messaging delivery worker (write path pending) and
-# the retention window is the challenge TTL + 30 days.
 retention_policies:
   messaging_verification_challenge: challenge_ttl_plus_30d
   messaging_verification_attempt: challenge_ttl_plus_30d

@@ -179,7 +179,7 @@ describe("SMS channel initialization seed", () => {
     for (const row of accounts) {
       expect(row.tenantId).toBe(SEED_TENANT_ID);
       expect(row.organizationId).toBe(SEED_ORGANIZATION_ID);
-      expect(row.enabled).toBe("FALSE");
+      expect(row.enabled).toBe(row.provider === "tencent" ? "TRUE" : "FALSE");
     }
   });
 
@@ -196,6 +196,8 @@ describe("SMS channel initialization seed", () => {
 
   it("seeds one signature per provider account and one chain per scenario", () => {
     const accounts = readSeedAccounts();
+    const tencentAccount = accounts.find((row) => row.provider === "tencent");
+    expect(tencentAccount, "tencent sms account").toBeDefined();
     const signatures = readSeedSignatures();
     expect(signatures).toHaveLength(accounts.length);
     const accountIds = accounts.map((row) => row.id);
@@ -203,8 +205,10 @@ describe("SMS channel initialization seed", () => {
       expect(signature.tenantId).toBe(SEED_TENANT_ID);
       expect(signature.organizationId).toBe(SEED_ORGANIZATION_ID);
       expect(accountIds).toContain(signature.accountId);
-      expect(signature.signName.trim()).not.toBe("");
-      expect(signature.enabled).toBe("FALSE");
+      expect(signature.signName).toBe("BirdCoder");
+      expect(signature.enabled).toBe(
+        signature.accountId === tencentAccount!.id ? "TRUE" : "FALSE",
+      );
     }
 
     const rules = readSeedRules();
@@ -214,12 +218,43 @@ describe("SMS channel initialization seed", () => {
       "system_notification",
       "verification_code",
     ]);
-    const signatureIds = signatures.map((row) => row.id);
+    const tencentSignature = signatures.find(
+      (row) => row.accountId === tencentAccount!.id,
+    );
+    expect(tencentSignature).toBeDefined();
+    const expectedChain = [
+      tencentSignature!.id,
+      ...signatures
+        .filter((row) => row.id !== tencentSignature!.id)
+        .map((row) => row.id),
+    ];
     for (const rule of rules) {
       expect(rule.tenantId).toBe(SEED_TENANT_ID);
       expect(rule.organizationId).toBe(SEED_ORGANIZATION_ID);
-      expect(rule.chain).toEqual(signatureIds);
-      expect(rule.enabled).toBe("FALSE");
+      expect(rule.chain).toEqual(expectedChain);
+      // Tencent Cloud SMS is the enabled default path.
+      expect(rule.enabled).toBe("TRUE");
+    }
+  });
+
+  it("defaults SMS delivery to Tencent Cloud", () => {
+    const entry = smsProviderCatalogEntry("tencent");
+    expect(entry, "tencent sms provider").toBeDefined();
+    expect(entry?.provider).toBe(SMS_PROVIDER_CATALOG[0]?.provider);
+
+    const account = readSeedAccounts().find((row) => row.provider === "tencent");
+    expect(account?.enabled).toBe("TRUE");
+    expect(account?.config.endpoint).toBe("https://sms.tencentcloudapi.com");
+    expect(account?.config.region).toBe("ap-guangzhou");
+
+    const signature = readSeedSignatures().find(
+      (row) => row.accountId === account!.id,
+    );
+    expect(signature?.signName).toBe("BirdCoder");
+    expect(signature?.enabled).toBe("TRUE");
+    for (const rule of readSeedRules()) {
+      expect(rule.chain[0]).toBe(signature!.id);
+      expect(rule.enabled).toBe("TRUE");
     }
   });
 

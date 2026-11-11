@@ -1,7 +1,7 @@
 export interface MessagingEmailAccount {
   id: string;
   name: string;
-  provider: 'smtp' | 'aliyun' | 'tencent' | 'tencent_mail' | 'mail_139' | 'gmail' | 'microsoft' | 'sendgrid' | 'mailgun' | 'amazon_ses' | 'postmark' | 'resend';
+  provider: 'smtp' | 'enterprise_mail' | 'aliyun' | 'tencent' | 'tencent_mail' | 'mail_139' | 'gmail' | 'microsoft' | 'sendgrid' | 'mailgun' | 'amazon_ses' | 'postmark' | 'resend';
   config?: Record<string, unknown>;
   hasSecret: boolean;
   keyDisplayMasked?: string;
