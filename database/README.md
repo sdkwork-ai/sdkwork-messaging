@@ -4,12 +4,23 @@ Canonical lifecycle assets for `sdkwork-messaging` per `DATABASE_FRAMEWORK_SPEC.
 
 - moduleId: `messaging`
 - serviceCode: `MESSAGING`
+- owner: `messaging-platform`
 - tablePrefix: `messaging_`
 - role: `authoritative-server`
+- PostgreSQL: 16.x (verified on 16.4), UTF-8 encoding, UTC; no PostgreSQL
+  extensions are required by the baseline or migrations.
+- Related specs: [DATABASE_SPEC.md](../../sdkwork-specs/DATABASE_SPEC.md),
+  [DATABASE_FRAMEWORK_SPEC.md](../../sdkwork-specs/DATABASE_FRAMEWORK_SPEC.md).
 
 ## Initialization state
 
 - **baselineStrategy**: `baseline-plus-migrations`.
+- **Consolidation level**: pre-GA consolidated baseline. The primary baseline
+  already expresses the end state of migrations `0002`–`0008`; this is a recorded
+  exception to §7.5 immutability because the contract materializer consumes one
+  baseline file. The ordered migrations are retained and applied on every fresh
+  install; new schema changes `MUST` be added as new migrations, not folded into
+  the baseline.
 - **Baseline anchor**: `database/ddl/baseline/postgres/0001_messaging_baseline.sql`
   is the consolidated DDL snapshot (`messaging_notification` is the anchor table).
 - **Ordered migration range**: `0000_legacy_channel_compat` …
