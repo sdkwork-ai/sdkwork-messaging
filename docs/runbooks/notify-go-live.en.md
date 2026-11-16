@@ -27,7 +27,13 @@ the SMS signature in the console to start sending.
 
 ## 2. Initialize the database (one time)
 
-Run before starting the application:
+A container/install-package CloudRouter deployment does not need this manual
+step: `cloudrouterctl install|upgrade|ensure` converges the Messaging baseline,
+migrations, and `standard` seed set through `SDKWORK_MESSAGING_APP_ROOT` on every
+explicit lifecycle command (the same pattern as the Drive storage module). After
+installation `/admin/notify/email` and `/admin/notify/sms` must already show
+13 / 8 provider configurations. The command below is for a standalone Messaging
+service, local development, or manual repair:
 
 ```bash
 cd <sdkwork-messaging>
@@ -69,6 +75,15 @@ pnpm run db:drift:check
 
 Expected: `status=seeded`, `pending_migrations=0`, drift clean.
 `/admin/notify/email` shows 13 accounts; `/admin/notify/sms` shows 8 accounts.
+
+If a console is still empty (for example an older installation that did not
+converge this module), no redeploy is required: the empty state lists every
+provider and each provider card has an **Initialize** action; existing account
+rows expose the same action. The backend command
+`POST /backend/v3/api/messaging/{email|sms}/providers/{provider}/initialize`
+idempotently converges that provider's account preset, sender/signature identity,
+and four scenario routing steps. It only fills missing config keys and never
+overwrites operator values or credentials.
 
 ## 4. Configure the enterprise mailbox (default email path)
 
@@ -113,7 +128,7 @@ Expected: `status=seeded`, `pending_migrations=0`, drift clean.
 
 | Symptom | Cause | Action |
 | --- | --- | --- |
-| Empty console lists | Seeds not applied, or wrong tenant | Run `pnpm db:seed`; confirm the signed-in tenant |
+| Empty console lists | The installation lifecycle did not converge the Messaging module, or the tenant is not `100001` | Use a provider's **Initialize** action in the empty state, run `cloudrouterctl ensure` / `pnpm db:seed`, and confirm the signed-in tenant |
 | Saving a channel secret fails | Encryption key missing or database not writable | Set `SDKWORK_MESSAGING_SECRET_ENCRYPTION_KEY` and retry |
 | Email authentication failure | Bad authorization code, client service disabled, sender not activated | Regenerate the code and verify the sender |
 | SMS send failure | Bad credentials, unapproved signature/template | Check the Tencent Cloud console state |

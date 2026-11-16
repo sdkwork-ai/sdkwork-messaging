@@ -208,6 +208,17 @@ async function deleteEmailAccount(accountId: string): Promise<void> {
   });
 }
 
+/**
+ * Idempotently initializes one email provider's default configuration:
+ * account preset, sender identity, and scenario routing steps. Missing config
+ * keys are merged; existing values and credentials are preserved.
+ */
+async function initializeEmailProvider(provider: MessagingEmailProvider): Promise<void> {
+  await messagingBackendSdkClient().messaging.emailProviders.initialize(provider, {
+    idempotencyKey: nextIdempotencyKey(),
+  });
+}
+
 async function listEmailSenders(params: {
   accountId?: string;
   page?: number;
@@ -301,6 +312,17 @@ async function updateSmsAccount(
 
 async function deleteSmsAccount(accountId: string): Promise<void> {
   await messagingBackendSdkClient().messaging.smsAccounts.delete(accountId, {
+    idempotencyKey: nextIdempotencyKey(),
+  });
+}
+
+/**
+ * Idempotently initializes one SMS provider's default configuration: account
+ * preset, signature identity, and scenario routing steps. Missing config keys
+ * are merged; existing values and credentials are preserved.
+ */
+async function initializeSmsProvider(provider: MessagingSmsProvider): Promise<void> {
+  await messagingBackendSdkClient().messaging.smsProviders.initialize(provider, {
     idempotencyKey: nextIdempotencyKey(),
   });
 }
@@ -419,6 +441,7 @@ export interface NotifyAdminService {
     input: MessagingEmailAccountUpdateRequest,
   ): Promise<MessagingEmailAccount>;
   deleteEmailAccount(accountId: string): Promise<void>;
+  initializeEmailProvider(provider: MessagingEmailProvider): Promise<void>;
   listEmailSenders(params: {
     accountId?: string;
     page?: number;
@@ -442,6 +465,7 @@ export interface NotifyAdminService {
     input: MessagingSmsAccountUpdateRequest,
   ): Promise<MessagingSmsAccount>;
   deleteSmsAccount(accountId: string): Promise<void>;
+  initializeSmsProvider(provider: MessagingSmsProvider): Promise<void>;
   listSmsSignatures(params: {
     accountId?: string;
     page?: number;
@@ -480,6 +504,7 @@ export function createNotifyAdminService(): NotifyAdminService {
     createEmailAccount,
     updateEmailAccount,
     deleteEmailAccount,
+    initializeEmailProvider,
     listEmailSenders,
     createEmailSender,
     updateEmailSender,
@@ -490,6 +515,7 @@ export function createNotifyAdminService(): NotifyAdminService {
     createSmsAccount,
     updateSmsAccount,
     deleteSmsAccount,
+    initializeSmsProvider,
     listSmsSignatures,
     createSmsSignature,
     updateSmsSignature,

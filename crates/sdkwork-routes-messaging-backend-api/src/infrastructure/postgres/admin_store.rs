@@ -11,18 +11,23 @@ use sqlx::{PgPool, Row};
 use crate::application::messaging_secret_codec::{
     AesGcmMessagingSecretCodec, MessagingSecretCodec, MessagingSecretContext,
 };
+use crate::application::provider_defaults::{
+    email_provider_default, email_provider_priority, preset_config, sms_provider_default,
+    sms_provider_priority,
+};
 use crate::infrastructure::runtime_id::{LocalMonotonicIdGenerator, MessageIdGenerator};
 use crate::ports::{
     mask_secret, mask_target, AnnouncementItem, CreateEmailAccountCommand,
     CreateEmailSenderCommand, CreateNotificationCommand, CreateSmsAccountCommand,
     CreateSmsSignatureCommand, CreateTemplateCommand, EmailAccountItem, EmailSendRuleItem,
     EmailSendRuleStep, EmailSenderItem, MessagingAdminStore, MessagingAdminSubject, MessagingPage,
-    NotificationItem, OutboundMessageItem, PublishAnnouncementCommand, PushMessageItem,
-    SendOutboundMessageCommand, SendPushMessageCommand, SmsAccountItem, SmsSendRuleItem,
-    SmsSendRuleStep, SmsSignatureItem, StoreError, TemplateItem, UpdateEmailAccountCommand,
-    UpdateEmailSendRuleCommand, UpdateEmailSenderCommand, UpdateSmsAccountCommand,
-    UpdateSmsSendRuleCommand, UpdateSmsSignatureCommand, UpdateTemplateCommand,
-    UpdateVerificationPolicyCommand, VerificationPolicyItem, SEND_RULE_SCENARIOS,
+    NotificationItem, OutboundMessageItem, ProviderInitialization, PublishAnnouncementCommand,
+    PushMessageItem, SendOutboundMessageCommand, SendPushMessageCommand, SmsAccountItem,
+    SmsSendRuleItem, SmsSendRuleStep, SmsSignatureItem, StoreError, TemplateItem,
+    UpdateEmailAccountCommand, UpdateEmailSendRuleCommand, UpdateEmailSenderCommand,
+    UpdateSmsAccountCommand, UpdateSmsSendRuleCommand, UpdateSmsSignatureCommand,
+    UpdateTemplateCommand, UpdateVerificationPolicyCommand, VerificationPolicyItem,
+    SEND_RULE_SCENARIOS,
 };
 
 pub struct PostgresMessagingAdminStore {
@@ -398,6 +403,51 @@ fn parse_expected_version(raw: &str) -> Result<i64, StoreError> {
         .ok_or_else(|| {
             StoreError::Invalid("expectedVersion must be a non-negative numeric version".to_owned())
         })
+}
+
+/// Reads a stored routing chain (`chain_json`) as numeric identity ids.
+fn chain_ids(value: &serde_json::Value) -> Vec<i64> {
+    value
+        .as_array()
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|item| {
+                    item.as_str()
+                        .and_then(|raw| raw.trim().parse::<i64>().ok())
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Orders a routing chain by provider delivery priority.
+///
+/// `sort_by_key` is stable, so identities that share a priority keep their
+/// relative order; unknown providers sort last.
+fn order_chain(ids: &[i64], priorities: &HashMap<i64, usize>) -> Vec<i64> {
+    let mut ordered = ids.to_vec();
+    ordered.sort_by_key(|id| priorities.get(id).copied().unwrap_or(usize::MAX));
+    ordered
+}
+
+/// Appends a newly initialized identity to an existing chain when missing and
+/// re-sorts the result by delivery priority.
+fn extend_chain(existing: &[i64], addition: i64, priorities: &HashMap<i64, usize>) -> Vec<i64> {
+    let mut ids = existing.to_vec();
+    if !ids.contains(&addition) {
+        ids.push(addition);
+    }
+    order_chain(&ids, priorities)
+}
+
+/// Serializes a routing chain into the `chain_json` representation (string ids).
+fn chain_json(ids: &[i64]) -> serde_json::Value {
+    serde_json::Value::Array(
+        ids.iter()
+            .map(|id| serde_json::Value::String(id.to_string()))
+            .collect(),
+    )
 }
 
 #[async_trait::async_trait]
@@ -1419,6 +1469,250 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         Ok(())
     }
 
+    async fn initialize_email_provider(
+        &self,
+        subject: &MessagingAdminSubject,
+        provider: &str,
+    ) -> Result<ProviderInitialization, StoreError> {
+        let preset = email_provider_default(provider).ok_or_else(|| {
+            StoreError::Invalid(format!("unknown email provider `{provider}`"))
+        })?;
+        let config = preset_config(preset.config_json);
+
+        // One transaction: account + sender + rules converge together or not at
+        // all (DATABASE_SPEC §17), and `FOR UPDATE` keeps a concurrent initialize
+        // or operator edit from producing a partial chain.
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+
+        let existing_account: Option<i64> = sqlx::query_scalar(
+            "SELECT id FROM messaging_email_account \
+             WHERE tenant_id = $1 AND organization_id = $2 AND provider = $3 \
+               AND deleted_at IS NULL \
+             ORDER BY id LIMIT 1 \
+             FOR UPDATE",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .bind(preset.provider)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+
+        let (account_id, created_account) = match existing_account {
+            Some(account_id) => {
+                // Merge only missing keys: `preset || existing` keeps every
+                // operator-provided value and adds the defaults they have not
+                // set yet. An unchanged config performs no write.
+                sqlx::query(
+                    "UPDATE messaging_email_account SET \
+                        config_json = $4 || config_json, \
+                        updated_at = CURRENT_TIMESTAMP, \
+                        version = version + 1 \
+                     WHERE id = $1 AND tenant_id = $2 AND organization_id = $3 \
+                       AND deleted_at IS NULL \
+                       AND config_json <> ($4 || config_json)",
+                )
+                .bind(account_id)
+                .bind(subject.tenant_id)
+                .bind(subject.organization_id)
+                .bind(&config)
+                .execute(&mut *tx)
+                .await
+                .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+                (account_id, false)
+            }
+            None => {
+                let account_id = self.next_id();
+                sqlx::query(
+                    "INSERT INTO messaging_email_account \
+                     (id, uuid, tenant_id, organization_id, name, provider, config_json, \
+                      enabled, receive_enabled, created_by) \
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+                )
+                .bind(account_id)
+                .bind(uuid())
+                .bind(subject.tenant_id)
+                .bind(subject.organization_id)
+                .bind(preset.name)
+                .bind(preset.provider)
+                .bind(&config)
+                .bind(preset.enabled)
+                .bind(preset.receive_enabled)
+                .bind(subject.operator_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|error| {
+                    if is_unique_violation(&error) {
+                        StoreError::Conflict(
+                            "email account was created concurrently; retry initialize".to_owned(),
+                        )
+                    } else {
+                        StoreError::Unavailable(error.to_string())
+                    }
+                })?;
+                (account_id, true)
+            }
+        };
+
+        let existing_sender: Option<i64> = sqlx::query_scalar(
+            "SELECT id FROM messaging_email_sender \
+             WHERE tenant_id = $1 AND organization_id = $2 AND account_id = $3 \
+               AND deleted_at IS NULL \
+             ORDER BY id LIMIT 1 \
+             FOR UPDATE",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .bind(account_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+
+        let identity_id = match existing_sender {
+            Some(sender_id) => sender_id,
+            None => {
+                let sender_id = self.next_id();
+                sqlx::query(
+                    "INSERT INTO messaging_email_sender \
+                     (id, uuid, tenant_id, organization_id, account_id, from_address, \
+                      from_name, enabled, created_by) \
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+                )
+                .bind(sender_id)
+                .bind(uuid())
+                .bind(subject.tenant_id)
+                .bind(subject.organization_id)
+                .bind(account_id)
+                .bind(preset.from_address)
+                .bind(preset.from_name)
+                .bind(preset.enabled)
+                .bind(subject.operator_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|error| {
+                    if is_unique_violation(&error) {
+                        StoreError::Conflict(
+                            "email sender was created concurrently; retry initialize".to_owned(),
+                        )
+                    } else {
+                        StoreError::Unavailable(error.to_string())
+                    }
+                })?;
+                sender_id
+            }
+        };
+
+        // Priority map for every sender of this scope, so a chain created from
+        // scratch — or an appended step — keeps the canonical default-first
+        // order regardless of the click order.
+        let sender_rows = sqlx::query(
+            "SELECT s.id, a.provider FROM messaging_email_sender s \
+             JOIN messaging_email_account a ON a.id = s.account_id \
+             WHERE s.tenant_id = $1 AND s.organization_id = $2 \
+               AND s.deleted_at IS NULL AND a.deleted_at IS NULL",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        let mut priorities: HashMap<i64, usize> = HashMap::with_capacity(sender_rows.len());
+        let mut all_sender_ids: Vec<i64> = Vec::with_capacity(sender_rows.len());
+        for row in sender_rows {
+            let sender_id: i64 = row.get("id");
+            let sender_provider: String = row.get("provider");
+            priorities.insert(sender_id, email_provider_priority(&sender_provider));
+            all_sender_ids.push(sender_id);
+        }
+        let canonical_chain = order_chain(&all_sender_ids, &priorities);
+
+        let rule_rows = sqlx::query(
+            "SELECT id, scenario, chain_json FROM messaging_email_send_rule \
+             WHERE tenant_id = $1 AND organization_id = $2 AND deleted_at IS NULL \
+             FOR UPDATE",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        let mut rules: HashMap<String, (i64, serde_json::Value)> =
+            HashMap::with_capacity(rule_rows.len());
+        for row in rule_rows {
+            rules.insert(row.get("scenario"), (row.get("id"), row.get("chain_json")));
+        }
+
+        let mut rules_ensured = 0usize;
+        for scenario in SEND_RULE_SCENARIOS {
+            match rules.get(*scenario) {
+                Some((rule_id, stored_chain)) => {
+                    let existing_ids = chain_ids(stored_chain);
+                    let next_ids = extend_chain(&existing_ids, identity_id, &priorities);
+                    if next_ids != existing_ids {
+                        sqlx::query(
+                            "UPDATE messaging_email_send_rule SET \
+                                chain_json = $4, \
+                                updated_at = CURRENT_TIMESTAMP, \
+                                version = version + 1 \
+                             WHERE id = $1 AND tenant_id = $2 AND organization_id = $3",
+                        )
+                        .bind(rule_id)
+                        .bind(subject.tenant_id)
+                        .bind(subject.organization_id)
+                        .bind(chain_json(&next_ids))
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+                    }
+                }
+                None => {
+                    sqlx::query(
+                        "INSERT INTO messaging_email_send_rule \
+                         (id, uuid, tenant_id, organization_id, scenario, chain_json, \
+                          enabled, created_by) \
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                    )
+                    .bind(self.next_id())
+                    .bind(uuid())
+                    .bind(subject.tenant_id)
+                    .bind(subject.organization_id)
+                    .bind(*scenario)
+                    .bind(chain_json(&canonical_chain))
+                    .bind(true)
+                    .bind(subject.operator_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|error| {
+                        if is_unique_violation(&error) {
+                            StoreError::Conflict(
+                                "email send rule was created concurrently; retry initialize"
+                                    .to_owned(),
+                            )
+                        } else {
+                            StoreError::Unavailable(error.to_string())
+                        }
+                    })?;
+                }
+            }
+            rules_ensured += 1;
+        }
+
+        tx.commit()
+            .await
+            .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+
+        Ok(ProviderInitialization {
+            account_id,
+            identity_id,
+            rules_ensured,
+            created_account,
+        })
+    }
+
     // ----------------------------------------------------------- email senders
 
     async fn list_email_senders(
@@ -2066,6 +2360,238 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
             .await
             .map_err(|error| StoreError::Unavailable(error.to_string()))?;
         Ok(())
+    }
+
+    async fn initialize_sms_provider(
+        &self,
+        subject: &MessagingAdminSubject,
+        provider: &str,
+    ) -> Result<ProviderInitialization, StoreError> {
+        let preset = sms_provider_default(provider)
+            .ok_or_else(|| StoreError::Invalid(format!("unknown sms provider `{provider}`")))?;
+        let config = preset_config(preset.config_json);
+
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+
+        let existing_account: Option<i64> = sqlx::query_scalar(
+            "SELECT id FROM messaging_sms_account \
+             WHERE tenant_id = $1 AND organization_id = $2 AND provider = $3 \
+               AND deleted_at IS NULL \
+             ORDER BY id LIMIT 1 \
+             FOR UPDATE",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .bind(preset.provider)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+
+        let (account_id, created_account) = match existing_account {
+            Some(account_id) => {
+                sqlx::query(
+                    "UPDATE messaging_sms_account SET \
+                        config_json = $4 || config_json, \
+                        updated_at = CURRENT_TIMESTAMP, \
+                        version = version + 1 \
+                     WHERE id = $1 AND tenant_id = $2 AND organization_id = $3 \
+                       AND deleted_at IS NULL \
+                       AND config_json <> ($4 || config_json)",
+                )
+                .bind(account_id)
+                .bind(subject.tenant_id)
+                .bind(subject.organization_id)
+                .bind(&config)
+                .execute(&mut *tx)
+                .await
+                .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+                (account_id, false)
+            }
+            None => {
+                let account_id = self.next_id();
+                sqlx::query(
+                    "INSERT INTO messaging_sms_account \
+                     (id, uuid, tenant_id, organization_id, name, provider, config_json, \
+                      enabled, created_by) \
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+                )
+                .bind(account_id)
+                .bind(uuid())
+                .bind(subject.tenant_id)
+                .bind(subject.organization_id)
+                .bind(preset.name)
+                .bind(preset.provider)
+                .bind(&config)
+                .bind(preset.enabled)
+                .bind(subject.operator_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|error| {
+                    if is_unique_violation(&error) {
+                        StoreError::Conflict(
+                            "sms account was created concurrently; retry initialize".to_owned(),
+                        )
+                    } else {
+                        StoreError::Unavailable(error.to_string())
+                    }
+                })?;
+                (account_id, true)
+            }
+        };
+
+        let existing_signature: Option<i64> = sqlx::query_scalar(
+            "SELECT id FROM messaging_sms_signature \
+             WHERE tenant_id = $1 AND organization_id = $2 AND account_id = $3 \
+               AND deleted_at IS NULL \
+             ORDER BY id LIMIT 1 \
+             FOR UPDATE",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .bind(account_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+
+        let identity_id = match existing_signature {
+            Some(signature_id) => signature_id,
+            None => {
+                let signature_id = self.next_id();
+                sqlx::query(
+                    "INSERT INTO messaging_sms_signature \
+                     (id, uuid, tenant_id, organization_id, account_id, sign_name, \
+                      enabled, created_by) \
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                )
+                .bind(signature_id)
+                .bind(uuid())
+                .bind(subject.tenant_id)
+                .bind(subject.organization_id)
+                .bind(account_id)
+                .bind(preset.sign_name)
+                .bind(preset.enabled)
+                .bind(subject.operator_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|error| {
+                    if is_unique_violation(&error) {
+                        StoreError::Conflict(
+                            "sms signature was created concurrently; retry initialize".to_owned(),
+                        )
+                    } else {
+                        StoreError::Unavailable(error.to_string())
+                    }
+                })?;
+                signature_id
+            }
+        };
+
+        let signature_rows = sqlx::query(
+            "SELECT s.id, a.provider FROM messaging_sms_signature s \
+             JOIN messaging_sms_account a ON a.id = s.account_id \
+             WHERE s.tenant_id = $1 AND s.organization_id = $2 \
+               AND s.deleted_at IS NULL AND a.deleted_at IS NULL",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        let mut priorities: HashMap<i64, usize> = HashMap::with_capacity(signature_rows.len());
+        let mut all_signature_ids: Vec<i64> = Vec::with_capacity(signature_rows.len());
+        for row in signature_rows {
+            let signature_id: i64 = row.get("id");
+            let signature_provider: String = row.get("provider");
+            priorities.insert(signature_id, sms_provider_priority(&signature_provider));
+            all_signature_ids.push(signature_id);
+        }
+        let canonical_chain = order_chain(&all_signature_ids, &priorities);
+
+        let rule_rows = sqlx::query(
+            "SELECT id, scenario, chain_json FROM messaging_sms_send_rule \
+             WHERE tenant_id = $1 AND organization_id = $2 AND deleted_at IS NULL \
+             FOR UPDATE",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        let mut rules: HashMap<String, (i64, serde_json::Value)> =
+            HashMap::with_capacity(rule_rows.len());
+        for row in rule_rows {
+            rules.insert(row.get("scenario"), (row.get("id"), row.get("chain_json")));
+        }
+
+        let mut rules_ensured = 0usize;
+        for scenario in SEND_RULE_SCENARIOS {
+            match rules.get(*scenario) {
+                Some((rule_id, stored_chain)) => {
+                    let existing_ids = chain_ids(stored_chain);
+                    let next_ids = extend_chain(&existing_ids, identity_id, &priorities);
+                    if next_ids != existing_ids {
+                        sqlx::query(
+                            "UPDATE messaging_sms_send_rule SET \
+                                chain_json = $4, \
+                                updated_at = CURRENT_TIMESTAMP, \
+                                version = version + 1 \
+                             WHERE id = $1 AND tenant_id = $2 AND organization_id = $3",
+                        )
+                        .bind(rule_id)
+                        .bind(subject.tenant_id)
+                        .bind(subject.organization_id)
+                        .bind(chain_json(&next_ids))
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+                    }
+                }
+                None => {
+                    sqlx::query(
+                        "INSERT INTO messaging_sms_send_rule \
+                         (id, uuid, tenant_id, organization_id, scenario, chain_json, \
+                          enabled, created_by) \
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                    )
+                    .bind(self.next_id())
+                    .bind(uuid())
+                    .bind(subject.tenant_id)
+                    .bind(subject.organization_id)
+                    .bind(*scenario)
+                    .bind(chain_json(&canonical_chain))
+                    .bind(true)
+                    .bind(subject.operator_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|error| {
+                        if is_unique_violation(&error) {
+                            StoreError::Conflict(
+                                "sms send rule was created concurrently; retry initialize"
+                                    .to_owned(),
+                            )
+                        } else {
+                            StoreError::Unavailable(error.to_string())
+                        }
+                    })?;
+                }
+            }
+            rules_ensured += 1;
+        }
+
+        tx.commit()
+            .await
+            .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+
+        Ok(ProviderInitialization {
+            account_id,
+            identity_id,
+            rules_ensured,
+            created_account,
+        })
     }
 
     // ---------------------------------------------------------- sms signatures

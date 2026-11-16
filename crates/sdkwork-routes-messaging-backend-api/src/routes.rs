@@ -6,7 +6,7 @@ use axum::extract::{FromRequestParts, Path, Query, State};
 use axum::http::request::Parts;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, put};
+use axum::routing::{get, post, put};
 use axum::{Json, Router};
 use sdkwork_utils_rust::uuid;
 use sdkwork_web_core::WebRequestContext;
@@ -273,6 +273,10 @@ pub fn admin_messaging_router_with_store(
                 .delete(delete_email_account),
         )
         .route(
+            "/backend/v3/api/messaging/email/providers/{provider}/initialize",
+            post(initialize_email_provider),
+        )
+        .route(
             "/backend/v3/api/messaging/email/senders",
             get(list_email_senders).post(create_email_sender),
         )
@@ -299,6 +303,10 @@ pub fn admin_messaging_router_with_store(
             get(retrieve_sms_account)
                 .put(update_sms_account)
                 .delete(delete_sms_account),
+        )
+        .route(
+            "/backend/v3/api/messaging/sms/providers/{provider}/initialize",
+            post(initialize_sms_provider),
         )
         .route(
             "/backend/v3/api/messaging/sms/signatures",
@@ -796,6 +804,44 @@ async fn delete_email_account(
     }
 }
 
+// --------------------------------------------------------- email initialize
+
+/// Idempotently initializes one email provider's console configuration:
+/// account preset, sender identity, and scenario routing steps. Missing config
+/// keys are merged; existing values and credentials are preserved.
+async fn initialize_email_provider(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(provider): Path<String>,
+    headers: axum::http::HeaderMap,
+    _body: axum::body::Bytes,
+) -> Response {
+    let _idempotency_key = match idempotency_key(&headers) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+    if let Err(error) = crate::ports::parse_email_provider(&provider) {
+        return problem_response(StatusCode::BAD_REQUEST, "Bad Request", error);
+    }
+    match state
+        .store
+        .initialize_email_provider(&subject, &provider)
+        .await
+    {
+        Ok(result) => resource_response(
+            StatusCode::OK,
+            json!({
+                "accepted": true,
+                "resourceId": result.account_id.to_string(),
+                "status": if result.created_account { "created" } else { "initialized" },
+                "identityId": result.identity_id.to_string(),
+                "rulesEnsured": result.rules_ensured,
+            }),
+        ),
+        Err(error) => store_error_response(error),
+    }
+}
+
 // --------------------------------------------------------------- email senders
 
 #[derive(Debug, Deserialize)]
@@ -1142,6 +1188,44 @@ async fn delete_sms_account(
         .await
     {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(error) => store_error_response(error),
+    }
+}
+
+// ------------------------------------------------------------ sms initialize
+
+/// Idempotently initializes one SMS provider's console configuration:
+/// account preset, signature identity, and scenario routing steps. Missing
+/// config keys are merged; existing values and credentials are preserved.
+async fn initialize_sms_provider(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(provider): Path<String>,
+    headers: axum::http::HeaderMap,
+    _body: axum::body::Bytes,
+) -> Response {
+    let _idempotency_key = match idempotency_key(&headers) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+    if let Err(error) = crate::ports::parse_sms_provider(&provider) {
+        return problem_response(StatusCode::BAD_REQUEST, "Bad Request", error);
+    }
+    match state
+        .store
+        .initialize_sms_provider(&subject, &provider)
+        .await
+    {
+        Ok(result) => resource_response(
+            StatusCode::OK,
+            json!({
+                "accepted": true,
+                "resourceId": result.account_id.to_string(),
+                "status": if result.created_account { "created" } else { "initialized" },
+                "identityId": result.identity_id.to_string(),
+                "rulesEnsured": result.rules_ensured,
+            }),
+        ),
         Err(error) => store_error_response(error),
     }
 }

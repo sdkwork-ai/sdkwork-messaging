@@ -453,6 +453,19 @@ pub struct UpdateTemplateCommand {
 
 // -------------------------------------------------------------------- store
 
+/// Outcome of an idempotent provider initialization command.
+///
+/// The command creates whatever is missing for one provider (account, sender
+/// or signature identity, scenario routing steps) and never overwrites operator
+/// edits. Repeating it is safe.
+#[derive(Clone, Debug)]
+pub struct ProviderInitialization {
+    pub account_id: i64,
+    pub identity_id: i64,
+    pub rules_ensured: usize,
+    pub created_account: bool,
+}
+
 #[async_trait::async_trait]
 // async_trait desugars every method to `Pin<Box<dyn Future>>` returns, which
 // clippy flags as double_must_use; the macro expansion is not hand-editable.
@@ -561,6 +574,14 @@ pub trait MessagingAdminStore: Send + Sync {
         account_id: i64,
         idempotency_key: &str,
     ) -> Result<(), StoreError>;
+    /// Ensures the default account, sender identity, and scenario routing steps
+    /// exist for one email provider. Missing config keys are merged into an
+    /// existing account; existing values and credentials are preserved.
+    async fn initialize_email_provider(
+        &self,
+        subject: &MessagingAdminSubject,
+        provider: &str,
+    ) -> Result<ProviderInitialization, StoreError>;
 
     // email sender identities
     async fn list_email_senders(
@@ -639,6 +660,14 @@ pub trait MessagingAdminStore: Send + Sync {
         account_id: i64,
         idempotency_key: &str,
     ) -> Result<(), StoreError>;
+    /// Ensures the default account, signature identity, and scenario routing
+    /// steps exist for one SMS provider. Missing config keys are merged into an
+    /// existing account; existing values and credentials are preserved.
+    async fn initialize_sms_provider(
+        &self,
+        subject: &MessagingAdminSubject,
+        provider: &str,
+    ) -> Result<ProviderInitialization, StoreError>;
 
     // sms signature identities
     async fn list_sms_signatures(

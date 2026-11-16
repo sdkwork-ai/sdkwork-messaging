@@ -60,7 +60,7 @@
     },
     {
       "path": "src/api/messaging.ts",
-      "sha256": "46a0847cb5b1e6539060b8026f2b9a019406393ce80ae2b9c8e256126e30ec44"
+      "sha256": "9b7d15e487f11a4f22d5ebdb5a93407074c15fdeaf45c5648fdb3aea6da74192"
     },
     {
       "path": "src/api/paths.ts",
@@ -115,6 +115,10 @@
       "sha256": "912fb37598ec3992c8b798f8fafd0f43a2f896f3ee8a7c07d7fe19c7b694e2e1"
     },
     {
+      "path": "src/types/email-providers-initialize-response.ts",
+      "sha256": "25e331944ab6018528d8a876d7e15f35673bc45b94a22515603f916236097b14"
+    },
+    {
       "path": "src/types/email-send-rules-list-response.ts",
       "sha256": "f77d81b7eb2d0663b54c2916cd6fc8a0603af57003d5fc059e0670dd59338f2f"
     },
@@ -144,7 +148,7 @@
     },
     {
       "path": "src/types/index.ts",
-      "sha256": "4c0409eba5a89f1c480154a224c00e7be7e9490570c57a94becf463aeeddd1d9"
+      "sha256": "7ed29d18134bd0c102d804370929ff72d0493a211722f911bcc9b052451f7add"
     },
     {
       "path": "src/types/messaging-announcement-list-response.ts",
@@ -257,6 +261,10 @@
     {
       "path": "src/types/messaging-outbound-message.ts",
       "sha256": "cdd6ff88a5d524134b965669e33f99203858b12404b541d836fcfe5908a2f9f6"
+    },
+    {
+      "path": "src/types/messaging-provider-initialize-response.ts",
+      "sha256": "7b41dddb8f428a60f6cd616aebe0fb57ffdcc08e4684d0dbc02e360b0d0a14ca"
     },
     {
       "path": "src/types/messaging-push-message-list-response.ts",
@@ -449,6 +457,10 @@
     {
       "path": "src/types/sms-accounts-update-response.ts",
       "sha256": "e360b9acdb9ef669ef4e2dcf4f2e58fc5171343f17ef697a6e0841360fcc0671"
+    },
+    {
+      "path": "src/types/sms-providers-initialize-response.ts",
+      "sha256": "9a622d09ab59f412cf4940661882e6376febd55503e49b4a93e998ad35a28485"
     },
     {
       "path": "src/types/sms-send-rules-list-response.ts",

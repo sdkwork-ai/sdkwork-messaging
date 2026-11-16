@@ -8,7 +8,7 @@ fn route_manifest_declares_messaging_backend_routes() {
     let routes = route_definitions();
 
     assert_eq!(manifest.routes().len(), routes.len());
-    assert_eq!(routes.len(), 39);
+    assert_eq!(routes.len(), 41);
 
     for route in routes {
         assert_eq!(
@@ -56,6 +56,7 @@ fn route_manifest_declares_messaging_backend_routes() {
         "messaging.emailAccounts.retrieve",
         "messaging.emailAccounts.update",
         "messaging.emailAccounts.delete",
+        "messaging.emailProviders.initialize",
         "messaging.emailSenders.list",
         "messaging.emailSenders.create",
         "messaging.emailSenders.retrieve",
@@ -68,6 +69,7 @@ fn route_manifest_declares_messaging_backend_routes() {
         "messaging.smsAccounts.retrieve",
         "messaging.smsAccounts.update",
         "messaging.smsAccounts.delete",
+        "messaging.smsProviders.initialize",
         "messaging.smsSignatures.list",
         "messaging.smsSignatures.create",
         "messaging.smsSignatures.retrieve",

@@ -1,7 +1,7 @@
 import { backendApiPath } from './paths';
 import type { ApiRequestOptions, HttpClient } from '../http/client';
 
-import type { MessagingAnnouncement, MessagingAnnouncementPublishRequest, MessagingAnnouncementResponse, MessagingEmailAccount, MessagingEmailAccountCreateRequest, MessagingEmailAccountResponse, MessagingEmailAccountUpdateRequest, MessagingEmailSender, MessagingEmailSenderCreateRequest, MessagingEmailSenderResponse, MessagingEmailSenderUpdateRequest, MessagingEmailSendRule, MessagingEmailSendRuleResponse, MessagingEmailSendRuleUpdateRequest, MessagingNotification, MessagingNotificationCreateRequest, MessagingNotificationResponse, MessagingOutboundMessage, MessagingOutboundMessageResponse, MessagingOutboundMessageSendRequest, MessagingPushMessage, MessagingPushMessageResponse, MessagingPushMessageSendRequest, MessagingSmsAccount, MessagingSmsAccountCreateRequest, MessagingSmsAccountResponse, MessagingSmsAccountUpdateRequest, MessagingSmsSendRule, MessagingSmsSendRuleResponse, MessagingSmsSendRuleUpdateRequest, MessagingSmsSignature, MessagingSmsSignatureCreateRequest, MessagingSmsSignatureResponse, MessagingSmsSignatureUpdateRequest, MessagingTemplate, MessagingTemplateCreateRequest, MessagingTemplateResponse, MessagingTemplateUpdateRequest, MessagingVerificationPolicy, MessagingVerificationPolicyResponse, MessagingVerificationPolicyUpdateRequest, PageInfo } from '../types';
+import type { MessagingAnnouncement, MessagingAnnouncementPublishRequest, MessagingAnnouncementResponse, MessagingEmailAccount, MessagingEmailAccountCreateRequest, MessagingEmailAccountResponse, MessagingEmailAccountUpdateRequest, MessagingEmailSender, MessagingEmailSenderCreateRequest, MessagingEmailSenderResponse, MessagingEmailSenderUpdateRequest, MessagingEmailSendRule, MessagingEmailSendRuleResponse, MessagingEmailSendRuleUpdateRequest, MessagingNotification, MessagingNotificationCreateRequest, MessagingNotificationResponse, MessagingOutboundMessage, MessagingOutboundMessageResponse, MessagingOutboundMessageSendRequest, MessagingProviderInitializeResponse, MessagingPushMessage, MessagingPushMessageResponse, MessagingPushMessageSendRequest, MessagingSmsAccount, MessagingSmsAccountCreateRequest, MessagingSmsAccountResponse, MessagingSmsAccountUpdateRequest, MessagingSmsSendRule, MessagingSmsSendRuleResponse, MessagingSmsSendRuleUpdateRequest, MessagingSmsSignature, MessagingSmsSignatureCreateRequest, MessagingSmsSignatureResponse, MessagingSmsSignatureUpdateRequest, MessagingTemplate, MessagingTemplateCreateRequest, MessagingTemplateResponse, MessagingTemplateUpdateRequest, MessagingVerificationPolicy, MessagingVerificationPolicyResponse, MessagingVerificationPolicyUpdateRequest, PageInfo } from '../types';
 
 
 export interface MessagingTemplatesListParams {
@@ -214,6 +214,30 @@ export class MessagingSmsSignaturesApi {
   }
 }
 
+export interface MessagingSmsProvidersInitializeParams {
+  idempotencyKey: string;
+}
+
+export class MessagingSmsProvidersApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** messaging.smsProviders.initialize */
+  async initialize(provider: string, params: MessagingSmsProvidersInitializeParams, requestOptions?: ApiRequestOptions): Promise<MessagingProviderInitializeResponse> {
+    const requestHeaders = buildRequestHeaders(
+      {
+        'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
+      },
+      {}
+    );
+    return this.client.request<MessagingProviderInitializeResponse>(backendApiPath(`/messaging/sms/providers/${serializePathParameter(provider, { name: 'provider', style: 'simple', explode: false })}/initialize`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
+  }
+}
+
 export interface MessagingSmsAccountsListParams {
   page?: number;
   pageSize?: number;
@@ -415,6 +439,30 @@ export class MessagingEmailSendersApi {
       {}
     );
     return this.client.request<void>(backendApiPath(`/messaging/email/senders/${serializePathParameter(senderId, { name: 'senderId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'DELETE' as any, ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}) });
+  }
+}
+
+export interface MessagingEmailProvidersInitializeParams {
+  idempotencyKey: string;
+}
+
+export class MessagingEmailProvidersApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** messaging.emailProviders.initialize */
+  async initialize(provider: string, params: MessagingEmailProvidersInitializeParams, requestOptions?: ApiRequestOptions): Promise<MessagingProviderInitializeResponse> {
+    const requestHeaders = buildRequestHeaders(
+      {
+        'Idempotency-Key': { value: params.idempotencyKey, style: 'simple', explode: false },
+      },
+      {}
+    );
+    return this.client.request<MessagingProviderInitializeResponse>(backendApiPath(`/messaging/email/providers/${serializePathParameter(provider, { name: 'provider', style: 'simple', explode: false })}/initialize`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'POST' as any, ...(requestHeaders !== undefined ? { headers: requestHeaders } : {}), sdkworkUnwrapKind: 'item' });
   }
 }
 
@@ -697,9 +745,11 @@ export class MessagingApi {
   public readonly outboundMessages: MessagingOutboundMessagesApi;
   public readonly verificationPolicies: MessagingVerificationPoliciesApi;
   public readonly emailAccounts: MessagingEmailAccountsApi;
+  public readonly emailProviders: MessagingEmailProvidersApi;
   public readonly emailSenders: MessagingEmailSendersApi;
   public readonly emailSendRules: MessagingEmailSendRulesApi;
   public readonly smsAccounts: MessagingSmsAccountsApi;
+  public readonly smsProviders: MessagingSmsProvidersApi;
   public readonly smsSignatures: MessagingSmsSignaturesApi;
   public readonly smsSendRules: MessagingSmsSendRulesApi;
   public readonly templates: MessagingTemplatesApi;
@@ -711,9 +761,11 @@ export class MessagingApi {
     this.outboundMessages = new MessagingOutboundMessagesApi(client);
     this.verificationPolicies = new MessagingVerificationPoliciesApi(client);
     this.emailAccounts = new MessagingEmailAccountsApi(client);
+    this.emailProviders = new MessagingEmailProvidersApi(client);
     this.emailSenders = new MessagingEmailSendersApi(client);
     this.emailSendRules = new MessagingEmailSendRulesApi(client);
     this.smsAccounts = new MessagingSmsAccountsApi(client);
+    this.smsProviders = new MessagingSmsProvidersApi(client);
     this.smsSignatures = new MessagingSmsSignaturesApi(client);
     this.smsSendRules = new MessagingSmsSendRulesApi(client);
     this.templates = new MessagingTemplatesApi(client);

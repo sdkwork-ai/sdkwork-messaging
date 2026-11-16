@@ -6,7 +6,7 @@ import { alignOpenApiOperationPatterns } from "../../sdkwork-specs/tools/lib/ali
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const GENERATOR_PATH = path.resolve(ROOT, "../sdkwork-sdk-generator/bin/sdkgen.js");
-const VERSION = "1.2.0";
+const VERSION = "1.3.0";
 const OWNER = "sdkwork-messaging";
 
 const FAMILIES = [
@@ -63,6 +63,11 @@ const FAMILIES = [
       route("GET", "/backend/v3/api/messaging/email/accounts/{accountId}", "messaging.emailAccounts.retrieve", "messaging.emailAccounts", "messaging.emailAccounts.retrieve", null, "MessagingEmailAccountResponse", false, [accountIdParameter()]),
       route("PUT", "/backend/v3/api/messaging/email/accounts/{accountId}", "messaging.emailAccounts.update", "messaging.emailAccounts", "messaging.emailAccounts.update", "MessagingEmailAccountUpdateRequest", "MessagingEmailAccountResponse", true, [accountIdParameter()]),
       route("DELETE", "/backend/v3/api/messaging/email/accounts/{accountId}", "messaging.emailAccounts.delete", "messaging.emailAccounts", "messaging.emailAccounts.delete", null, null, true, [accountIdParameter()]),
+      // One-click provider initialization: idempotently converges the account,
+      // sender identity, and scenario routing steps for one provider. The
+      // permission is the existing account-write permission (the command
+      // mutates account configuration), so operators keep their current grant.
+      route("POST", "/backend/v3/api/messaging/email/providers/{provider}/initialize", "messaging.emailProviders.initialize", "messaging.emailProviders", "messaging.emailProviders.initialize", null, "MessagingProviderInitializeResponse", true, [providerParameter()], "messaging.emailAccounts.post"),
       route("GET", "/backend/v3/api/messaging/email/senders", "messaging.emailSenders.list", "messaging.emailSenders", "messaging.emailSenders.list", null, "MessagingEmailSenderListResponse", false, [accountIdQueryParameter()]),
       route("POST", "/backend/v3/api/messaging/email/senders", "messaging.emailSenders.create", "messaging.emailSenders", "messaging.emailSenders.create", "MessagingEmailSenderCreateRequest", "MessagingEmailSenderResponse", true),
       route("GET", "/backend/v3/api/messaging/email/senders/{senderId}", "messaging.emailSenders.retrieve", "messaging.emailSenders", "messaging.emailSenders.retrieve", null, "MessagingEmailSenderResponse", false, [senderIdParameter()]),
@@ -77,6 +82,9 @@ const FAMILIES = [
       route("GET", "/backend/v3/api/messaging/sms/accounts/{accountId}", "messaging.smsAccounts.retrieve", "messaging.smsAccounts", "messaging.smsAccounts.retrieve", null, "MessagingSmsAccountResponse", false, [accountIdParameter()]),
       route("PUT", "/backend/v3/api/messaging/sms/accounts/{accountId}", "messaging.smsAccounts.update", "messaging.smsAccounts", "messaging.smsAccounts.update", "MessagingSmsAccountUpdateRequest", "MessagingSmsAccountResponse", true, [accountIdParameter()]),
       route("DELETE", "/backend/v3/api/messaging/sms/accounts/{accountId}", "messaging.smsAccounts.delete", "messaging.smsAccounts", "messaging.smsAccounts.delete", null, null, true, [accountIdParameter()]),
+      // One-click provider initialization: idempotently converges the account,
+      // signature identity, and scenario routing steps for one provider.
+      route("POST", "/backend/v3/api/messaging/sms/providers/{provider}/initialize", "messaging.smsProviders.initialize", "messaging.smsProviders", "messaging.smsProviders.initialize", null, "MessagingProviderInitializeResponse", true, [providerParameter()], "messaging.smsAccounts.post"),
       route("GET", "/backend/v3/api/messaging/sms/signatures", "messaging.smsSignatures.list", "messaging.smsSignatures", "messaging.smsSignatures.list", null, "MessagingSmsSignatureListResponse", false, [accountIdQueryParameter()]),
       route("POST", "/backend/v3/api/messaging/sms/signatures", "messaging.smsSignatures.create", "messaging.smsSignatures", "messaging.smsSignatures.create", "MessagingSmsSignatureCreateRequest", "MessagingSmsSignatureResponse", true),
       route("GET", "/backend/v3/api/messaging/sms/signatures/{signatureId}", "messaging.smsSignatures.retrieve", "messaging.smsSignatures", "messaging.smsSignatures.retrieve", null, "MessagingSmsSignatureResponse", false, [signatureIdParameter()]),
@@ -113,7 +121,7 @@ async function writeText(filePath, value) {
   await writeFile(filePath, value, "utf8");
 }
 
-function route(method, routePath, operationId, resource, auditEvent, requestSchema, responseSchema, idempotent, parameters = []) {
+function route(method, routePath, operationId, resource, auditEvent, requestSchema, responseSchema, idempotent, parameters = [], permission = null) {
   return {
     method,
     path: routePath,
@@ -124,6 +132,7 @@ function route(method, routePath, operationId, resource, auditEvent, requestSche
     responseSchema,
     idempotent,
     parameters,
+    permission,
   };
 }
 
@@ -138,6 +147,10 @@ function pathParameter(name) {
 
 function accountIdParameter() {
   return pathParameter("accountId");
+}
+
+function providerParameter() {
+  return pathParameter("provider");
 }
 
 function signatureIdParameter() {
@@ -652,6 +665,13 @@ function schemas() {
       requestId,
     }),
     MessagingEmailAccountListResponse: envelope("MessagingEmailAccountListResponse", "MessagingEmailAccount"),
+    MessagingProviderInitializeResponse: object(["accepted"], {
+      accepted: { type: "boolean" },
+      resourceId: id,
+      status: { type: "string", enum: ["created", "initialized"] },
+      identityId: id,
+      rulesEnsured: { type: "integer", minimum: 0 },
+    }),
     MessagingEmailSender: object(["id", "accountId", "accountName", "fromAddress", "enabled", "version"], {
       id,
       accountId: id,
@@ -842,7 +862,8 @@ function operation(family, routeItem) {
     "x-sdkwork-api-authority": family.apiAuthority,
     "x-sdkwork-domain": family.domain,
     "x-sdkwork-resource": routeItem.resource,
-    "x-sdkwork-permission": `${routeItem.resource}.${routeItem.method.toLowerCase()}`,
+    "x-sdkwork-permission":
+      routeItem.permission ?? `${routeItem.resource}.${routeItem.method.toLowerCase()}`,
     "x-sdkwork-tenant-scope": "tenant",
     "x-sdkwork-data-scope": "organization",
     "x-sdkwork-audit-event": routeItem.auditEvent,
