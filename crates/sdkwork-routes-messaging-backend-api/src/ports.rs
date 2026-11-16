@@ -417,8 +417,13 @@ pub struct EmailSendRuleStep {
     pub account_name: String,
     pub from_address: String,
     pub from_name: Option<String>,
-    /// Whether the sender identity itself is enabled (account/sender switch).
+    /// Whether the sender identity itself is enabled (sender switch).
     pub identity_enabled: bool,
+    /// Whether the owning provider account is enabled.
+    pub account_enabled: bool,
+    /// Whether the provider account has channel credentials stored.
+    /// Seeded accounts start without credentials by design.
+    pub has_secret: bool,
     /// Whether this step participates in the fallback chain. A disabled step
     /// stays in place for later re-activation instead of being removed.
     pub step_enabled: bool,
@@ -536,8 +541,13 @@ pub struct SmsSendRuleStep {
     pub account_id: String,
     pub account_name: String,
     pub sign_name: String,
-    /// Whether the signature/account identity itself is enabled.
+    /// Whether the signature identity itself is enabled.
     pub identity_enabled: bool,
+    /// Whether the owning provider account is enabled.
+    pub account_enabled: bool,
+    /// Whether the provider account has channel credentials stored.
+    /// Seeded accounts start without credentials by design.
+    pub has_secret: bool,
     /// Whether this step participates in the fallback chain.
     pub step_enabled: bool,
 }

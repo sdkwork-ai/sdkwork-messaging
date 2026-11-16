@@ -274,7 +274,8 @@ impl PostgresMessagingAdminStore {
         }
         let ids: Vec<i64> = steps.iter().map(|step| step.id).collect();
         let rows = sqlx::query(
-            "SELECT s.id, s.account_id, a.name AS account_name, s.from_address, s.from_name, s.enabled \
+            "SELECT s.id, s.account_id, a.name AS account_name, s.from_address, s.from_name, s.enabled, \
+                    a.enabled AS account_enabled, (a.secret_ciphertext IS NOT NULL) AS has_secret \
              FROM messaging_email_sender s \
              JOIN messaging_email_account a ON a.id = s.account_id \
              WHERE s.tenant_id = $1 AND s.organization_id = $2 AND s.id = ANY($3) AND s.deleted_at IS NULL",
@@ -299,6 +300,8 @@ impl PostgresMessagingAdminStore {
                     from_address: row.get("from_address"),
                     from_name: row.get("from_name"),
                     identity_enabled: row.get("enabled"),
+                    account_enabled: row.get("account_enabled"),
+                    has_secret: row.get("has_secret"),
                     step_enabled: step.enabled,
                 });
             }
@@ -336,7 +339,8 @@ impl PostgresMessagingAdminStore {
         }
         let ids: Vec<i64> = steps.iter().map(|step| step.id).collect();
         let rows = sqlx::query(
-            "SELECT s.id, s.account_id, a.name AS account_name, s.sign_name, s.enabled \
+            "SELECT s.id, s.account_id, a.name AS account_name, s.sign_name, s.enabled, \
+                    a.enabled AS account_enabled, (a.secret_ciphertext IS NOT NULL) AS has_secret \
              FROM messaging_sms_signature s \
              JOIN messaging_sms_account a ON a.id = s.account_id \
              WHERE s.tenant_id = $1 AND s.organization_id = $2 AND s.id = ANY($3) AND s.deleted_at IS NULL",
@@ -360,6 +364,8 @@ impl PostgresMessagingAdminStore {
                     account_name: row.get("account_name"),
                     sign_name: row.get("sign_name"),
                     identity_enabled: row.get("enabled"),
+                    account_enabled: row.get("account_enabled"),
+                    has_secret: row.get("has_secret"),
                     step_enabled: step.enabled,
                 });
             }

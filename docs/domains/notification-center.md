@@ -22,12 +22,17 @@ Industry-aligned invariants:
 1. **Ordered failover.** Steps are tried in order; delivery falls through to the
    next step when a step is disabled, the identity is disabled, the provider
    account lacks credentials, or the provider returns a failure.
-2. **Two independent switches per step.**
-   - `identityEnabled` belongs to the channel account tab (sender/signature and
-     its provider account). It answers "can this identity send at all?".
-   - `stepEnabled` belongs to the rule. It answers "may this scenario use this
+2. **Three independent signals per step.**
+   - `identityEnabled` is the sender/signature switch in the channel tab.
+   - `accountEnabled` is the owning provider account switch.
+   - `stepEnabled` belongs to the rule and answers "may this scenario use this
      identity?". A disabled step stays in place so it can be re-activated
      without losing its position.
+   Each step also exposes `hasSecret` so an operator can see that the identity is
+   enabled while its provider account is disabled or its credentials have not
+   been entered yet. Seeded accounts intentionally start without credentials, so
+   "Credentials missing" is an expected pre-go-live signal rather than a rule
+   error.
 3. **Rule-level kill switch.** A disabled rule is skipped and the scenario falls
    back to `default`. A disabled rule may keep an empty chain.
 4. **No silent dead rules.** An **enabled** rule must contain at least one

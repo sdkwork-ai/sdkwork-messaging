@@ -1285,6 +1285,8 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
         steps: rule.chain.map((step) => ({
           id: step.senderId,
           identityEnabled: step.identityEnabled,
+          accountEnabled: step.accountEnabled,
+          hasSecret: step.hasSecret,
           stepEnabled: step.stepEnabled,
         })),
         version: rule.version,
@@ -1366,6 +1368,8 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
           steps: updated.chain.map((step) => ({
             id: step.senderId,
             identityEnabled: step.identityEnabled,
+            accountEnabled: step.accountEnabled,
+            hasSecret: step.hasSecret,
             stepEnabled: step.stepEnabled,
           })),
           version: updated.version,
@@ -1492,6 +1496,16 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
                           {!step.identityEnabled ? (
                             <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
                               {t("admin.notify.rules.identityDisabled")}
+                            </span>
+                          ) : null}
+                          {!step.accountEnabled ? (
+                            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                              {t("admin.notify.rules.accountDisabled")}
+                            </span>
+                          ) : null}
+                          {!step.hasSecret ? (
+                            <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
+                              {t("admin.notify.rules.credentialsMissing")}
                             </span>
                           ) : null}
                           {!step.stepEnabled ? (

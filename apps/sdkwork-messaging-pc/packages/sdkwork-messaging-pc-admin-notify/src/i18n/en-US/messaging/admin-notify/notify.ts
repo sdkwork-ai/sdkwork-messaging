@@ -331,6 +331,8 @@ export const messagingNotifyAdminMessagesEn = {
   "admin.notify.rules.moveDown": "Move down",
   "admin.notify.rules.removeStep": "Remove step",
   "admin.notify.rules.identityDisabled": "Identity disabled",
+  "admin.notify.rules.accountDisabled": "Account disabled",
+  "admin.notify.rules.credentialsMissing": "Credentials missing",
   "admin.notify.rules.stepDisabled": "Step disabled",
   "admin.notify.rules.unknownIdentity": "Unknown identity",
   "admin.notify.rules.validation.duplicate-step": "The routing chain contains a duplicate step; remove the duplicate.",

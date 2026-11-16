@@ -128,6 +128,11 @@ async fn provider_initialize_is_complete_idempotent_and_non_destructive() {
         assert!(rule.enabled);
         assert_eq!(rule.chain.len(), 1);
         assert_eq!(rule.chain[0].sender_id, enterprise_sender_id);
+        assert!(rule.chain[0].account_enabled);
+        assert!(
+            !rule.chain[0].has_secret,
+            "seeded accounts start without credentials"
+        );
     }
 
     // --- idempotent: no new rows, no version bump
@@ -188,6 +193,12 @@ async fn provider_initialize_is_complete_idempotent_and_non_destructive() {
         assert_eq!(rule.chain.len(), 2);
         assert_eq!(rule.chain[0].sender_id, enterprise_sender_id);
         assert_eq!(rule.chain[1].sender_id, gmail_sender_id);
+        assert!(rule.chain[0].account_enabled);
+        assert!(
+            !rule.chain[1].account_enabled,
+            "the gmail preset account stays disabled"
+        );
+        assert!(!rule.chain[1].has_secret);
     }
 
     // Per-step enablement round-trips without removing the step from the chain.
@@ -387,6 +398,8 @@ async fn provider_initialize_is_complete_idempotent_and_non_destructive() {
         assert!(rule.enabled);
         assert_eq!(rule.chain.len(), 1);
         assert_eq!(rule.chain[0].signature_id, signatures.items[0].id);
+        assert!(rule.chain[0].account_enabled);
+        assert!(!rule.chain[0].has_secret);
     }
     // Object-shaped SMS chains must also block deleting a referenced signature.
     let blocked_signature = store
