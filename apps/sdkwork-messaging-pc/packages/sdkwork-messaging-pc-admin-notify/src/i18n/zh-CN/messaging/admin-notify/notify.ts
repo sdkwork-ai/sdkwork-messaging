@@ -331,6 +331,8 @@ export const messagingNotifyAdminMessagesZh = {
   "admin.notify.rules.moveDown": "下移",
   "admin.notify.rules.removeStep": "移除步骤",
   "admin.notify.rules.identityDisabled": "身份已停用",
+  "admin.notify.rules.accountDisabled": "账户已停用",
+  "admin.notify.rules.credentialsMissing": "凭据未配置",
   "admin.notify.rules.stepDisabled": "步骤已停用",
   "admin.notify.rules.unknownIdentity": "未知身份",
   "admin.notify.rules.validation.duplicate-step": "发送链中存在重复步骤，请移除重复项。",
@@ -407,6 +409,7 @@ export const messagingNotifyAdminMessagesZh = {
   "admin.notify.records.detailTitle": "发送记录详情",
   "admin.notify.records.detail.createdAt": "创建时间",
   "admin.notify.records.detail.content": "消息内容",
+  "admin.notify.records.detail.htmlSource": "查看 HTML 源码",
   "admin.notify.records.detail.attempts": "投递尝试",
   "admin.notify.records.detail.noAttempts": "尚无投递尝试记录。",
 };

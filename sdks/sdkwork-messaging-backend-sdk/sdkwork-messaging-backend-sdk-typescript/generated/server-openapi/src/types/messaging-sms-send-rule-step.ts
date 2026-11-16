@@ -4,5 +4,7 @@ export interface MessagingSmsSendRuleStep {
   accountName: string;
   signName: string;
   identityEnabled: boolean;
+  accountEnabled: boolean;
+  hasSecret: boolean;
   stepEnabled: boolean;
 }

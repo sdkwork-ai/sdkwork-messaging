@@ -8134,6 +8134,8 @@
           "accountName",
           "fromAddress",
           "identityEnabled",
+          "accountEnabled",
+          "hasSecret",
           "stepEnabled"
         ],
         "properties": {
@@ -8159,6 +8161,12 @@
             "maxLength": 192
           },
           "identityEnabled": {
+            "type": "boolean"
+          },
+          "accountEnabled": {
+            "type": "boolean"
+          },
+          "hasSecret": {
             "type": "boolean"
           },
           "stepEnabled": {
@@ -8886,6 +8894,9 @@
           "body": {
             "type": "string"
           },
+          "bodyText": {
+            "type": "string"
+          },
           "bodyPreview": {
             "type": "string"
           },
@@ -9242,6 +9253,8 @@
           "accountName",
           "signName",
           "identityEnabled",
+          "accountEnabled",
+          "hasSecret",
           "stepEnabled"
         ],
         "properties": {
@@ -9263,6 +9276,12 @@
             "maxLength": 64
           },
           "identityEnabled": {
+            "type": "boolean"
+          },
+          "accountEnabled": {
+            "type": "boolean"
+          },
+          "hasSecret": {
             "type": "boolean"
           },
           "stepEnabled": {

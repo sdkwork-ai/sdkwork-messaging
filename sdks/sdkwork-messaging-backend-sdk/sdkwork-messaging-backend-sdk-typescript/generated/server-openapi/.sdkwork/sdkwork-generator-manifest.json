@@ -244,7 +244,7 @@
     },
     {
       "path": "src/types/messaging-email-send-rule-step.ts",
-      "sha256": "f21a18fa07a433c3a16b8bb775c5c0210b3486e2e44ca35a0e8db22cf26fea58"
+      "sha256": "2abde5a51f1dd2bcf7c2614796ed868e1d8aa82076db071010f93e43ff828391"
     },
     {
       "path": "src/types/messaging-email-send-rule-update-request.ts",
@@ -336,7 +336,7 @@
     },
     {
       "path": "src/types/messaging-send-record.ts",
-      "sha256": "676033eaf458963982fd8dd78ef6aa0018f4814c2da1571556bf7320e8ee2c51"
+      "sha256": "728a1501ac1319389f3b1c23ec6c042a9f711782f5d26f11ed939bd04051e321"
     },
     {
       "path": "src/types/messaging-sms-account-create-request.ts",
@@ -372,7 +372,7 @@
     },
     {
       "path": "src/types/messaging-sms-send-rule-step.ts",
-      "sha256": "98db04e283bd59845d6b2538e975904e5bd4ed49d44238b54bb647af1cb844da"
+      "sha256": "3d4d1e4207518d3c38e8c06ba023599eb366b309975ca1d7dcd567b2753366be"
     },
     {
       "path": "src/types/messaging-sms-send-rule-update-request.ts",

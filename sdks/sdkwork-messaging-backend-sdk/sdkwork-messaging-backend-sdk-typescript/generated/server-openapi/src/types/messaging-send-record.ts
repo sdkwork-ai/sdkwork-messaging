@@ -6,6 +6,7 @@ export interface MessagingSendRecord {
   targetMasked: string;
   subject?: string;
   body?: string;
+  bodyText?: string;
   bodyPreview: string;
   status: 'accepted' | 'queued' | 'sent' | 'delivered' | 'failed' | 'opened' | 'cancelled' | 'expired';
   scenario: string;

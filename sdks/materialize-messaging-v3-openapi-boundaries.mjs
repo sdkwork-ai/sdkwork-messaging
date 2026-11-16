@@ -535,6 +535,7 @@ function schemas() {
       targetMasked: { type: "string" },
       subject: { type: "string" },
       body: { type: "string" },
+      bodyText: { type: "string" },
       bodyPreview: { type: "string" },
       status: { type: "string", enum: ["accepted", "queued", "sent", "delivered", "failed", "opened", "cancelled", "expired"] },
       scenario: { type: "string", minLength: 1, maxLength: 64 },
@@ -711,12 +712,14 @@ function schemas() {
       requestId,
     }),
     MessagingSmsSignatureListResponse: envelope("MessagingSmsSignatureListResponse", "MessagingSmsSignature"),
-    MessagingSmsSendRuleStep: object(["signatureId", "accountId", "accountName", "signName", "identityEnabled", "stepEnabled"], {
+    MessagingSmsSendRuleStep: object(["signatureId", "accountId", "accountName", "signName", "identityEnabled", "accountEnabled", "hasSecret", "stepEnabled"], {
       signatureId: id,
       accountId: id,
       accountName: { type: "string", minLength: 1 },
       signName: { type: "string", minLength: 1, maxLength: 64 },
       identityEnabled: { type: "boolean" },
+      accountEnabled: { type: "boolean" },
+      hasSecret: { type: "boolean" },
       stepEnabled: { type: "boolean" },
     }),
     MessagingSmsSendRule: object(["scenario", "chain", "enabled", "version"], {
@@ -817,13 +820,15 @@ function schemas() {
       requestId,
     }),
     MessagingEmailSenderListResponse: envelope("MessagingEmailSenderListResponse", "MessagingEmailSender"),
-    MessagingEmailSendRuleStep: object(["senderId", "accountId", "accountName", "fromAddress", "identityEnabled", "stepEnabled"], {
+    MessagingEmailSendRuleStep: object(["senderId", "accountId", "accountName", "fromAddress", "identityEnabled", "accountEnabled", "hasSecret", "stepEnabled"], {
       senderId: id,
       accountId: id,
       accountName: { type: "string", minLength: 1 },
       fromAddress: { type: "string", minLength: 3, maxLength: 320 },
       fromName: { type: "string", maxLength: 192 },
       identityEnabled: { type: "boolean" },
+      accountEnabled: { type: "boolean" },
+      hasSecret: { type: "boolean" },
       stepEnabled: { type: "boolean" },
     }),
     MessagingEmailSendRule: object(["scenario", "chain", "enabled", "version"], {

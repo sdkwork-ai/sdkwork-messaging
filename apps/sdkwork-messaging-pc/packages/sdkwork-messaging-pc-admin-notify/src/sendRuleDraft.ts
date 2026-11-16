@@ -14,6 +14,8 @@
 export interface SendRuleStepDraft {
   id: string;
   identityEnabled: boolean;
+  accountEnabled: boolean;
+  hasSecret: boolean;
   stepEnabled: boolean;
 }
 
@@ -33,11 +35,23 @@ export type SendRuleValidationError =
 
 export function createRuleDraft(input: {
   enabled: boolean;
-  steps: SendRuleStepDraft[];
+  steps: {
+    id: string;
+    identityEnabled: boolean;
+    accountEnabled?: boolean;
+    hasSecret?: boolean;
+    stepEnabled: boolean;
+  }[];
   version: string;
   updatedAt: string | null;
 }): SendRuleDraft {
-  const steps = input.steps.map((step) => ({ ...step }));
+  const steps = input.steps.map((step) => ({
+    id: step.id,
+    identityEnabled: step.identityEnabled,
+    accountEnabled: step.accountEnabled ?? true,
+    hasSecret: step.hasSecret ?? false,
+    stepEnabled: step.stepEnabled,
+  }));
   return {
     enabled: input.enabled,
     steps,
@@ -97,13 +111,18 @@ export function addDraftStep(
   draft: SendRuleDraft,
   id: string,
   identityEnabled: boolean,
+  accountEnabled = true,
+  hasSecret = true,
 ): SendRuleDraft {
   if (!id || draft.steps.some((step) => step.id === id)) {
     return draft;
   }
   return {
     ...draft,
-    steps: [...draft.steps, { id, identityEnabled, stepEnabled: true }],
+    steps: [
+      ...draft.steps,
+      { id, identityEnabled, accountEnabled, hasSecret, stepEnabled: true },
+    ],
   };
 }
 

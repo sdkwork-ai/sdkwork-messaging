@@ -274,7 +274,8 @@ impl PostgresMessagingAdminStore {
         }
         let ids: Vec<i64> = steps.iter().map(|step| step.id).collect();
         let rows = sqlx::query(
-            "SELECT s.id, s.account_id, a.name AS account_name, s.from_address, s.from_name, s.enabled \
+            "SELECT s.id, s.account_id, a.name AS account_name, s.from_address, s.from_name, s.enabled, \
+                    a.enabled AS account_enabled, (a.secret_ciphertext IS NOT NULL) AS has_secret \
              FROM messaging_email_sender s \
              JOIN messaging_email_account a ON a.id = s.account_id \
              WHERE s.tenant_id = $1 AND s.organization_id = $2 AND s.id = ANY($3) AND s.deleted_at IS NULL",
@@ -299,6 +300,8 @@ impl PostgresMessagingAdminStore {
                     from_address: row.get("from_address"),
                     from_name: row.get("from_name"),
                     identity_enabled: row.get("enabled"),
+                    account_enabled: row.get("account_enabled"),
+                    has_secret: row.get("has_secret"),
                     step_enabled: step.enabled,
                 });
             }
@@ -336,7 +339,8 @@ impl PostgresMessagingAdminStore {
         }
         let ids: Vec<i64> = steps.iter().map(|step| step.id).collect();
         let rows = sqlx::query(
-            "SELECT s.id, s.account_id, a.name AS account_name, s.sign_name, s.enabled \
+            "SELECT s.id, s.account_id, a.name AS account_name, s.sign_name, s.enabled, \
+                    a.enabled AS account_enabled, (a.secret_ciphertext IS NOT NULL) AS has_secret \
              FROM messaging_sms_signature s \
              JOIN messaging_sms_account a ON a.id = s.account_id \
              WHERE s.tenant_id = $1 AND s.organization_id = $2 AND s.id = ANY($3) AND s.deleted_at IS NULL",
@@ -360,6 +364,8 @@ impl PostgresMessagingAdminStore {
                     account_name: row.get("account_name"),
                     sign_name: row.get("sign_name"),
                     identity_enabled: row.get("enabled"),
+                    account_enabled: row.get("account_enabled"),
+                    has_secret: row.get("has_secret"),
                     step_enabled: step.enabled,
                 });
             }
@@ -377,11 +383,8 @@ fn escape_like_pattern(value: &str) -> String {
         .replace('_', "\\_")
 }
 
-/// One-line preview for a send record. HTML-heavy email bodies collapse to a
-/// short plain-text excerpt; the full body stays on the record detail.
-fn body_preview(body: &str) -> String {
-    // Strip HTML tags first: email bodies are HTML, and a raw tag stream is a
-    // poor one-line preview in the console table.
+/// Strips HTML tags and collapses whitespace into a plain-text rendering.
+fn strip_html_text(body: &str) -> String {
     let mut text = String::with_capacity(body.len());
     let mut in_tag = false;
     for character in body.chars() {
@@ -392,7 +395,13 @@ fn body_preview(body: &str) -> String {
             _ => {}
         }
     }
-    let collapsed = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// One-line preview for a send record. HTML-heavy email bodies collapse to a
+/// short plain-text excerpt; the full body stays on the record detail.
+fn body_preview(body: &str) -> String {
+    let collapsed = strip_html_text(body);
     let mut chars = collapsed.chars();
     let preview: String = chars.by_ref().take(160).collect();
     if chars.next().is_some() {
@@ -410,6 +419,7 @@ fn send_record_item_from_row(row: &sqlx::postgres::PgRow) -> MessagingSendRecord
         target_masked: row.get("target_masked"),
         subject: row.get("subject"),
         body: body.clone(),
+        body_text: strip_html_text(&body),
         body_preview: body_preview(&body),
         status: row.get("status"),
         scenario: row
@@ -3990,6 +4000,11 @@ mod tests {
         assert_eq!(body_preview("hello \n  world"), "hello world");
         assert_eq!(body_preview("<p>hello</p> \n <b>world</b>"), "hello world");
         assert_eq!(body_preview("<p>only</p>"), "only");
+        assert_eq!(
+            strip_html_text("<p>a</p>\n<b>b</b>"),
+            "a b",
+            "full plain text keeps all content"
+        );
         let long = "x".repeat(200);
         let preview = body_preview(&long);
         assert!(preview.ends_with('…'));

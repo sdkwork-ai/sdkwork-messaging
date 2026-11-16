@@ -52,6 +52,8 @@ describe("send rule draft", () => {
     expect(added.steps.map((step) => step.id)).toEqual(["1", "2", "3"]);
     expect(added.steps[2].stepEnabled).toBe(true);
     expect(added.steps[2].identityEnabled).toBe(false);
+    expect(added.steps[2].accountEnabled).toBe(true);
+    expect(added.steps[2].hasSecret).toBe(true);
     // Adding an existing step is a no-op.
     expect(addDraftStep(initial, "1", true)).toBe(initial);
   });

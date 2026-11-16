@@ -331,6 +331,8 @@ export const messagingNotifyAdminMessagesEn = {
   "admin.notify.rules.moveDown": "Move down",
   "admin.notify.rules.removeStep": "Remove step",
   "admin.notify.rules.identityDisabled": "Identity disabled",
+  "admin.notify.rules.accountDisabled": "Account disabled",
+  "admin.notify.rules.credentialsMissing": "Credentials missing",
   "admin.notify.rules.stepDisabled": "Step disabled",
   "admin.notify.rules.unknownIdentity": "Unknown identity",
   "admin.notify.rules.validation.duplicate-step": "The routing chain contains a duplicate step; remove the duplicate.",
@@ -407,6 +409,7 @@ export const messagingNotifyAdminMessagesEn = {
   "admin.notify.records.detailTitle": "Send record detail",
   "admin.notify.records.detail.createdAt": "Created at",
   "admin.notify.records.detail.content": "Message content",
+  "admin.notify.records.detail.htmlSource": "View HTML source",
   "admin.notify.records.detail.attempts": "Delivery attempts",
   "admin.notify.records.detail.noAttempts": "No delivery attempt recorded yet.",
 };
