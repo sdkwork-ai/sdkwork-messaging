@@ -2,7 +2,7 @@
   "openapi": "3.1.2",
   "info": {
     "title": "SDKWork Messaging Backend API",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "description": "Backend/admin contract for notification creation, announcement publishing, app push delivery, SMS/email sends, verification policies, channel configuration, and message templates.",
     "x-sdkwork-api-authority": "sdkwork-messaging-backend-api",
     "x-sdkwork-sdk-family": "sdkwork-messaging-backend-sdk"
@@ -7378,6 +7378,499 @@
         "x-sdkwork-source-route-crate": "sdkwork-routes-messaging-backend-api",
         "x-sdkwork-server-request-id": true
       }
+    },
+    "/backend/v3/api/messaging/templates/{templateId}/providers": {
+      "get": {
+        "tags": [
+          "messaging"
+        ],
+        "summary": "messaging.templateProviders.list",
+        "operationId": "templateProviders.list",
+        "parameters": [
+          {
+            "name": "templateId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "items",
+                            "pageInfo"
+                          ],
+                          "properties": {
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/MessagingTemplateProviderBinding"
+                              }
+                            },
+                            "pageInfo": {
+                              "$ref": "#/components/schemas/PageInfo"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-messaging",
+        "x-sdkwork-api-authority": "sdkwork-messaging-backend-api",
+        "x-sdkwork-domain": "messaging",
+        "x-sdkwork-resource": "messaging.templateProviders",
+        "x-sdkwork-permission": "messaging.templates.get",
+        "x-sdkwork-tenant-scope": "tenant",
+        "x-sdkwork-data-scope": "organization",
+        "x-sdkwork-audit-event": "messaging.templateProviders.list",
+        "x-sdkwork-idempotent": false,
+        "x-sdkwork-deployment": "all",
+        "x-sdkwork-source": "crates/sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-source-route-crate": "sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-server-request-id": true
+      }
+    },
+    "/backend/v3/api/messaging/templates/{templateId}/providers/sync": {
+      "post": {
+        "tags": [
+          "messaging"
+        ],
+        "summary": "messaging.templateProviders.sync",
+        "operationId": "templateProviders.sync",
+        "parameters": [
+          {
+            "name": "templateId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Client-provided retry key for this command. It is scoped by tenant, principal, method, and path.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "x-sdkwork-idempotency-key": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/MessagingTemplateProviderSyncResponse"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-messaging",
+        "x-sdkwork-api-authority": "sdkwork-messaging-backend-api",
+        "x-sdkwork-domain": "messaging",
+        "x-sdkwork-resource": "messaging.templateProviders",
+        "x-sdkwork-permission": "messaging.templateProviders.post",
+        "x-sdkwork-tenant-scope": "tenant",
+        "x-sdkwork-data-scope": "organization",
+        "x-sdkwork-audit-event": "messaging.templateProviders.sync",
+        "x-sdkwork-idempotent": true,
+        "x-sdkwork-deployment": "all",
+        "x-sdkwork-source": "crates/sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-source-route-crate": "sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-server-request-id": true,
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessagingTemplateProviderSyncRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/backend/v3/api/messaging/templates/{templateId}/providers/{provider}": {
+      "put": {
+        "tags": [
+          "messaging"
+        ],
+        "summary": "messaging.templateProviders.update",
+        "operationId": "templateProviders.update",
+        "parameters": [
+          {
+            "name": "templateId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Client-provided retry key for this command. It is scoped by tenant, principal, method, and path.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "x-sdkwork-idempotency-key": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/MessagingTemplateProviderResponse"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-messaging",
+        "x-sdkwork-api-authority": "sdkwork-messaging-backend-api",
+        "x-sdkwork-domain": "messaging",
+        "x-sdkwork-resource": "messaging.templateProviders",
+        "x-sdkwork-permission": "messaging.templateProviders.put",
+        "x-sdkwork-tenant-scope": "tenant",
+        "x-sdkwork-data-scope": "organization",
+        "x-sdkwork-audit-event": "messaging.templateProviders.update",
+        "x-sdkwork-idempotent": true,
+        "x-sdkwork-deployment": "all",
+        "x-sdkwork-source": "crates/sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-source-route-crate": "sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-server-request-id": true,
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessagingTemplateProviderUpdateRequest"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -8631,6 +9124,10 @@
           "templateCode": {
             "type": "string",
             "maxLength": 160
+          },
+          "provider": {
+            "type": "string",
+            "maxLength": 64
           }
         }
       },
@@ -9633,6 +10130,164 @@
           }
         },
         "x-sdkwork-schema-name": "MessagingTemplateListResponse"
+      },
+      "MessagingTemplateProviderBinding": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "provider",
+          "syncStatus",
+          "version"
+        ],
+        "properties": {
+          "provider": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "providerTemplateId": {
+            "type": "string",
+            "maxLength": 192
+          },
+          "providerTemplateName": {
+            "type": "string",
+            "maxLength": 192
+          },
+          "syncStatus": {
+            "type": "string",
+            "enum": [
+              "not_synced",
+              "pending_approval",
+              "synced",
+              "failed"
+            ]
+          },
+          "syncMessage": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "lastSyncedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "string",
+            "format": "int64",
+            "pattern": "^[0-9]+$",
+            "x-sdkwork-int64-string": true,
+            "x-sdkwork-rust-type": "i64"
+          }
+        }
+      },
+      "MessagingTemplateProviderListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "pageInfo"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessagingTemplateProviderBinding"
+            }
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        },
+        "x-sdkwork-schema-name": "MessagingTemplateProviderListResponse"
+      },
+      "MessagingTemplateProviderResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "item"
+        ],
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/MessagingTemplateProviderBinding"
+          }
+        }
+      },
+      "MessagingTemplateProviderSyncRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "providers": {
+            "type": "array",
+            "maxItems": 32,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          "overwrite": {
+            "type": "boolean"
+          }
+        }
+      },
+      "MessagingTemplateProviderSyncResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "item"
+        ],
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/MessagingTemplateProviderSyncResult"
+          }
+        }
+      },
+      "MessagingTemplateProviderSyncResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "synced",
+          "pendingApproval",
+          "items"
+        ],
+        "properties": {
+          "synced": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pendingApproval": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessagingTemplateProviderBinding"
+            }
+          }
+        }
+      },
+      "MessagingTemplateProviderUpdateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "providerTemplateId": {
+            "type": "string",
+            "maxLength": 192
+          },
+          "providerTemplateName": {
+            "type": "string",
+            "maxLength": 192
+          },
+          "syncStatus": {
+            "type": "string",
+            "enum": [
+              "not_synced",
+              "pending_approval",
+              "synced",
+              "failed"
+            ]
+          }
+        }
       },
       "MessagingTemplateResponse": {
         "type": "object",

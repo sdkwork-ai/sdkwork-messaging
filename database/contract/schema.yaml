@@ -2,7 +2,7 @@ schema_version: 1
 kind: sdkwork.database.schema
 database_role: authoritative-server
 module_id: messaging
-contract_version: 1.0.0
+contract_version: 1.1.0
 owner_team: messaging-platform
 compliance_level: L2
 engines:
@@ -124,6 +124,13 @@ tables:
     write_owner: messaging-service
     tenant_scope: tenant_required
     soft_delete_policy: "soft_delete"
+    lifecycle_status: active
+  - name: messaging_template_provider
+    domain: messaging
+    profile: configuration
+    write_owner: messaging-service
+    tenant_scope: tenant_required
+    soft_delete_policy: null
     lifecycle_status: active
     owner: messaging-platform
   - name: messaging_email_account

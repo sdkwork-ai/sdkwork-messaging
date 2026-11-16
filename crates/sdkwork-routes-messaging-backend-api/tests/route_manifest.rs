@@ -8,7 +8,7 @@ fn route_manifest_declares_messaging_backend_routes() {
     let routes = route_definitions();
 
     assert_eq!(manifest.routes().len(), routes.len());
-    assert_eq!(routes.len(), 46);
+    assert_eq!(routes.len(), 49);
 
     for route in routes {
         assert_eq!(
@@ -87,6 +87,9 @@ fn route_manifest_declares_messaging_backend_routes() {
         "messaging.templates.retrieve",
         "messaging.templates.update",
         "messaging.templates.delete",
+        "messaging.templateProviders.list",
+        "messaging.templateProviders.sync",
+        "messaging.templateProviders.update",
     ] {
         assert!(
             operation_ids.contains(&expected),

@@ -467,6 +467,8 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
               onCancel={closeEditor}
               onDelete={mode === "edit" ? requestDelete : undefined}
               onDuplicate={mode === "edit" ? duplicateCurrent : undefined}
+              templateId={editingTemplate?.id}
+              service={admin}
             />
           )}
         </div>

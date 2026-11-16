@@ -349,6 +349,29 @@ const HTTP_ROUTES: &[HttpRoute] = &[
     )
     .with_required_permission("messaging.templates.delete")
     .with_idempotent(true),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/messaging/templates/{templateId}/providers",
+        SDK_DOMAIN,
+        "messaging.templateProviders.list",
+    )
+    .with_required_permission("messaging.templates.get"),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/messaging/templates/{templateId}/providers/sync",
+        SDK_DOMAIN,
+        "messaging.templateProviders.sync",
+    )
+    .with_required_permission("messaging.templates.put")
+    .with_idempotent(true),
+    HttpRoute::dual_token(
+        HttpMethod::Put,
+        "/backend/v3/api/messaging/templates/{templateId}/providers/{provider}",
+        SDK_DOMAIN,
+        "messaging.templateProviders.update",
+    )
+    .with_required_permission("messaging.templates.put")
+    .with_idempotent(true),
 ];
 
 pub fn backend_route_manifest() -> HttpRouteManifest {

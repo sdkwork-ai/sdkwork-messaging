@@ -1531,6 +1531,105 @@
         "file": "src/lib.rs",
         "routeCrate": "sdkwork-routes-messaging-backend-api"
       }
+    },
+    {
+      "method": "GET",
+      "path": "/backend/v3/api/messaging/templates/{templateId}/providers",
+      "operationId": "templateProviders.list",
+      "tags": [
+        "messaging"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::handlers",
+        "name": "templateProviders_list"
+      },
+      "schemas": {
+        "request": null,
+        "response": "MessagingTemplateProviderListResponse",
+        "problem": "ProblemDetail"
+      },
+      "idempotency": {
+        "required": false,
+        "header": null
+      },
+      "ownership": {
+        "owner": "sdkwork-messaging",
+        "apiAuthority": "sdkwork-messaging-backend-api"
+      },
+      "source": {
+        "file": "src/lib.rs",
+        "routeCrate": "sdkwork-routes-messaging-backend-api"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/backend/v3/api/messaging/templates/{templateId}/providers/sync",
+      "operationId": "templateProviders.sync",
+      "tags": [
+        "messaging"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::handlers",
+        "name": "templateProviders_sync"
+      },
+      "schemas": {
+        "request": "MessagingTemplateProviderSyncRequest",
+        "response": "MessagingTemplateProviderSyncResponse",
+        "problem": "ProblemDetail"
+      },
+      "idempotency": {
+        "required": true,
+        "header": "Idempotency-Key"
+      },
+      "ownership": {
+        "owner": "sdkwork-messaging",
+        "apiAuthority": "sdkwork-messaging-backend-api"
+      },
+      "source": {
+        "file": "src/lib.rs",
+        "routeCrate": "sdkwork-routes-messaging-backend-api"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/backend/v3/api/messaging/templates/{templateId}/providers/{provider}",
+      "operationId": "templateProviders.update",
+      "tags": [
+        "messaging"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::handlers",
+        "name": "templateProviders_update"
+      },
+      "schemas": {
+        "request": "MessagingTemplateProviderUpdateRequest",
+        "response": "MessagingTemplateProviderResponse",
+        "problem": "ProblemDetail"
+      },
+      "idempotency": {
+        "required": true,
+        "header": "Idempotency-Key"
+      },
+      "ownership": {
+        "owner": "sdkwork-messaging",
+        "apiAuthority": "sdkwork-messaging-backend-api"
+      },
+      "source": {
+        "file": "src/lib.rs",
+        "routeCrate": "sdkwork-routes-messaging-backend-api"
+      }
     }
   ]
 }

@@ -137,6 +137,7 @@ async fn send_record_and_dashboard_routes_return_the_contract_envelope() {
                 payload: None,
                 scenario: Some("verification_code".to_owned()),
                 template_code: Some("verification_code".to_owned()),
+                provider: None,
             },
             "http-email-1",
         )
@@ -153,6 +154,7 @@ async fn send_record_and_dashboard_routes_return_the_contract_envelope() {
                 payload: None,
                 scenario: Some("marketing".to_owned()),
                 template_code: None,
+                provider: None,
             },
             "http-sms-1",
         )

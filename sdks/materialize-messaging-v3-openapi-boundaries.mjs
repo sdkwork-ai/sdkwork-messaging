@@ -6,7 +6,7 @@ import { alignOpenApiOperationPatterns } from "../../sdkwork-specs/tools/lib/ali
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const GENERATOR_PATH = path.resolve(ROOT, "../sdkwork-sdk-generator/bin/sdkgen.js");
-const VERSION = "1.4.0";
+const VERSION = "1.5.0";
 const OWNER = "sdkwork-messaging";
 
 const FAMILIES = [
@@ -120,6 +120,9 @@ const FAMILIES = [
       route("GET", "/backend/v3/api/messaging/templates/{templateId}", "messaging.templates.retrieve", "messaging.templates", "messaging.templates.retrieve", null, "MessagingTemplateResponse", false, [pathParameter("templateId")]),
       route("PUT", "/backend/v3/api/messaging/templates/{templateId}", "messaging.templates.update", "messaging.templates", "messaging.templates.update", "MessagingTemplateUpdateRequest", "MessagingTemplateResponse", true, [pathParameter("templateId")]),
       route("DELETE", "/backend/v3/api/messaging/templates/{templateId}", "messaging.templates.delete", "messaging.templates", "messaging.templates.delete", null, null, true, [pathParameter("templateId")]),
+      route("GET", "/backend/v3/api/messaging/templates/{templateId}/providers", "messaging.templateProviders.list", "messaging.templateProviders", "messaging.templateProviders.list", null, "MessagingTemplateProviderListResponse", false, [pathParameter("templateId")], "messaging.templates.get", false),
+      route("POST", "/backend/v3/api/messaging/templates/{templateId}/providers/sync", "messaging.templateProviders.sync", "messaging.templateProviders", "messaging.templateProviders.sync", "MessagingTemplateProviderSyncRequest", "MessagingTemplateProviderSyncResponse", true, [pathParameter("templateId")]),
+      route("PUT", "/backend/v3/api/messaging/templates/{templateId}/providers/{provider}", "messaging.templateProviders.update", "messaging.templateProviders", "messaging.templateProviders.update", "MessagingTemplateProviderUpdateRequest", "MessagingTemplateProviderResponse", true, [pathParameter("templateId"), providerParameter()]),
     ],
   },
 ];
@@ -511,6 +514,7 @@ function schemas() {
       payload: metadata,
       scenario: { type: "string", maxLength: 64 },
       templateCode: { type: "string", maxLength: 160 },
+      provider: { type: "string", maxLength: 64 },
     }),
     MessagingOutboundMessageResponse: object(["item", "requestId"], {
       item: { $ref: "#/components/schemas/MessagingOutboundMessage" },
@@ -901,6 +905,38 @@ function schemas() {
       requestId,
     }),
     MessagingTemplateListResponse: envelope("MessagingTemplateListResponse", "MessagingTemplate"),
+    MessagingTemplateProviderBinding: object(["provider", "syncStatus", "version"], {
+      provider: { type: "string", minLength: 1, maxLength: 64 },
+      providerTemplateId: { type: "string", maxLength: 192 },
+      providerTemplateName: { type: "string", maxLength: 192 },
+      syncStatus: { type: "string", enum: ["not_synced", "pending_approval", "synced", "failed"] },
+      syncMessage: { type: "string", maxLength: 512 },
+      lastSyncedAt: { type: "string", format: "date-time" },
+      version: int64,
+    }),
+    MessagingTemplateProviderListResponse: envelope("MessagingTemplateProviderListResponse", "MessagingTemplateProviderBinding"),
+    MessagingTemplateProviderResponse: object(["item", "requestId"], {
+      item: { $ref: "#/components/schemas/MessagingTemplateProviderBinding" },
+      requestId,
+    }),
+    MessagingTemplateProviderSyncRequest: object([], {
+      providers: { type: "array", maxItems: 32, items: { type: "string", minLength: 1, maxLength: 64 } },
+      overwrite: { type: "boolean" },
+    }),
+    MessagingTemplateProviderSyncResult: object(["synced", "pendingApproval", "items"], {
+      synced: { type: "integer", minimum: 0 },
+      pendingApproval: { type: "integer", minimum: 0 },
+      items: { type: "array", items: { $ref: "#/components/schemas/MessagingTemplateProviderBinding" } },
+    }),
+    MessagingTemplateProviderSyncResponse: object(["item", "requestId"], {
+      item: { $ref: "#/components/schemas/MessagingTemplateProviderSyncResult" },
+      requestId,
+    }),
+    MessagingTemplateProviderUpdateRequest: object([], {
+      providerTemplateId: { type: "string", maxLength: 192 },
+      providerTemplateName: { type: "string", maxLength: 192 },
+      syncStatus: { type: "string", enum: ["not_synced", "pending_approval", "synced", "failed"] },
+    }),
   };
 }
 
