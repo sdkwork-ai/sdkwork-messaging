@@ -409,6 +409,7 @@ export const messagingNotifyAdminMessagesEn = {
   "admin.notify.records.detailTitle": "Send record detail",
   "admin.notify.records.detail.createdAt": "Created at",
   "admin.notify.records.detail.content": "Message content",
+  "admin.notify.records.detail.htmlSource": "View HTML source",
   "admin.notify.records.detail.attempts": "Delivery attempts",
   "admin.notify.records.detail.noAttempts": "No delivery attempt recorded yet.",
 };

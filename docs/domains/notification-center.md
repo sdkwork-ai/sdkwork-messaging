@@ -80,8 +80,11 @@ Filters: `status`, `q` (target/subject/body), `from`, `to` (RFC3339 or
 Record fields include target masked value, subject/body preview, status,
 scenario (from `payload_json.scenario`, default `default`), template code,
 latest provider and provider message id, latest error, attempt count, and
-created/sent/delivered/failed timestamps. The detail response adds the full body
-and the ordered attempt list.
+created/sent/delivered/failed timestamps. The detail response adds the full body,
+a tag-stripped `bodyText` rendering, and the ordered attempt list. The console
+renders `bodyText` by default and keeps the raw HTML body behind an explicit
+"View HTML source" disclosure, so operators never read markup by accident and
+the console never injects stored HTML into the page.
 
 Status vocabulary: `accepted`, `queued`, `sent`, `delivered`, `failed`,
 `opened`, `cancelled`, `expired`. The delivery worker owns message status

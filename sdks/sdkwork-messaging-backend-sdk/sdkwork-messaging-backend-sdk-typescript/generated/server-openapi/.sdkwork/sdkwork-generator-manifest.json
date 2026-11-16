@@ -336,7 +336,7 @@
     },
     {
       "path": "src/types/messaging-send-record.ts",
-      "sha256": "676033eaf458963982fd8dd78ef6aa0018f4814c2da1571556bf7320e8ee2c51"
+      "sha256": "728a1501ac1319389f3b1c23ec6c042a9f711782f5d26f11ed939bd04051e321"
     },
     {
       "path": "src/types/messaging-sms-account-create-request.ts",

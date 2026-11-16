@@ -179,8 +179,11 @@ pub struct MessagingSendRecordItem {
     pub target_masked: String,
     pub subject: Option<String>,
     /// Full message body (email HTML or SMS text). The list preview is derived
-    /// from it; the detail drawer renders this value.
+    /// from it; the detail drawer renders this value as the HTML source.
     pub body: String,
+    /// Plain-text rendering of the body (HTML tags stripped, whitespace
+    /// collapsed). Used by the detail drawer so operators do not read raw tags.
+    pub body_text: String,
     pub body_preview: String,
     pub status: String,
     pub scenario: String,

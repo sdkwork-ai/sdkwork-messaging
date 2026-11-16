@@ -535,6 +535,7 @@ function schemas() {
       targetMasked: { type: "string" },
       subject: { type: "string" },
       body: { type: "string" },
+      bodyText: { type: "string" },
       bodyPreview: { type: "string" },
       status: { type: "string", enum: ["accepted", "queued", "sent", "delivered", "failed", "opened", "cancelled", "expired"] },
       scenario: { type: "string", minLength: 1, maxLength: 64 },

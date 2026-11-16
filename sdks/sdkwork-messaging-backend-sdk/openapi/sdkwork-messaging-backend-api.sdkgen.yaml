@@ -8894,6 +8894,9 @@
           "body": {
             "type": "string"
           },
+          "bodyText": {
+            "type": "string"
+          },
           "bodyPreview": {
             "type": "string"
           },

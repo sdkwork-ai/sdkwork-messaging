@@ -409,6 +409,7 @@ export const messagingNotifyAdminMessagesZh = {
   "admin.notify.records.detailTitle": "发送记录详情",
   "admin.notify.records.detail.createdAt": "创建时间",
   "admin.notify.records.detail.content": "消息内容",
+  "admin.notify.records.detail.htmlSource": "查看 HTML 源码",
   "admin.notify.records.detail.attempts": "投递尝试",
   "admin.notify.records.detail.noAttempts": "尚无投递尝试记录。",
 };

@@ -228,6 +228,7 @@ async fn send_record_and_dashboard_routes_return_the_contract_envelope() {
         "enterprise_mail"
     );
     assert_eq!(body["data"]["item"]["body"], "<p>Your code is 123456</p>");
+    assert_eq!(body["data"]["item"]["bodyText"], "Your code is 123456");
 
     let (status, body, _) = get_json(
         router.clone(),

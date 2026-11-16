@@ -383,11 +383,8 @@ fn escape_like_pattern(value: &str) -> String {
         .replace('_', "\\_")
 }
 
-/// One-line preview for a send record. HTML-heavy email bodies collapse to a
-/// short plain-text excerpt; the full body stays on the record detail.
-fn body_preview(body: &str) -> String {
-    // Strip HTML tags first: email bodies are HTML, and a raw tag stream is a
-    // poor one-line preview in the console table.
+/// Strips HTML tags and collapses whitespace into a plain-text rendering.
+fn strip_html_text(body: &str) -> String {
     let mut text = String::with_capacity(body.len());
     let mut in_tag = false;
     for character in body.chars() {
@@ -398,7 +395,13 @@ fn body_preview(body: &str) -> String {
             _ => {}
         }
     }
-    let collapsed = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// One-line preview for a send record. HTML-heavy email bodies collapse to a
+/// short plain-text excerpt; the full body stays on the record detail.
+fn body_preview(body: &str) -> String {
+    let collapsed = strip_html_text(body);
     let mut chars = collapsed.chars();
     let preview: String = chars.by_ref().take(160).collect();
     if chars.next().is_some() {
@@ -416,6 +419,7 @@ fn send_record_item_from_row(row: &sqlx::postgres::PgRow) -> MessagingSendRecord
         target_masked: row.get("target_masked"),
         subject: row.get("subject"),
         body: body.clone(),
+        body_text: strip_html_text(&body),
         body_preview: body_preview(&body),
         status: row.get("status"),
         scenario: row
@@ -3996,6 +4000,11 @@ mod tests {
         assert_eq!(body_preview("hello \n  world"), "hello world");
         assert_eq!(body_preview("<p>hello</p> \n <b>world</b>"), "hello world");
         assert_eq!(body_preview("<p>only</p>"), "only");
+        assert_eq!(
+            strip_html_text("<p>a</p>\n<b>b</b>"),
+            "a b",
+            "full plain text keeps all content"
+        );
         let long = "x".repeat(200);
         let preview = body_preview(&long);
         assert!(preview.ends_with('…'));

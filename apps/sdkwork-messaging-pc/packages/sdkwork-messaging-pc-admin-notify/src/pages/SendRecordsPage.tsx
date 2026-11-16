@@ -387,8 +387,18 @@ export function SendRecordsPage({ channel, service }: SdkworkMessagingSendRecord
                   </p>
                 ) : null}
                 <p className="mt-1 whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-xs text-slate-600 dark:bg-white/5 dark:text-slate-300">
-                  {detail.body ?? detail.bodyPreview}
+                  {detail.bodyText ?? detail.bodyPreview}
                 </p>
+                {detail.body && detail.body !== detail.bodyText && detail.body.includes("<") ? (
+                  <details className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                    <summary className="cursor-pointer">
+                      {t("admin.notify.records.detail.htmlSource")}
+                    </summary>
+                    <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-[11px] text-slate-600 dark:bg-white/5 dark:text-slate-300">
+                      {detail.body}
+                    </pre>
+                  </details>
+                ) : null}
               </section>
               {detail.errorMessage ? (
                 <section className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
