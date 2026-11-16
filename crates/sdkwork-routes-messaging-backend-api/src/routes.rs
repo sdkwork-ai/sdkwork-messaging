@@ -110,6 +110,10 @@ pub fn problem_response(status: StatusCode, title: &str, detail: impl Into<Strin
     }))
     .into_response();
     *response.status_mut() = status;
+    response.headers_mut().insert(
+        axum::http::header::CONTENT_TYPE,
+        axum::http::HeaderValue::from_static("application/problem+json"),
+    );
     response
 }
 
@@ -634,14 +638,31 @@ struct SendRecordListQuery {
     q: Option<String>,
     from: Option<String>,
     to: Option<String>,
-    page: Option<i64>,
-    page_size: Option<i64>,
+    page: Option<String>,
+    page_size: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct DashboardQuery {
-    range: Option<i64>,
+    range: Option<String>,
+}
+
+/// Parses an optional integer query value. Typed extraction would turn a
+/// malformed value into axum's plain-text rejection before the handler can
+/// produce a `ProblemDetail`; parsing here keeps every 400 on the API contract.
+#[allow(clippy::result_large_err)]
+fn parse_query_i64(raw: Option<&str>, field: &str) -> Result<Option<i64>, Response> {
+    let Some(raw) = raw.map(str::trim).filter(|value| !value.is_empty()) else {
+        return Ok(None);
+    };
+    raw.parse::<i64>().map(Some).map_err(|_| {
+        problem_response(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            format!("{field} must be an integer"),
+        )
+    })
 }
 
 /// Parses a list filter date bound. Accepts RFC3339 timestamps and bare
@@ -697,10 +718,15 @@ async fn send_records_response(
     channel: &'static str,
     query: SendRecordListQuery,
 ) -> Response {
-    let (page, page_size) = match page_bounds(&PageQuery {
-        page: query.page,
-        page_size: query.page_size,
-    }) {
+    let page = match parse_query_i64(query.page.as_deref(), "page") {
+        Ok(value) => value,
+        Err(response) => return response,
+    };
+    let page_size = match parse_query_i64(query.page_size.as_deref(), "page_size") {
+        Ok(value) => value,
+        Err(response) => return response,
+    };
+    let (page, page_size) = match page_bounds(&PageQuery { page, page_size }) {
         Ok(bounds) => bounds,
         Err(response) => return response,
     };
@@ -819,7 +845,11 @@ async fn notification_dashboard(
     subject: MessagingAdminSubject,
     Query(query): Query<DashboardQuery>,
 ) -> Response {
-    let range = query.range.unwrap_or(30);
+    let range = match parse_query_i64(query.range.as_deref(), "range") {
+        Ok(Some(value)) => value,
+        Ok(None) => 30,
+        Err(response) => return response,
+    };
     if !(1..=365).contains(&range) {
         return problem_response(
             StatusCode::BAD_REQUEST,

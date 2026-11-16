@@ -30,3 +30,4 @@ sdkwork-iam-web-adapter.workspace = true
 
 [dev-dependencies]
 sdkwork-web-contract.workspace = true
+tower.workspace = true
