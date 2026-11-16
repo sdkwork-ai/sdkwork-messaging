@@ -34,6 +34,7 @@ sdkwork-messaging-delivery-service = { path = "crates/sdkwork-messaging-delivery
 sdkwork-routes-messaging-backend-api = { path = "crates/sdkwork-routes-messaging-backend-api" }
 sdkwork-api-messaging-assembly = { path = "crates/sdkwork-api-messaging-assembly" }
 axum = { version = "0.8", features = ["ws"] }
+tower = { version = "0.5", features = ["util"] }
 sdkwork-database-config = { path = "../sdkwork-database/crates/sdkwork-database-config", package = "sdkwork-database-config" }
 sdkwork-database-lifecycle = { path = "../sdkwork-database/crates/sdkwork-database-lifecycle", package = "sdkwork-database-lifecycle" }
 sdkwork-database-spi = { path = "../sdkwork-database/crates/sdkwork-database-spi", package = "sdkwork-database-spi" }

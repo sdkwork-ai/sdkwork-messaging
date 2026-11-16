@@ -4,4 +4,6 @@ export interface MessagingOutboundMessageSendRequest {
   subject?: string;
   body: string;
   payload?: Record<string, unknown>;
+  scenario?: string;
+  templateCode?: string;
 }

@@ -65,6 +65,41 @@ const HTTP_ROUTES: &[HttpRoute] = &[
     .with_idempotent(true),
     HttpRoute::dual_token(
         HttpMethod::Get,
+        "/backend/v3/api/messaging/email/send_records",
+        SDK_DOMAIN,
+        "messaging.emailSendRecords.list",
+    )
+    .with_required_permission("messaging.outboundMessages.get"),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/messaging/email/send_records/{recordId}",
+        SDK_DOMAIN,
+        "messaging.emailSendRecords.retrieve",
+    )
+    .with_required_permission("messaging.outboundMessages.get"),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/messaging/sms/send_records",
+        SDK_DOMAIN,
+        "messaging.smsSendRecords.list",
+    )
+    .with_required_permission("messaging.outboundMessages.get"),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/messaging/sms/send_records/{recordId}",
+        SDK_DOMAIN,
+        "messaging.smsSendRecords.retrieve",
+    )
+    .with_required_permission("messaging.outboundMessages.get"),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/backend/v3/api/messaging/dashboard",
+        SDK_DOMAIN,
+        "messaging.dashboard.retrieve",
+    )
+    .with_required_permission("messaging.notifications.get"),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
         "/backend/v3/api/messaging/verification_policies",
         SDK_DOMAIN,
         "messaging.verificationPolicies.list",
@@ -115,6 +150,14 @@ const HTTP_ROUTES: &[HttpRoute] = &[
         "messaging.emailAccounts.delete",
     )
     .with_required_permission("messaging.emailAccounts.delete")
+    .with_idempotent(true),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/messaging/email/providers/{provider}/initialize",
+        SDK_DOMAIN,
+        "messaging.emailProviders.initialize",
+    )
+    .with_required_permission("messaging.emailAccounts.post")
     .with_idempotent(true),
     HttpRoute::dual_token(
         HttpMethod::Get,
@@ -206,6 +249,14 @@ const HTTP_ROUTES: &[HttpRoute] = &[
         "messaging.smsAccounts.delete",
     )
     .with_required_permission("messaging.smsAccounts.delete")
+    .with_idempotent(true),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/backend/v3/api/messaging/sms/providers/{provider}/initialize",
+        SDK_DOMAIN,
+        "messaging.smsProviders.initialize",
+    )
+    .with_required_permission("messaging.smsAccounts.post")
     .with_idempotent(true),
     HttpRoute::dual_token(
         HttpMethod::Get,

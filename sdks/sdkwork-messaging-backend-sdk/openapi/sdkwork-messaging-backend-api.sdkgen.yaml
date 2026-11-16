@@ -2,7 +2,7 @@
   "openapi": "3.1.2",
   "info": {
     "title": "SDKWork Messaging Backend API",
-    "version": "1.2.0",
+    "version": "1.4.0",
     "description": "Backend/admin contract for notification creation, announcement publishing, app push delivery, SMS/email sends, verification policies, channel configuration, and message templates.",
     "x-sdkwork-api-authority": "sdkwork-messaging-backend-api",
     "x-sdkwork-sdk-family": "sdkwork-messaging-backend-sdk"
@@ -1303,6 +1303,858 @@
         }
       }
     },
+    "/backend/v3/api/messaging/email/send_records": {
+      "get": {
+        "tags": [
+          "messaging"
+        ],
+        "summary": "messaging.emailSendRecords.list",
+        "operationId": "emailSendRecords.list",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "accepted",
+                "queued",
+                "sent",
+                "delivered",
+                "failed",
+                "opened",
+                "cancelled",
+                "expired"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 40
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 40
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "items",
+                            "pageInfo"
+                          ],
+                          "properties": {
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/MessagingSendRecord"
+                              }
+                            },
+                            "pageInfo": {
+                              "$ref": "#/components/schemas/PageInfo"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-messaging",
+        "x-sdkwork-api-authority": "sdkwork-messaging-backend-api",
+        "x-sdkwork-domain": "messaging",
+        "x-sdkwork-resource": "messaging.emailSendRecords",
+        "x-sdkwork-permission": "messaging.outboundMessages.get",
+        "x-sdkwork-tenant-scope": "tenant",
+        "x-sdkwork-data-scope": "organization",
+        "x-sdkwork-audit-event": "messaging.email_send_records.list",
+        "x-sdkwork-idempotent": false,
+        "x-sdkwork-deployment": "all",
+        "x-sdkwork-source": "crates/sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-source-route-crate": "sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-server-request-id": true
+      }
+    },
+    "/backend/v3/api/messaging/email/send_records/{recordId}": {
+      "get": {
+        "tags": [
+          "messaging"
+        ],
+        "summary": "messaging.emailSendRecords.retrieve",
+        "operationId": "emailSendRecords.retrieve",
+        "parameters": [
+          {
+            "name": "recordId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/MessagingSendRecord"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-messaging",
+        "x-sdkwork-api-authority": "sdkwork-messaging-backend-api",
+        "x-sdkwork-domain": "messaging",
+        "x-sdkwork-resource": "messaging.emailSendRecords",
+        "x-sdkwork-permission": "messaging.outboundMessages.get",
+        "x-sdkwork-tenant-scope": "tenant",
+        "x-sdkwork-data-scope": "organization",
+        "x-sdkwork-audit-event": "messaging.email_send_records.retrieve",
+        "x-sdkwork-idempotent": false,
+        "x-sdkwork-deployment": "all",
+        "x-sdkwork-source": "crates/sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-source-route-crate": "sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-server-request-id": true
+      }
+    },
+    "/backend/v3/api/messaging/sms/send_records": {
+      "get": {
+        "tags": [
+          "messaging"
+        ],
+        "summary": "messaging.smsSendRecords.list",
+        "operationId": "smsSendRecords.list",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "accepted",
+                "queued",
+                "sent",
+                "delivered",
+                "failed",
+                "opened",
+                "cancelled",
+                "expired"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 40
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 40
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "items",
+                            "pageInfo"
+                          ],
+                          "properties": {
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/MessagingSendRecord"
+                              }
+                            },
+                            "pageInfo": {
+                              "$ref": "#/components/schemas/PageInfo"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-messaging",
+        "x-sdkwork-api-authority": "sdkwork-messaging-backend-api",
+        "x-sdkwork-domain": "messaging",
+        "x-sdkwork-resource": "messaging.smsSendRecords",
+        "x-sdkwork-permission": "messaging.outboundMessages.get",
+        "x-sdkwork-tenant-scope": "tenant",
+        "x-sdkwork-data-scope": "organization",
+        "x-sdkwork-audit-event": "messaging.sms_send_records.list",
+        "x-sdkwork-idempotent": false,
+        "x-sdkwork-deployment": "all",
+        "x-sdkwork-source": "crates/sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-source-route-crate": "sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-server-request-id": true
+      }
+    },
+    "/backend/v3/api/messaging/sms/send_records/{recordId}": {
+      "get": {
+        "tags": [
+          "messaging"
+        ],
+        "summary": "messaging.smsSendRecords.retrieve",
+        "operationId": "smsSendRecords.retrieve",
+        "parameters": [
+          {
+            "name": "recordId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/MessagingSendRecord"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-messaging",
+        "x-sdkwork-api-authority": "sdkwork-messaging-backend-api",
+        "x-sdkwork-domain": "messaging",
+        "x-sdkwork-resource": "messaging.smsSendRecords",
+        "x-sdkwork-permission": "messaging.outboundMessages.get",
+        "x-sdkwork-tenant-scope": "tenant",
+        "x-sdkwork-data-scope": "organization",
+        "x-sdkwork-audit-event": "messaging.sms_send_records.retrieve",
+        "x-sdkwork-idempotent": false,
+        "x-sdkwork-deployment": "all",
+        "x-sdkwork-source": "crates/sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-source-route-crate": "sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-server-request-id": true
+      }
+    },
+    "/backend/v3/api/messaging/dashboard": {
+      "get": {
+        "tags": [
+          "messaging"
+        ],
+        "summary": "messaging.dashboard.retrieve",
+        "operationId": "dashboard.retrieve",
+        "parameters": [
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365,
+              "default": 30
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/MessagingDashboardSummary"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-messaging",
+        "x-sdkwork-api-authority": "sdkwork-messaging-backend-api",
+        "x-sdkwork-domain": "messaging",
+        "x-sdkwork-resource": "messaging.dashboard",
+        "x-sdkwork-permission": "messaging.notifications.get",
+        "x-sdkwork-tenant-scope": "tenant",
+        "x-sdkwork-data-scope": "organization",
+        "x-sdkwork-audit-event": "messaging.dashboard.retrieve",
+        "x-sdkwork-idempotent": false,
+        "x-sdkwork-deployment": "all",
+        "x-sdkwork-source": "crates/sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-source-route-crate": "sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-server-request-id": true
+      }
+    },
     "/backend/v3/api/messaging/verification_policies": {
       "get": {
         "tags": [
@@ -2398,6 +3250,162 @@
         "x-sdkwork-tenant-scope": "tenant",
         "x-sdkwork-data-scope": "organization",
         "x-sdkwork-audit-event": "messaging.emailAccounts.delete",
+        "x-sdkwork-idempotent": true,
+        "x-sdkwork-deployment": "all",
+        "x-sdkwork-source": "crates/sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-source-route-crate": "sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-server-request-id": true
+      }
+    },
+    "/backend/v3/api/messaging/email/providers/{provider}/initialize": {
+      "post": {
+        "tags": [
+          "messaging"
+        ],
+        "summary": "messaging.emailProviders.initialize",
+        "operationId": "emailProviders.initialize",
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Client-provided retry key for this command. It is scoped by tenant, principal, method, and path.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "x-sdkwork-idempotency-key": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/MessagingProviderInitializeResponse"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-messaging",
+        "x-sdkwork-api-authority": "sdkwork-messaging-backend-api",
+        "x-sdkwork-domain": "messaging",
+        "x-sdkwork-resource": "messaging.emailProviders",
+        "x-sdkwork-permission": "messaging.emailAccounts.post",
+        "x-sdkwork-tenant-scope": "tenant",
+        "x-sdkwork-data-scope": "organization",
+        "x-sdkwork-audit-event": "messaging.emailProviders.initialize",
         "x-sdkwork-idempotent": true,
         "x-sdkwork-deployment": "all",
         "x-sdkwork-source": "crates/sdkwork-routes-messaging-backend-api",
@@ -4286,6 +5294,162 @@
         "x-sdkwork-tenant-scope": "tenant",
         "x-sdkwork-data-scope": "organization",
         "x-sdkwork-audit-event": "messaging.smsAccounts.delete",
+        "x-sdkwork-idempotent": true,
+        "x-sdkwork-deployment": "all",
+        "x-sdkwork-source": "crates/sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-source-route-crate": "sdkwork-routes-messaging-backend-api",
+        "x-sdkwork-server-request-id": true
+      }
+    },
+    "/backend/v3/api/messaging/sms/providers/{provider}/initialize": {
+      "post": {
+        "tags": [
+          "messaging"
+        ],
+        "summary": "messaging.smsProviders.initialize",
+        "operationId": "smsProviders.initialize",
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Client-provided retry key for this command. It is scoped by tenant, principal, method, and path.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "x-sdkwork-idempotency-key": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SdkWorkApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "item"
+                          ],
+                          "properties": {
+                            "item": {
+                              "$ref": "#/components/schemas/MessagingProviderInitializeResponse"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AuthToken": [],
+            "AccessToken": []
+          }
+        ],
+        "x-sdkwork-owner": "sdkwork-messaging",
+        "x-sdkwork-api-authority": "sdkwork-messaging-backend-api",
+        "x-sdkwork-domain": "messaging",
+        "x-sdkwork-resource": "messaging.smsProviders",
+        "x-sdkwork-permission": "messaging.smsAccounts.post",
+        "x-sdkwork-tenant-scope": "tenant",
+        "x-sdkwork-data-scope": "organization",
+        "x-sdkwork-audit-event": "messaging.smsProviders.initialize",
         "x-sdkwork-idempotent": true,
         "x-sdkwork-deployment": "all",
         "x-sdkwork-source": "crates/sdkwork-routes-messaging-backend-api",
@@ -6401,6 +7565,279 @@
           }
         }
       },
+      "MessagingDashboardChannel": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "channel",
+          "total",
+          "delivered",
+          "failed",
+          "pending"
+        ],
+        "properties": {
+          "channel": {
+            "type": "string",
+            "enum": [
+              "sms",
+              "email"
+            ]
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "delivered": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pending": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "MessagingDashboardProvider": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "provider",
+          "channel",
+          "total",
+          "failed"
+        ],
+        "properties": {
+          "provider": {
+            "type": "string",
+            "minLength": 1
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "sms",
+              "email"
+            ]
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "MessagingDashboardScenario": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "scenario",
+          "channel",
+          "total",
+          "failed"
+        ],
+        "properties": {
+          "scenario": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "sms",
+              "email"
+            ]
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "MessagingDashboardStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "count"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "queued",
+              "sent",
+              "delivered",
+              "failed",
+              "opened",
+              "cancelled",
+              "expired"
+            ]
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "MessagingDashboardSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rangeDays",
+          "from",
+          "to",
+          "totals",
+          "byChannel",
+          "byStatus",
+          "byScenario",
+          "byProvider",
+          "trend",
+          "recentFailures"
+        ],
+        "properties": {
+          "rangeDays": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 365
+          },
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/MessagingDashboardTotals"
+          },
+          "byChannel": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessagingDashboardChannel"
+            }
+          },
+          "byStatus": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessagingDashboardStatus"
+            }
+          },
+          "byScenario": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessagingDashboardScenario"
+            }
+          },
+          "byProvider": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessagingDashboardProvider"
+            }
+          },
+          "trend": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessagingDashboardTrendPoint"
+            }
+          },
+          "recentFailures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessagingSendRecord"
+            }
+          }
+        }
+      },
+      "MessagingDashboardTotals": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "total",
+          "email",
+          "sms",
+          "delivered",
+          "failed",
+          "pending",
+          "successRate"
+        ],
+        "properties": {
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "email": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sms": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "delivered": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pending": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "successRate": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      },
+      "MessagingDashboardTrendPoint": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "date",
+          "email",
+          "sms",
+          "delivered",
+          "failed"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          },
+          "email": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sms": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "delivered": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
       "MessagingEmailAccount": {
         "type": "object",
         "additionalProperties": false,
@@ -6695,7 +8132,9 @@
           "senderId",
           "accountId",
           "accountName",
-          "fromAddress"
+          "fromAddress",
+          "identityEnabled",
+          "stepEnabled"
         ],
         "properties": {
           "senderId": {
@@ -6719,6 +8158,26 @@
             "type": "string",
             "maxLength": 192
           },
+          "identityEnabled": {
+            "type": "boolean"
+          },
+          "stepEnabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "MessagingEmailSendRuleStepUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "senderId",
+          "enabled"
+        ],
+        "properties": {
+          "senderId": {
+            "type": "string",
+            "minLength": 1
+          },
           "enabled": {
             "type": "boolean"
           }
@@ -6728,17 +8187,16 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "senderIds",
+          "steps",
           "enabled",
           "expectedVersion"
         ],
         "properties": {
-          "senderIds": {
+          "steps": {
             "type": "array",
             "maxItems": 50,
             "items": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/MessagingEmailSendRuleStepUpdate"
             }
           },
           "enabled": {
@@ -7157,6 +8615,45 @@
           "payload": {
             "type": "object",
             "additionalProperties": true
+          },
+          "scenario": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "templateCode": {
+            "type": "string",
+            "maxLength": 160
+          }
+        }
+      },
+      "MessagingProviderInitializeResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "accepted"
+        ],
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          },
+          "resourceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "initialized"
+            ]
+          },
+          "identityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rulesEnsured": {
+            "type": "integer",
+            "minimum": 0
           }
         }
       },
@@ -7298,6 +8795,181 @@
             "format": "date-time"
           }
         }
+      },
+      "MessagingSendAttempt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "status",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "provider": {
+            "type": "string"
+          },
+          "providerMessageId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "queued",
+              "sent",
+              "delivered",
+              "failed",
+              "opened",
+              "cancelled",
+              "expired"
+            ]
+          },
+          "errorCode": {
+            "type": "string"
+          },
+          "errorMessage": {
+            "type": "string"
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deliveredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "failedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MessagingSendRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "channel",
+          "targetMasked",
+          "bodyPreview",
+          "status",
+          "scenario",
+          "attemptCount",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "sms",
+              "email"
+            ]
+          },
+          "targetMasked": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "bodyPreview": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "queued",
+              "sent",
+              "delivered",
+              "failed",
+              "opened",
+              "cancelled",
+              "expired"
+            ]
+          },
+          "scenario": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "templateCode": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "provider": {
+            "type": "string"
+          },
+          "providerMessageId": {
+            "type": "string"
+          },
+          "errorCode": {
+            "type": "string"
+          },
+          "errorMessage": {
+            "type": "string"
+          },
+          "attemptCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deliveredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "failedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "attempts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessagingSendAttempt"
+            }
+          }
+        }
+      },
+      "MessagingSendRecordListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "pageInfo"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessagingSendRecord"
+            }
+          },
+          "pageInfo": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        },
+        "x-sdkwork-schema-name": "MessagingSendRecordListResponse"
       },
       "MessagingSmsAccount": {
         "type": "object",
@@ -7568,7 +9240,9 @@
           "signatureId",
           "accountId",
           "accountName",
-          "signName"
+          "signName",
+          "identityEnabled",
+          "stepEnabled"
         ],
         "properties": {
           "signatureId": {
@@ -7588,6 +9262,26 @@
             "minLength": 1,
             "maxLength": 64
           },
+          "identityEnabled": {
+            "type": "boolean"
+          },
+          "stepEnabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "MessagingSmsSendRuleStepUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "signatureId",
+          "enabled"
+        ],
+        "properties": {
+          "signatureId": {
+            "type": "string",
+            "minLength": 1
+          },
           "enabled": {
             "type": "boolean"
           }
@@ -7597,17 +9291,16 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "signatureIds",
+          "steps",
           "enabled",
           "expectedVersion"
         ],
         "properties": {
-          "signatureIds": {
+          "steps": {
             "type": "array",
             "maxItems": 50,
             "items": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/MessagingSmsSendRuleStepUpdate"
             }
           },
           "enabled": {

@@ -6,7 +6,7 @@ use axum::extract::{FromRequestParts, Path, Query, State};
 use axum::http::request::Parts;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, put};
+use axum::routing::{get, post, put};
 use axum::{Json, Router};
 use sdkwork_utils_rust::uuid;
 use sdkwork_web_core::WebRequestContext;
@@ -17,9 +17,10 @@ use crate::ports::{
     CreateEmailAccountCommand, CreateEmailSenderCommand, CreateNotificationCommand,
     CreateSmsAccountCommand, CreateSmsSignatureCommand, CreateTemplateCommand, MessagingAdminStore,
     MessagingAdminSubject, PublishAnnouncementCommand, SendOutboundMessageCommand,
-    SendPushMessageCommand, StoreError, UpdateEmailAccountCommand, UpdateEmailSendRuleCommand,
-    UpdateEmailSenderCommand, UpdateSmsAccountCommand, UpdateSmsSendRuleCommand,
-    UpdateSmsSignatureCommand, UpdateTemplateCommand, UpdateVerificationPolicyCommand,
+    SendPushMessageCommand, SendRecordFilter, StoreError, UpdateEmailAccountCommand,
+    UpdateEmailSendRuleCommand, UpdateEmailSenderCommand, UpdateSmsAccountCommand,
+    UpdateSmsSendRuleCommand, UpdateSmsSignatureCommand, UpdateTemplateCommand,
+    UpdateVerificationPolicyCommand,
 };
 
 #[derive(Clone)]
@@ -109,6 +110,10 @@ pub fn problem_response(status: StatusCode, title: &str, detail: impl Into<Strin
     }))
     .into_response();
     *response.status_mut() = status;
+    response.headers_mut().insert(
+        axum::http::header::CONTENT_TYPE,
+        axum::http::HeaderValue::from_static("application/problem+json"),
+    );
     response
 }
 
@@ -255,6 +260,26 @@ pub fn admin_messaging_router_with_store(
             get(list_outbound_messages).post(send_outbound_message),
         )
         .route(
+            "/backend/v3/api/messaging/email/send_records",
+            get(list_email_send_records),
+        )
+        .route(
+            "/backend/v3/api/messaging/email/send_records/{recordId}",
+            get(retrieve_email_send_record),
+        )
+        .route(
+            "/backend/v3/api/messaging/sms/send_records",
+            get(list_sms_send_records),
+        )
+        .route(
+            "/backend/v3/api/messaging/sms/send_records/{recordId}",
+            get(retrieve_sms_send_record),
+        )
+        .route(
+            "/backend/v3/api/messaging/dashboard",
+            get(notification_dashboard),
+        )
+        .route(
             "/backend/v3/api/messaging/verification_policies",
             get(list_verification_policies),
         )
@@ -271,6 +296,10 @@ pub fn admin_messaging_router_with_store(
             get(retrieve_email_account)
                 .put(update_email_account)
                 .delete(delete_email_account),
+        )
+        .route(
+            "/backend/v3/api/messaging/email/providers/{provider}/initialize",
+            post(initialize_email_provider),
         )
         .route(
             "/backend/v3/api/messaging/email/senders",
@@ -299,6 +328,10 @@ pub fn admin_messaging_router_with_store(
             get(retrieve_sms_account)
                 .put(update_sms_account)
                 .delete(delete_sms_account),
+        )
+        .route(
+            "/backend/v3/api/messaging/sms/providers/{provider}/initialize",
+            post(initialize_sms_provider),
         )
         .route(
             "/backend/v3/api/messaging/sms/signatures",
@@ -596,6 +629,251 @@ async fn send_outbound_message(
     }
 }
 
+// ------------------------------------------------------------- send records
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SendRecordListQuery {
+    status: Option<String>,
+    q: Option<String>,
+    from: Option<String>,
+    to: Option<String>,
+    page: Option<String>,
+    page_size: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DashboardQuery {
+    range: Option<String>,
+}
+
+/// Parses an optional integer query value. Typed extraction would turn a
+/// malformed value into axum's plain-text rejection before the handler can
+/// produce a `ProblemDetail`; parsing here keeps every 400 on the API contract.
+#[allow(clippy::result_large_err)]
+fn parse_query_i64(raw: Option<&str>, field: &str) -> Result<Option<i64>, Response> {
+    let Some(raw) = raw.map(str::trim).filter(|value| !value.is_empty()) else {
+        return Ok(None);
+    };
+    raw.parse::<i64>().map(Some).map_err(|_| {
+        problem_response(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            format!("{field} must be an integer"),
+        )
+    })
+}
+
+/// Parses a list filter date bound. Accepts RFC3339 timestamps and bare
+/// `YYYY-MM-DD` dates; a bare `to` date covers the whole day (exclusive next
+/// midnight).
+#[allow(clippy::result_large_err)]
+fn parse_date_bound(
+    raw: Option<&str>,
+    field: &str,
+    end_exclusive: bool,
+) -> Result<Option<chrono::DateTime<chrono::Utc>>, Response> {
+    let Some(raw) = raw.map(str::trim).filter(|value| !value.is_empty()) else {
+        return Ok(None);
+    };
+    if let Ok(value) = chrono::DateTime::parse_from_rfc3339(raw) {
+        return Ok(Some(value.with_timezone(&chrono::Utc)));
+    }
+    let date = chrono::NaiveDate::parse_from_str(raw, "%Y-%m-%d").map_err(|_| {
+        problem_response(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            format!("{field} must be an RFC3339 timestamp or YYYY-MM-DD date"),
+        )
+    })?;
+    let date = if end_exclusive {
+        date.checked_add_signed(chrono::Duration::days(1))
+            .ok_or_else(|| {
+                problem_response(
+                    StatusCode::BAD_REQUEST,
+                    "Bad Request",
+                    format!("{field} is out of range"),
+                )
+            })?
+    } else {
+        date
+    };
+    let naive = date.and_hms_opt(0, 0, 0).ok_or_else(|| {
+        problem_response(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            format!("{field} is out of range"),
+        )
+    })?;
+    Ok(Some(
+        chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(naive, chrono::Utc),
+    ))
+}
+
+#[allow(clippy::result_large_err)]
+async fn send_records_response(
+    state: &MessagingRouterState,
+    subject: &MessagingAdminSubject,
+    channel: &'static str,
+    query: SendRecordListQuery,
+) -> Response {
+    let page = match parse_query_i64(query.page.as_deref(), "page") {
+        Ok(value) => value,
+        Err(response) => return response,
+    };
+    let page_size = match parse_query_i64(query.page_size.as_deref(), "page_size") {
+        Ok(value) => value,
+        Err(response) => return response,
+    };
+    let (page, page_size) = match page_bounds(&PageQuery { page, page_size }) {
+        Ok(bounds) => bounds,
+        Err(response) => return response,
+    };
+    let from = match parse_date_bound(query.from.as_deref(), "from", false) {
+        Ok(value) => value,
+        Err(response) => return response,
+    };
+    let to = match parse_date_bound(query.to.as_deref(), "to", true) {
+        Ok(value) => value,
+        Err(response) => return response,
+    };
+    if let (Some(from), Some(to)) = (from, to) {
+        if from >= to {
+            return problem_response(
+                StatusCode::BAD_REQUEST,
+                "Bad Request",
+                "from must be earlier than to",
+            );
+        }
+    }
+    let filter = SendRecordFilter {
+        status: query.status,
+        q: query.q,
+        from,
+        to,
+        page,
+        page_size,
+    };
+    match state
+        .store
+        .list_send_records(subject, channel, &filter)
+        .await
+    {
+        Ok(result) => {
+            let items = result
+                .items
+                .into_iter()
+                .filter_map(|item| serde_json::to_value(item).ok())
+                .collect();
+            list_response(items, result.page, result.page_size, result.total_items)
+        }
+        Err(error) => store_error_response(error),
+    }
+}
+
+#[allow(clippy::result_large_err)]
+async fn send_record_detail_response(
+    state: &MessagingRouterState,
+    subject: &MessagingAdminSubject,
+    channel: &'static str,
+    record_id: String,
+) -> Response {
+    let record_id = match record_id.trim().parse::<i64>() {
+        Ok(value) if value > 0 => value,
+        _ => {
+            return problem_response(
+                StatusCode::BAD_REQUEST,
+                "Bad Request",
+                "recordId must be a positive numeric id",
+            );
+        }
+    };
+    match state
+        .store
+        .retrieve_send_record(subject, channel, record_id)
+        .await
+    {
+        Ok(detail) => match serde_json::to_value(detail) {
+            Ok(value) => resource_response(StatusCode::OK, value),
+            Err(_) => problem_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "failed to serialize send record",
+            ),
+        },
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn list_email_send_records(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Query(query): Query<SendRecordListQuery>,
+) -> Response {
+    send_records_response(&state, &subject, "email", query).await
+}
+
+async fn list_sms_send_records(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Query(query): Query<SendRecordListQuery>,
+) -> Response {
+    send_records_response(&state, &subject, "sms", query).await
+}
+
+async fn retrieve_email_send_record(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(record_id): Path<String>,
+) -> Response {
+    send_record_detail_response(&state, &subject, "email", record_id).await
+}
+
+async fn retrieve_sms_send_record(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(record_id): Path<String>,
+) -> Response {
+    send_record_detail_response(&state, &subject, "sms", record_id).await
+}
+
+// --------------------------------------------------------------- dashboard
+
+async fn notification_dashboard(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Query(query): Query<DashboardQuery>,
+) -> Response {
+    let range = match parse_query_i64(query.range.as_deref(), "range") {
+        Ok(Some(value)) => value,
+        Ok(None) => 30,
+        Err(response) => return response,
+    };
+    if !(1..=365).contains(&range) {
+        return problem_response(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "range must be between 1 and 365 days",
+        );
+    }
+    match state
+        .store
+        .notification_dashboard(&subject, range, chrono::Utc::now())
+        .await
+    {
+        Ok(summary) => match serde_json::to_value(summary) {
+            Ok(value) => resource_response(StatusCode::OK, value),
+            Err(_) => problem_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "failed to serialize notification dashboard",
+            ),
+        },
+        Err(error) => store_error_response(error),
+    }
+}
+
 // --------------------------------------------------------- verification policy
 
 async fn list_verification_policies(
@@ -792,6 +1070,44 @@ async fn delete_email_account(
         .await
     {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(error) => store_error_response(error),
+    }
+}
+
+// --------------------------------------------------------- email initialize
+
+/// Idempotently initializes one email provider's console configuration:
+/// account preset, sender identity, and scenario routing steps. Missing config
+/// keys are merged; existing values and credentials are preserved.
+async fn initialize_email_provider(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(provider): Path<String>,
+    headers: axum::http::HeaderMap,
+    _body: axum::body::Bytes,
+) -> Response {
+    let _idempotency_key = match idempotency_key(&headers) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+    if let Err(error) = crate::ports::parse_email_provider(&provider) {
+        return problem_response(StatusCode::BAD_REQUEST, "Bad Request", error);
+    }
+    match state
+        .store
+        .initialize_email_provider(&subject, &provider)
+        .await
+    {
+        Ok(result) => resource_response(
+            StatusCode::OK,
+            json!({
+                "accepted": true,
+                "resourceId": result.account_id.to_string(),
+                "status": if result.created_account { "created" } else { "initialized" },
+                "identityId": result.identity_id.to_string(),
+                "rulesEnsured": result.rules_ensured,
+            }),
+        ),
         Err(error) => store_error_response(error),
     }
 }
@@ -1142,6 +1458,44 @@ async fn delete_sms_account(
         .await
     {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(error) => store_error_response(error),
+    }
+}
+
+// ------------------------------------------------------------ sms initialize
+
+/// Idempotently initializes one SMS provider's console configuration:
+/// account preset, signature identity, and scenario routing steps. Missing
+/// config keys are merged; existing values and credentials are preserved.
+async fn initialize_sms_provider(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(provider): Path<String>,
+    headers: axum::http::HeaderMap,
+    _body: axum::body::Bytes,
+) -> Response {
+    let _idempotency_key = match idempotency_key(&headers) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+    if let Err(error) = crate::ports::parse_sms_provider(&provider) {
+        return problem_response(StatusCode::BAD_REQUEST, "Bad Request", error);
+    }
+    match state
+        .store
+        .initialize_sms_provider(&subject, &provider)
+        .await
+    {
+        Ok(result) => resource_response(
+            StatusCode::OK,
+            json!({
+                "accepted": true,
+                "resourceId": result.account_id.to_string(),
+                "status": if result.created_account { "created" } else { "initialized" },
+                "identityId": result.identity_id.to_string(),
+                "rulesEnsured": result.rules_ensured,
+            }),
+        ),
         Err(error) => store_error_response(error),
     }
 }
@@ -1504,5 +1858,40 @@ async fn delete_template(
     {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(error) => store_error_response(error),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn date_bounds_accept_dates_and_rfc3339() {
+        let from = parse_date_bound(Some("2026-11-16"), "from", false)
+            .expect("date-only from")
+            .expect("from value");
+        assert_eq!(from.to_rfc3339(), "2026-11-16T00:00:00+00:00");
+
+        let to = parse_date_bound(Some("2026-11-16"), "to", true)
+            .expect("date-only to")
+            .expect("to value");
+        assert_eq!(to.to_rfc3339(), "2026-11-17T00:00:00+00:00");
+
+        let instant = parse_date_bound(Some("2026-11-16T08:30:00+08:00"), "from", false)
+            .expect("rfc3339 from")
+            .expect("from value");
+        assert_eq!(instant.to_rfc3339(), "2026-11-16T00:30:00+00:00");
+    }
+
+    #[test]
+    fn date_bounds_reject_invalid_and_overflowing_values() {
+        assert!(parse_date_bound(Some("not-a-date"), "from", false).is_err());
+        assert!(parse_date_bound(Some("2026-13-01"), "from", false).is_err());
+        // chrono's date range is wide enough for a 9999 year; the checked add
+        // still guards the true boundary instead of panicking.
+        assert!(parse_date_bound(Some("9999-12-31"), "to", true).is_ok());
+        assert!(parse_date_bound(Some("   "), "from", false)
+            .expect("blank is ignored")
+            .is_none());
     }
 }

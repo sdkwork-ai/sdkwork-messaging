@@ -1,5 +1,7 @@
+import type { MessagingEmailSendRuleStepUpdate } from './messaging-email-send-rule-step-update';
+
 export interface MessagingEmailSendRuleUpdateRequest {
-  senderIds: string[];
+  steps: MessagingEmailSendRuleStepUpdate[];
   enabled: boolean;
   expectedVersion: string;
 }

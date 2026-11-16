@@ -382,7 +382,12 @@ async fn send_rule_chain_resolves_and_blocks_sender_deletion_while_referenced() 
             &test.subject_t1o1,
             "default",
             &sdkwork_routes_messaging_backend_api::ports::UpdateEmailSendRuleCommand {
-                sender_ids: vec![sender.id.clone()],
+                steps: vec![
+                    sdkwork_routes_messaging_backend_api::ports::EmailSendRuleStepCommand {
+                        sender_id: sender.id.clone(),
+                        enabled: true,
+                    },
+                ],
                 enabled: true,
                 expected_version: "0".to_owned(),
             },
@@ -421,7 +426,12 @@ async fn send_rule_chain_resolves_and_blocks_sender_deletion_while_referenced() 
             &test.subject_t1o1,
             "default",
             &sdkwork_routes_messaging_backend_api::ports::UpdateEmailSendRuleCommand {
-                sender_ids: vec!["999999".to_owned()],
+                steps: vec![
+                    sdkwork_routes_messaging_backend_api::ports::EmailSendRuleStepCommand {
+                        sender_id: "999999".to_owned(),
+                        enabled: true,
+                    },
+                ],
                 enabled: true,
                 expected_version: rule.version.clone(),
             },
@@ -516,6 +526,184 @@ async fn sms_signature_unique_and_secret_mask_roundtrip() {
     .expect("fetch ciphertext");
     let _ciphertext: String = row.get("secret_ciphertext");
     let _key_id: String = row.get("secret_key_id");
+
+    drop_test_database(&mut admin, &database).await;
+}
+
+/// One-click provider initialization (the admin console action) must converge
+/// account + identity + every scenario chain, stay idempotent, preserve
+/// operator edits, and keep the default provider at the head of each chain.
+#[tokio::test]
+#[ignore = "requires SDKWORK_MESSAGING_TEST_DATABASE_URL (PostgreSQL)"]
+async fn provider_initialize_converges_accounts_identities_and_rules() {
+    let (test, database, mut admin) = setup().await;
+
+    let enterprise = test
+        .store
+        .initialize_email_provider(&test.subject_t1o1, "enterprise_mail")
+        .await
+        .expect("initialize enterprise mailbox");
+    assert!(enterprise.created_account);
+    assert_eq!(enterprise.rules_ensured, 4);
+
+    let accounts = test
+        .store
+        .list_email_accounts(&test.subject_t1o1, 1, 20)
+        .await
+        .expect("list email accounts");
+    assert_eq!(accounts.total_items, 1);
+    assert_eq!(accounts.items[0].provider, "enterprise_mail");
+    assert!(
+        accounts.items[0].enabled,
+        "default email account is enabled"
+    );
+
+    let senders = test
+        .store
+        .list_email_senders(&test.subject_t1o1, None, 1, 20)
+        .await
+        .expect("list email senders");
+    assert_eq!(senders.total_items, 1);
+    assert_eq!(senders.items[0].from_address, "no-reply@birdcoder.com");
+    assert!(senders.items[0].enabled);
+
+    let rules = test
+        .store
+        .list_email_send_rules(&test.subject_t1o1)
+        .await
+        .expect("list email rules");
+    assert_eq!(rules.len(), 4);
+    for rule in &rules {
+        assert!(rule.enabled);
+        assert_eq!(rule.chain.len(), 1);
+        assert_eq!(rule.chain[0].sender_id, senders.items[0].id);
+    }
+
+    // Idempotent: a second initialize adds nothing and does not bump versions.
+    let first_version = accounts.items[0].version.clone();
+    let second = test
+        .store
+        .initialize_email_provider(&test.subject_t1o1, "enterprise_mail")
+        .await
+        .expect("re-initialize enterprise mailbox");
+    assert!(!second.created_account);
+    let accounts = test
+        .store
+        .list_email_accounts(&test.subject_t1o1, 1, 20)
+        .await
+        .expect("list email accounts");
+    assert_eq!(accounts.total_items, 1);
+    assert_eq!(accounts.items[0].version, first_version);
+
+    // Operator edits survive: a non-preset key is retained and a configured
+    // host is not replaced by the preset.
+    sqlx::query(
+        "UPDATE messaging_email_account SET config_json = config_json || \
+         '{\"host\":\"smtp.operator.example\",\"customFlag\":\"keep\"}'::jsonb WHERE tenant_id = $1",
+    )
+    .bind(test.subject_t1o1.tenant_id)
+    .execute(&test.pool)
+    .await
+    .expect("apply operator edit");
+    test.store
+        .initialize_email_provider(&test.subject_t1o1, "enterprise_mail")
+        .await
+        .expect("initialize after operator edit");
+    let accounts = test
+        .store
+        .list_email_accounts(&test.subject_t1o1, 1, 20)
+        .await
+        .expect("list email accounts");
+    assert_eq!(accounts.items[0].config["host"], "smtp.operator.example");
+    assert_eq!(accounts.items[0].config["customFlag"], "keep");
+    assert_eq!(accounts.items[0].config["transport"], "smtp");
+
+    // Adding a second provider appends it after the default and reuses the
+    // existing rules instead of replacing them.
+    let gmail = test
+        .store
+        .initialize_email_provider(&test.subject_t1o1, "gmail")
+        .await
+        .expect("initialize gmail");
+    assert!(gmail.created_account);
+    let senders = test
+        .store
+        .list_email_senders(&test.subject_t1o1, None, 1, 50)
+        .await
+        .expect("list email senders");
+    assert_eq!(senders.total_items, 2);
+    let enterprise_sender = senders
+        .items
+        .iter()
+        .find(|sender| sender.account_name == "Enterprise Mail")
+        .expect("enterprise sender");
+    let gmail_sender = senders
+        .items
+        .iter()
+        .find(|sender| sender.account_name == "Gmail")
+        .expect("gmail sender");
+    let rules = test
+        .store
+        .list_email_send_rules(&test.subject_t1o1)
+        .await
+        .expect("list email rules");
+    for rule in &rules {
+        assert_eq!(rule.chain.len(), 2);
+        assert_eq!(rule.chain[0].sender_id, enterprise_sender.id);
+        assert_eq!(rule.chain[1].sender_id, gmail_sender.id);
+    }
+
+    // Unknown providers are rejected, not silently created.
+    assert!(matches!(
+        test.store
+            .initialize_email_provider(&test.subject_t1o1, "exchange")
+            .await,
+        Err(StoreError::Invalid(_))
+    ));
+
+    // SMS: Tencent Cloud is the default and gets a signature plus four rules.
+    let tencent = test
+        .store
+        .initialize_sms_provider(&test.subject_t1o1, "tencent")
+        .await
+        .expect("initialize tencent sms");
+    assert!(tencent.created_account);
+    assert_eq!(tencent.rules_ensured, 4);
+    let accounts = test
+        .store
+        .list_sms_accounts(&test.subject_t1o1, 1, 20)
+        .await
+        .expect("list sms accounts");
+    assert_eq!(accounts.total_items, 1);
+    assert_eq!(accounts.items[0].provider, "tencent");
+    assert_eq!(
+        accounts.items[0].config["endpoint"],
+        "https://sms.tencentcloudapi.com"
+    );
+    let signatures = test
+        .store
+        .list_sms_signatures(&test.subject_t1o1, None, 1, 20)
+        .await
+        .expect("list sms signatures");
+    assert_eq!(signatures.total_items, 1);
+    assert_eq!(signatures.items[0].sign_name, "BirdCoder");
+    let rules = test
+        .store
+        .list_sms_send_rules(&test.subject_t1o1)
+        .await
+        .expect("list sms rules");
+    assert_eq!(rules.len(), 4);
+    for rule in &rules {
+        assert!(rule.enabled);
+        assert_eq!(rule.chain.len(), 1);
+        assert_eq!(rule.chain[0].signature_id, signatures.items[0].id);
+    }
+    assert!(matches!(
+        test.store
+            .initialize_sms_provider(&test.subject_t1o1, "exchange")
+            .await,
+        Err(StoreError::Invalid(_))
+    ));
 
     drop_test_database(&mut admin, &database).await;
 }

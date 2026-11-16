@@ -280,6 +280,171 @@
     },
     {
       "method": "GET",
+      "path": "/backend/v3/api/messaging/email/send_records",
+      "operationId": "emailSendRecords.list",
+      "tags": [
+        "messaging"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::handlers",
+        "name": "emailSendRecords_list"
+      },
+      "schemas": {
+        "request": null,
+        "response": "MessagingSendRecordListResponse",
+        "problem": "ProblemDetail"
+      },
+      "idempotency": {
+        "required": false,
+        "header": null
+      },
+      "ownership": {
+        "owner": "sdkwork-messaging",
+        "apiAuthority": "sdkwork-messaging-backend-api"
+      },
+      "source": {
+        "file": "src/lib.rs",
+        "routeCrate": "sdkwork-routes-messaging-backend-api"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/backend/v3/api/messaging/email/send_records/{recordId}",
+      "operationId": "emailSendRecords.retrieve",
+      "tags": [
+        "messaging"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::handlers",
+        "name": "emailSendRecords_retrieve"
+      },
+      "schemas": {
+        "request": null,
+        "response": "MessagingSendRecord",
+        "problem": "ProblemDetail"
+      },
+      "idempotency": {
+        "required": false,
+        "header": null
+      },
+      "ownership": {
+        "owner": "sdkwork-messaging",
+        "apiAuthority": "sdkwork-messaging-backend-api"
+      },
+      "source": {
+        "file": "src/lib.rs",
+        "routeCrate": "sdkwork-routes-messaging-backend-api"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/backend/v3/api/messaging/sms/send_records",
+      "operationId": "smsSendRecords.list",
+      "tags": [
+        "messaging"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::handlers",
+        "name": "smsSendRecords_list"
+      },
+      "schemas": {
+        "request": null,
+        "response": "MessagingSendRecordListResponse",
+        "problem": "ProblemDetail"
+      },
+      "idempotency": {
+        "required": false,
+        "header": null
+      },
+      "ownership": {
+        "owner": "sdkwork-messaging",
+        "apiAuthority": "sdkwork-messaging-backend-api"
+      },
+      "source": {
+        "file": "src/lib.rs",
+        "routeCrate": "sdkwork-routes-messaging-backend-api"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/backend/v3/api/messaging/sms/send_records/{recordId}",
+      "operationId": "smsSendRecords.retrieve",
+      "tags": [
+        "messaging"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::handlers",
+        "name": "smsSendRecords_retrieve"
+      },
+      "schemas": {
+        "request": null,
+        "response": "MessagingSendRecord",
+        "problem": "ProblemDetail"
+      },
+      "idempotency": {
+        "required": false,
+        "header": null
+      },
+      "ownership": {
+        "owner": "sdkwork-messaging",
+        "apiAuthority": "sdkwork-messaging-backend-api"
+      },
+      "source": {
+        "file": "src/lib.rs",
+        "routeCrate": "sdkwork-routes-messaging-backend-api"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/backend/v3/api/messaging/dashboard",
+      "operationId": "dashboard.retrieve",
+      "tags": [
+        "messaging"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::handlers",
+        "name": "dashboard_retrieve"
+      },
+      "schemas": {
+        "request": null,
+        "response": "MessagingDashboardSummary",
+        "problem": "ProblemDetail"
+      },
+      "idempotency": {
+        "required": false,
+        "header": null
+      },
+      "ownership": {
+        "owner": "sdkwork-messaging",
+        "apiAuthority": "sdkwork-messaging-backend-api"
+      },
+      "source": {
+        "file": "src/lib.rs",
+        "routeCrate": "sdkwork-routes-messaging-backend-api"
+      }
+    },
+    {
+      "method": "GET",
       "path": "/backend/v3/api/messaging/verification_policies",
       "operationId": "verificationPolicies.list",
       "tags": [
@@ -494,6 +659,39 @@
       "schemas": {
         "request": null,
         "response": null,
+        "problem": "ProblemDetail"
+      },
+      "idempotency": {
+        "required": true,
+        "header": "Idempotency-Key"
+      },
+      "ownership": {
+        "owner": "sdkwork-messaging",
+        "apiAuthority": "sdkwork-messaging-backend-api"
+      },
+      "source": {
+        "file": "src/lib.rs",
+        "routeCrate": "sdkwork-routes-messaging-backend-api"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/backend/v3/api/messaging/email/providers/{provider}/initialize",
+      "operationId": "emailProviders.initialize",
+      "tags": [
+        "messaging"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::handlers",
+        "name": "emailProviders_initialize"
+      },
+      "schemas": {
+        "request": null,
+        "response": "MessagingProviderInitializeResponse",
         "problem": "ProblemDetail"
       },
       "idempotency": {
@@ -890,6 +1088,39 @@
       "schemas": {
         "request": null,
         "response": null,
+        "problem": "ProblemDetail"
+      },
+      "idempotency": {
+        "required": true,
+        "header": "Idempotency-Key"
+      },
+      "ownership": {
+        "owner": "sdkwork-messaging",
+        "apiAuthority": "sdkwork-messaging-backend-api"
+      },
+      "source": {
+        "file": "src/lib.rs",
+        "routeCrate": "sdkwork-routes-messaging-backend-api"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/backend/v3/api/messaging/sms/providers/{provider}/initialize",
+      "operationId": "smsProviders.initialize",
+      "tags": [
+        "messaging"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true
+      },
+      "handler": {
+        "module": "crate::handlers",
+        "name": "smsProviders_initialize"
+      },
+      "schemas": {
+        "request": null,
+        "response": "MessagingProviderInitializeResponse",
         "problem": "ProblemDetail"
       },
       "idempotency": {

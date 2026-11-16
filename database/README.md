@@ -70,6 +70,16 @@ pnpm run db:seed      # standard profile, zh-CN by default
 pnpm run db:bootstrap # migrate then seed
 ```
 
+Packaged CloudRouter deployments do not call these commands: the installer's
+explicit lifecycle (`cloudrouterctl install|upgrade|ensure`) bootstraps the
+Messaging module through `SDKWORK_MESSAGING_APP_ROOT` with the same `standard`
+profile, exactly like the Drive storage module. Applications that were installed
+before that convergence can repair a single provider from the admin console:
+`POST /backend/v3/api/messaging/{email|sms}/providers/{provider}/initialize`
+is idempotent, fills only missing preset config keys, reuses existing identities,
+and appends the provider to the four scenario routing chains without overwriting
+operator edits.
+
 ## Locale selection
 
 `db:seed` and `db:bootstrap` default to `zh-CN` / `standard`. The

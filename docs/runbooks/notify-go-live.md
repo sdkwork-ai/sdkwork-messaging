@@ -22,7 +22,12 @@
 
 ## 2. 初始化数据库（一次性）
 
-推荐在应用启动前执行：
+以容器或安装包部署 CloudRouter 时无需手工执行本步骤：`cloudrouterctl
+install|upgrade|ensure` 会在显式生命周期命令中，通过
+`SDKWORK_MESSAGING_APP_ROOT` 加载 Messaging 的 baseline、迁移和 `standard`
+种子（与 Drive 存储模块相同的收敛方式），因此安装完成后
+`/admin/notify/email` 与 `/admin/notify/sms` 应立即显示 13 / 8 条服务商配置。
+以下命令用于独立运行 Messaging、本地开发或手工修复：
 
 ```bash
 cd <sdkwork-messaging>
@@ -63,6 +68,17 @@ pnpm run db:drift:check
 
 期望：`status=seeded`、`pending_migrations=0`、drift clean。
 控制台 `/admin/notify/email` 应看到 13 个账户，`/admin/notify/sms` 应看到 8 个账户。
+`/admin/notify/overview` 提供通知概览（发送量、送达率、场景/供应商分布、最近失败），
+`/admin/notify/email-records` 与 `/admin/notify/sms-records` 提供发送记录与投递尝试明细。
+发送规则支持逐步启停（身份启用与步骤启用分离）、空链/全停用校验、「推荐顺序」与未保存提示；
+设计说明见 [notification-center.md](../domains/notification-center.md)。
+
+如果控制台仍为空（例如旧版本安装未收敛该模块），无需重新部署：
+两个渠道的空态会列出全部供应商，点击任一供应商的「初始化配置」即可；
+已有账户行也提供「初始化」操作。后端命令
+`POST /backend/v3/api/messaging/{email|sms}/providers/{provider}/initialize`
+会幂等补齐该供应商的账户预设、发件身份/签名和四条场景路由规则，只补缺失的
+配置键，不覆盖运营已填写的值与凭据。
 
 ## 4. 配置企业邮箱（默认发送通道）
 
@@ -102,7 +118,7 @@ pnpm run db:drift:check
 
 | 现象 | 原因 | 处理 |
 | --- | --- | --- |
-| 控制台列表为空 | 未执行 seed，或租户不是 `100001` | 执行 `pnpm db:seed`；确认登录租户 |
+| 控制台列表为空 | 安装生命周期未收敛 Messaging 模块，或租户不是 `100001` | 在空态点击供应商「初始化配置」；或执行 `cloudrouterctl ensure` / `pnpm db:seed`；确认登录租户 |
 | 保存渠道密钥失败 | 未设置加密主密钥或数据库不可写 | 设置 `SDKWORK_MESSAGING_SECRET_ENCRYPTION_KEY` 后重试 |
 | 邮件发送认证失败 | 授权码错误 / 未开客户端服务 / 发件地址未开通 | 重新生成授权码并核对发件地址 |
 | 短信发送失败 | 凭据错误、签名未审核、模板未审核 | 核对腾讯云控制台状态后重试 |

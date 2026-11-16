@@ -1,6 +1,9 @@
 import {
+  Inbox,
+  LayoutDashboard,
   Mail,
   MailCheck,
+  MailOpen,
   MessageSquareText,
   MessageSquareDashed,
   Send,
@@ -16,7 +19,7 @@ import {
  * and TRADE contributions consumed by `sdkwork-cloudrouter`).
  */
 
-export const MESSAGING_ADMIN_DEFAULT_PATH = "/admin/notify/email";
+export const MESSAGING_ADMIN_DEFAULT_PATH = "/admin/notify/overview";
 
 export interface SdkworkMessagingAdminNotifyModuleDef {
   id: "notifyCenter";
@@ -55,6 +58,17 @@ export const MESSAGING_ADMIN_MENU: SdkworkMessagingAdminNotifyMenu = {
   moduleId: "notifyCenter",
   groups: [
     {
+      groupKey: "admin.header.notifyCenter",
+      items: [
+        {
+          path: "/admin/notify/overview",
+          labelKey: "admin.menu.notify.overview",
+          icon: LayoutDashboard,
+          iconColor: "text-indigo-500",
+        },
+      ],
+    },
+    {
       groupKey: "admin.menu.notify.channels",
       items: [
         {
@@ -68,6 +82,23 @@ export const MESSAGING_ADMIN_MENU: SdkworkMessagingAdminNotifyMenu = {
           labelKey: "admin.menu.notify.smsChannel",
           icon: MessageSquareText,
           iconColor: "text-emerald-500",
+        },
+      ],
+    },
+    {
+      groupKey: "admin.menu.notify.records",
+      items: [
+        {
+          path: "/admin/notify/email-records",
+          labelKey: "admin.menu.notify.emailRecords",
+          icon: MailOpen,
+          iconColor: "text-sky-500",
+        },
+        {
+          path: "/admin/notify/sms-records",
+          labelKey: "admin.menu.notify.smsRecords",
+          icon: Inbox,
+          iconColor: "text-teal-500",
         },
       ],
     },
@@ -95,7 +126,14 @@ export interface SdkworkMessagingAdminNotifyRouteRecord {
   path: string;
   requiredPermission: string;
   redirectTo?: string;
-  screen: "email-channel" | "sms-channel" | "email-templates" | "sms-templates";
+  screen:
+    | "overview"
+    | "email-channel"
+    | "sms-channel"
+    | "email-records"
+    | "sms-records"
+    | "email-templates"
+    | "sms-templates";
 }
 
 export const MESSAGING_ADMIN_ROUTE_RECORDS: readonly SdkworkMessagingAdminNotifyRouteRecord[] = [
@@ -103,7 +141,12 @@ export const MESSAGING_ADMIN_ROUTE_RECORDS: readonly SdkworkMessagingAdminNotify
     path: "notify",
     requiredPermission: "cloudrouter.admin.access",
     redirectTo: MESSAGING_ADMIN_DEFAULT_PATH,
-    screen: "email-channel",
+    screen: "overview",
+  },
+  {
+    path: "notify/overview",
+    requiredPermission: "cloudrouter.admin.access",
+    screen: "overview",
   },
   {
     path: "notify/email",
@@ -114,6 +157,16 @@ export const MESSAGING_ADMIN_ROUTE_RECORDS: readonly SdkworkMessagingAdminNotify
     path: "notify/sms",
     requiredPermission: "cloudrouter.admin.access",
     screen: "sms-channel",
+  },
+  {
+    path: "notify/email-records",
+    requiredPermission: "cloudrouter.admin.access",
+    screen: "email-records",
+  },
+  {
+    path: "notify/sms-records",
+    requiredPermission: "cloudrouter.admin.access",
+    screen: "sms-records",
   },
   {
     path: "notify/email-templates",
@@ -134,8 +187,11 @@ export interface SdkworkMessagingAdminNotifyPermissionHint {
 
 export const MESSAGING_ADMIN_PERMISSION_HINTS: readonly SdkworkMessagingAdminNotifyPermissionHint[] = [
   { pathPrefix: "/admin/notify", requiredPermission: "cloudrouter.admin.access" },
+  { pathPrefix: "/admin/notify/overview", requiredPermission: "cloudrouter.admin.access" },
   { pathPrefix: "/admin/notify/email", requiredPermission: "cloudrouter.admin.access" },
   { pathPrefix: "/admin/notify/sms", requiredPermission: "cloudrouter.admin.access" },
+  { pathPrefix: "/admin/notify/email-records", requiredPermission: "cloudrouter.admin.access" },
+  { pathPrefix: "/admin/notify/sms-records", requiredPermission: "cloudrouter.admin.access" },
   { pathPrefix: "/admin/notify/email-templates", requiredPermission: "cloudrouter.admin.access" },
   { pathPrefix: "/admin/notify/sms-templates", requiredPermission: "cloudrouter.admin.access" },
 ];

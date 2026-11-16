@@ -23,6 +23,7 @@ export function createMessagingPcSdkClients(
 // modules directly (verify-repo SDK ownership rule).
 export type {
   SdkworkBackendClient as MessagingBackendSdkClient,
+  MessagingDashboardSummary,
   MessagingEmailAccount,
   MessagingEmailAccountCreateRequest,
   MessagingEmailAccountUpdateRequest,
@@ -32,6 +33,8 @@ export type {
   MessagingEmailSender,
   MessagingEmailSenderCreateRequest,
   MessagingEmailSenderUpdateRequest,
+  MessagingSendAttempt,
+  MessagingSendRecord,
   MessagingSmsAccount,
   MessagingSmsAccountCreateRequest,
   MessagingSmsAccountUpdateRequest,
