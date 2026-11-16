@@ -1195,7 +1195,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .map_err(|error| StoreError::Unavailable(error.to_string()))?;
 
         let rows = sqlx::query(
-            "SELECT m.id, m.channel, m.target_masked, m.subject, m.body, m.status, \
+            "SELECT m.id, m.channel, m.target_masked, m.subject, LEFT(m.body, 2000) AS body, m.status, \
                     COALESCE(NULLIF(m.payload_json->>'scenario', ''), 'default') AS scenario, \
                     NULLIF(m.payload_json->>'templateCode', '') AS template_code, \
                     d.provider, d.provider_message_id, d.error_code, d.error_message, \
