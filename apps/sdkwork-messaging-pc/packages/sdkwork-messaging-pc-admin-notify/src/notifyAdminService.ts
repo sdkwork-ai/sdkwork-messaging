@@ -2,6 +2,7 @@
 //! templates through the injected `@sdkwork/messaging-backend-sdk` client.
 
 import type {
+  MessagingDashboardSummary,
   MessagingEmailAccount,
   MessagingEmailAccountCreateRequest,
   MessagingEmailAccountUpdateRequest,
@@ -10,6 +11,7 @@ import type {
   MessagingEmailSender,
   MessagingEmailSenderCreateRequest,
   MessagingEmailSenderUpdateRequest,
+  MessagingSendRecord,
   MessagingSmsAccount,
   MessagingSmsAccountCreateRequest,
   MessagingSmsAccountUpdateRequest,
@@ -26,6 +28,7 @@ import type {
 import { messagingBackendSdkClient } from "./sdk-client";
 
 export type {
+  MessagingDashboardSummary,
   MessagingEmailAccount,
   MessagingEmailAccountCreateRequest,
   MessagingEmailAccountUpdateRequest,
@@ -35,6 +38,8 @@ export type {
   MessagingEmailSender,
   MessagingEmailSenderCreateRequest,
   MessagingEmailSenderUpdateRequest,
+  MessagingSendAttempt,
+  MessagingSendRecord,
   MessagingSmsAccount,
   MessagingSmsAccountCreateRequest,
   MessagingSmsAccountUpdateRequest,
@@ -121,6 +126,34 @@ export interface MessagingSmsAccountPage {
 
 export interface MessagingSmsSignaturePage {
   items: MessagingSmsSignature[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+  hasMore: boolean;
+}
+
+export type MessagingSendRecordStatus =
+  | "accepted"
+  | "queued"
+  | "sent"
+  | "delivered"
+  | "failed"
+  | "opened"
+  | "cancelled"
+  | "expired";
+
+export interface MessagingSendRecordFilters {
+  status?: MessagingSendRecordStatus;
+  q?: string;
+  /** RFC3339 timestamp or `YYYY-MM-DD` date. */
+  from?: string;
+  /** RFC3339 timestamp or `YYYY-MM-DD` date (inclusive day when date-only). */
+  to?: string;
+}
+
+export interface MessagingSendRecordPage {
+  items: MessagingSendRecord[];
   page: number;
   pageSize: number;
   totalItems: number;
@@ -385,6 +418,50 @@ async function updateSmsSendRule(
   return response.item;
 }
 
+// -------------------------------------------------------------- send records
+
+async function listEmailSendRecords(
+  params: MessagingSendRecordFilters & { page?: number; pageSize?: number },
+): Promise<MessagingSendRecordPage> {
+  const response = await messagingBackendSdkClient().messaging.emailSendRecords.list({
+    status: params.status,
+    q: params.q,
+    from_: params.from,
+    to: params.to,
+    page: params.page ?? 1,
+    pageSize: params.pageSize ?? 20,
+  });
+  return toPage(response);
+}
+
+async function retrieveEmailSendRecord(recordId: string): Promise<MessagingSendRecord> {
+  return messagingBackendSdkClient().messaging.emailSendRecords.retrieve(recordId);
+}
+
+async function listSmsSendRecords(
+  params: MessagingSendRecordFilters & { page?: number; pageSize?: number },
+): Promise<MessagingSendRecordPage> {
+  const response = await messagingBackendSdkClient().messaging.smsSendRecords.list({
+    status: params.status,
+    q: params.q,
+    from_: params.from,
+    to: params.to,
+    page: params.page ?? 1,
+    pageSize: params.pageSize ?? 20,
+  });
+  return toPage(response);
+}
+
+async function retrieveSmsSendRecord(recordId: string): Promise<MessagingSendRecord> {
+  return messagingBackendSdkClient().messaging.smsSendRecords.retrieve(recordId);
+}
+
+// ---------------------------------------------------------------- dashboard
+
+async function getNotificationDashboard(rangeDays = 30): Promise<MessagingDashboardSummary> {
+  return messagingBackendSdkClient().messaging.dashboard.retrieve({ range: rangeDays });
+}
+
 async function listTemplates(params: {
   channel?: MessagingChannelType;
   status?: MessagingTemplateStatus;
@@ -482,6 +559,15 @@ export interface NotifyAdminService {
     scenario: MessagingEmailSendScenario,
     input: MessagingSmsSendRuleUpdateRequest,
   ): Promise<MessagingSmsSendRule>;
+  listEmailSendRecords(
+    params: MessagingSendRecordFilters & { page?: number; pageSize?: number },
+  ): Promise<MessagingSendRecordPage>;
+  retrieveEmailSendRecord(recordId: string): Promise<MessagingSendRecord>;
+  listSmsSendRecords(
+    params: MessagingSendRecordFilters & { page?: number; pageSize?: number },
+  ): Promise<MessagingSendRecordPage>;
+  retrieveSmsSendRecord(recordId: string): Promise<MessagingSendRecord>;
+  getNotificationDashboard(rangeDays?: number): Promise<MessagingDashboardSummary>;
   listTemplates(params: {
     channel?: MessagingChannelType;
     status?: MessagingTemplateStatus;
@@ -522,6 +608,11 @@ export function createNotifyAdminService(): NotifyAdminService {
     deleteSmsSignature,
     listSmsSendRules,
     updateSmsSendRule,
+    listEmailSendRecords,
+    retrieveEmailSendRecord,
+    listSmsSendRecords,
+    retrieveSmsSendRecord,
+    getNotificationDashboard,
     listTemplates,
     createTemplate,
     retrieveTemplate,

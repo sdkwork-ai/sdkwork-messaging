@@ -17,9 +17,10 @@ use crate::ports::{
     CreateEmailAccountCommand, CreateEmailSenderCommand, CreateNotificationCommand,
     CreateSmsAccountCommand, CreateSmsSignatureCommand, CreateTemplateCommand, MessagingAdminStore,
     MessagingAdminSubject, PublishAnnouncementCommand, SendOutboundMessageCommand,
-    SendPushMessageCommand, StoreError, UpdateEmailAccountCommand, UpdateEmailSendRuleCommand,
-    UpdateEmailSenderCommand, UpdateSmsAccountCommand, UpdateSmsSendRuleCommand,
-    UpdateSmsSignatureCommand, UpdateTemplateCommand, UpdateVerificationPolicyCommand,
+    SendPushMessageCommand, SendRecordFilter, StoreError, UpdateEmailAccountCommand,
+    UpdateEmailSendRuleCommand, UpdateEmailSenderCommand, UpdateSmsAccountCommand,
+    UpdateSmsSendRuleCommand, UpdateSmsSignatureCommand, UpdateTemplateCommand,
+    UpdateVerificationPolicyCommand,
 };
 
 #[derive(Clone)]
@@ -253,6 +254,26 @@ pub fn admin_messaging_router_with_store(
         .route(
             "/backend/v3/api/messaging/outbound_messages",
             get(list_outbound_messages).post(send_outbound_message),
+        )
+        .route(
+            "/backend/v3/api/messaging/email/send_records",
+            get(list_email_send_records),
+        )
+        .route(
+            "/backend/v3/api/messaging/email/send_records/{recordId}",
+            get(retrieve_email_send_record),
+        )
+        .route(
+            "/backend/v3/api/messaging/sms/send_records",
+            get(list_sms_send_records),
+        )
+        .route(
+            "/backend/v3/api/messaging/sms/send_records/{recordId}",
+            get(retrieve_sms_send_record),
+        )
+        .route(
+            "/backend/v3/api/messaging/dashboard",
+            get(notification_dashboard),
         )
         .route(
             "/backend/v3/api/messaging/verification_policies",
@@ -598,6 +619,218 @@ async fn send_outbound_message(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Internal Server Error",
                 "failed to serialize outbound message",
+            ),
+        },
+        Err(error) => store_error_response(error),
+    }
+}
+
+// ------------------------------------------------------------- send records
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SendRecordListQuery {
+    status: Option<String>,
+    q: Option<String>,
+    from: Option<String>,
+    to: Option<String>,
+    page: Option<i64>,
+    page_size: Option<i64>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct DashboardQuery {
+    range: Option<i64>,
+}
+
+/// Parses a list filter date bound. Accepts RFC3339 timestamps and bare
+/// `YYYY-MM-DD` dates; a bare `to` date covers the whole day (exclusive next
+/// midnight).
+#[allow(clippy::result_large_err)]
+fn parse_date_bound(
+    raw: Option<&str>,
+    field: &str,
+    end_exclusive: bool,
+) -> Result<Option<chrono::DateTime<chrono::Utc>>, Response> {
+    let Some(raw) = raw.map(str::trim).filter(|value| !value.is_empty()) else {
+        return Ok(None);
+    };
+    if let Ok(value) = chrono::DateTime::parse_from_rfc3339(raw) {
+        return Ok(Some(value.with_timezone(&chrono::Utc)));
+    }
+    let date = chrono::NaiveDate::parse_from_str(raw, "%Y-%m-%d").map_err(|_| {
+        problem_response(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            format!("{field} must be an RFC3339 timestamp or YYYY-MM-DD date"),
+        )
+    })?;
+    let date = if end_exclusive {
+        date + chrono::Duration::days(1)
+    } else {
+        date
+    };
+    let naive = date.and_hms_opt(0, 0, 0).ok_or_else(|| {
+        problem_response(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            format!("{field} is out of range"),
+        )
+    })?;
+    Ok(Some(
+        chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(naive, chrono::Utc),
+    ))
+}
+
+#[allow(clippy::result_large_err)]
+async fn send_records_response(
+    state: &MessagingRouterState,
+    subject: &MessagingAdminSubject,
+    channel: &'static str,
+    query: SendRecordListQuery,
+) -> Response {
+    let (page, page_size) = match page_bounds(&PageQuery {
+        page: query.page,
+        page_size: query.page_size,
+    }) {
+        Ok(bounds) => bounds,
+        Err(response) => return response,
+    };
+    let from = match parse_date_bound(query.from.as_deref(), "from", false) {
+        Ok(value) => value,
+        Err(response) => return response,
+    };
+    let to = match parse_date_bound(query.to.as_deref(), "to", true) {
+        Ok(value) => value,
+        Err(response) => return response,
+    };
+    if let (Some(from), Some(to)) = (from, to) {
+        if from >= to {
+            return problem_response(
+                StatusCode::BAD_REQUEST,
+                "Bad Request",
+                "from must be earlier than to",
+            );
+        }
+    }
+    let filter = SendRecordFilter {
+        status: query.status,
+        q: query.q,
+        from,
+        to,
+        page,
+        page_size,
+    };
+    match state
+        .store
+        .list_send_records(subject, channel, &filter)
+        .await
+    {
+        Ok(result) => {
+            let items = result
+                .items
+                .into_iter()
+                .filter_map(|item| serde_json::to_value(item).ok())
+                .collect();
+            list_response(items, result.page, result.page_size, result.total_items)
+        }
+        Err(error) => store_error_response(error),
+    }
+}
+
+#[allow(clippy::result_large_err)]
+async fn send_record_detail_response(
+    state: &MessagingRouterState,
+    subject: &MessagingAdminSubject,
+    channel: &'static str,
+    record_id: String,
+) -> Response {
+    let record_id = match record_id.trim().parse::<i64>() {
+        Ok(value) if value > 0 => value,
+        _ => {
+            return problem_response(
+                StatusCode::BAD_REQUEST,
+                "Bad Request",
+                "recordId must be a positive numeric id",
+            );
+        }
+    };
+    match state
+        .store
+        .retrieve_send_record(subject, channel, record_id)
+        .await
+    {
+        Ok(detail) => match serde_json::to_value(detail) {
+            Ok(value) => resource_response(StatusCode::OK, value),
+            Err(_) => problem_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "failed to serialize send record",
+            ),
+        },
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn list_email_send_records(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Query(query): Query<SendRecordListQuery>,
+) -> Response {
+    send_records_response(&state, &subject, "email", query).await
+}
+
+async fn list_sms_send_records(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Query(query): Query<SendRecordListQuery>,
+) -> Response {
+    send_records_response(&state, &subject, "sms", query).await
+}
+
+async fn retrieve_email_send_record(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(record_id): Path<String>,
+) -> Response {
+    send_record_detail_response(&state, &subject, "email", record_id).await
+}
+
+async fn retrieve_sms_send_record(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(record_id): Path<String>,
+) -> Response {
+    send_record_detail_response(&state, &subject, "sms", record_id).await
+}
+
+// --------------------------------------------------------------- dashboard
+
+async fn notification_dashboard(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Query(query): Query<DashboardQuery>,
+) -> Response {
+    let range = query.range.unwrap_or(30);
+    if !(1..=365).contains(&range) {
+        return problem_response(
+            StatusCode::BAD_REQUEST,
+            "Bad Request",
+            "range must be between 1 and 365 days",
+        );
+    }
+    match state
+        .store
+        .notification_dashboard(&subject, range, chrono::Utc::now())
+        .await
+    {
+        Ok(summary) => match serde_json::to_value(summary) {
+            Ok(value) => resource_response(StatusCode::OK, value),
+            Err(_) => problem_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "failed to serialize notification dashboard",
             ),
         },
         Err(error) => store_error_response(error),

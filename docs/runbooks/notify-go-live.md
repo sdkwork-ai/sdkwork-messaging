@@ -68,6 +68,10 @@ pnpm run db:drift:check
 
 期望：`status=seeded`、`pending_migrations=0`、drift clean。
 控制台 `/admin/notify/email` 应看到 13 个账户，`/admin/notify/sms` 应看到 8 个账户。
+`/admin/notify/overview` 提供通知概览（发送量、送达率、场景/供应商分布、最近失败），
+`/admin/notify/email-records` 与 `/admin/notify/sms-records` 提供发送记录与投递尝试明细。
+发送规则支持逐步启停（身份启用与步骤启用分离）、空链/全停用校验、「推荐顺序」与未保存提示；
+设计说明见 [notification-center.md](../domains/notification-center.md)。
 
 如果控制台仍为空（例如旧版本安装未收敛该模块），无需重新部署：
 两个渠道的空态会列出全部供应商，点击任一供应商的「初始化配置」即可；

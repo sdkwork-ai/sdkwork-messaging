@@ -143,6 +143,153 @@ pub struct SendOutboundMessageCommand {
     pub subject: Option<String>,
     pub body: String,
     pub payload: Option<Value>,
+    /// Business scenario used for routing and record grouping. Stored in the
+    /// message payload so the send-record and dashboard surfaces can group by it.
+    pub scenario: Option<String>,
+    /// Template code used to render the message, when one was applied.
+    pub template_code: Option<String>,
+}
+
+// ------------------------------------------------------------- send records
+
+/// One delivery attempt of an outbound message, resolved from
+/// `messaging_outbound_delivery`.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MessagingSendAttemptItem {
+    pub id: String,
+    pub provider: Option<String>,
+    pub provider_message_id: Option<String>,
+    pub status: String,
+    pub error_code: Option<String>,
+    pub error_message: Option<String>,
+    pub sent_at: Option<String>,
+    pub delivered_at: Option<String>,
+    pub failed_at: Option<String>,
+    pub created_at: String,
+}
+
+/// A send record as listed by `/admin/notify/email-records` and
+/// `/admin/notify/sms-records`.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MessagingSendRecordItem {
+    pub id: String,
+    pub channel: String,
+    pub target_masked: String,
+    pub subject: Option<String>,
+    /// Full message body (email HTML or SMS text). The list preview is derived
+    /// from it; the detail drawer renders this value.
+    pub body: String,
+    pub body_preview: String,
+    pub status: String,
+    pub scenario: String,
+    pub template_code: Option<String>,
+    pub provider: Option<String>,
+    pub provider_message_id: Option<String>,
+    pub error_code: Option<String>,
+    pub error_message: Option<String>,
+    pub attempt_count: i64,
+    pub created_at: String,
+    pub sent_at: Option<String>,
+    pub delivered_at: Option<String>,
+    pub failed_at: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MessagingSendRecordDetail {
+    #[serde(flatten)]
+    pub item: MessagingSendRecordItem,
+    pub attempts: Vec<MessagingSendAttemptItem>,
+}
+
+/// Server-side filters for the send-record list. Date bounds are inclusive
+/// `from` and exclusive `to` in UTC.
+#[derive(Clone, Debug)]
+pub struct SendRecordFilter {
+    pub status: Option<String>,
+    pub q: Option<String>,
+    pub from: Option<chrono::DateTime<chrono::Utc>>,
+    pub to: Option<chrono::DateTime<chrono::Utc>>,
+    pub page: i64,
+    pub page_size: i64,
+}
+
+// --------------------------------------------------------------- dashboard
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MessagingDashboardTotals {
+    pub total: i64,
+    pub email: i64,
+    pub sms: i64,
+    pub delivered: i64,
+    pub failed: i64,
+    pub pending: i64,
+    /// `delivered + opened` over `delivered + opened + failed`, in `[0, 1]`.
+    pub success_rate: f64,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MessagingDashboardChannel {
+    pub channel: String,
+    pub total: i64,
+    pub delivered: i64,
+    pub failed: i64,
+    pub pending: i64,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MessagingDashboardStatus {
+    pub status: String,
+    pub count: i64,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MessagingDashboardScenario {
+    pub scenario: String,
+    pub channel: String,
+    pub total: i64,
+    pub failed: i64,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MessagingDashboardProvider {
+    pub provider: String,
+    pub channel: String,
+    pub total: i64,
+    pub failed: i64,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MessagingDashboardTrendPoint {
+    /// UTC calendar day (`YYYY-MM-DD`).
+    pub date: String,
+    pub email: i64,
+    pub sms: i64,
+    pub delivered: i64,
+    pub failed: i64,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MessagingDashboardSummary {
+    pub range_days: i64,
+    pub from: String,
+    pub to: String,
+    pub totals: MessagingDashboardTotals,
+    pub by_channel: Vec<MessagingDashboardChannel>,
+    pub by_status: Vec<MessagingDashboardStatus>,
+    pub by_scenario: Vec<MessagingDashboardScenario>,
+    pub by_provider: Vec<MessagingDashboardProvider>,
+    pub trend: Vec<MessagingDashboardTrendPoint>,
+    pub recent_failures: Vec<MessagingSendRecordItem>,
 }
 
 // ------------------------------------------------------ verification policy
@@ -270,7 +417,11 @@ pub struct EmailSendRuleStep {
     pub account_name: String,
     pub from_address: String,
     pub from_name: Option<String>,
-    pub enabled: bool,
+    /// Whether the sender identity itself is enabled (account/sender switch).
+    pub identity_enabled: bool,
+    /// Whether this step participates in the fallback chain. A disabled step
+    /// stays in place for later re-activation instead of being removed.
+    pub step_enabled: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -286,8 +437,15 @@ pub struct EmailSendRuleItem {
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct EmailSendRuleStepCommand {
+    pub sender_id: String,
+    pub enabled: bool,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateEmailSendRuleCommand {
-    pub sender_ids: Vec<String>,
+    pub steps: Vec<EmailSendRuleStepCommand>,
     pub enabled: bool,
     /// Optimistic concurrency guard (DATABASE_SPEC §17): the version read by the
     /// client; the update applies only when it still matches.
@@ -378,7 +536,10 @@ pub struct SmsSendRuleStep {
     pub account_id: String,
     pub account_name: String,
     pub sign_name: String,
-    pub enabled: bool,
+    /// Whether the signature/account identity itself is enabled.
+    pub identity_enabled: bool,
+    /// Whether this step participates in the fallback chain.
+    pub step_enabled: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -394,8 +555,15 @@ pub struct SmsSendRuleItem {
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct SmsSendRuleStepCommand {
+    pub signature_id: String,
+    pub enabled: bool,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateSmsSendRuleCommand {
-    pub signature_ids: Vec<String>,
+    pub steps: Vec<SmsSendRuleStepCommand>,
     pub enabled: bool,
     /// Optimistic concurrency guard (DATABASE_SPEC §17): the version read by the
     /// client; the update applies only when it still matches.
@@ -527,6 +695,26 @@ pub trait MessagingAdminStore: Send + Sync {
         command: &SendOutboundMessageCommand,
         idempotency_key: &str,
     ) -> Result<OutboundMessageItem, StoreError>;
+
+    // send records + dashboard
+    async fn list_send_records(
+        &self,
+        subject: &MessagingAdminSubject,
+        channel: &str,
+        filter: &SendRecordFilter,
+    ) -> Result<MessagingPage<MessagingSendRecordItem>, StoreError>;
+    async fn retrieve_send_record(
+        &self,
+        subject: &MessagingAdminSubject,
+        channel: &str,
+        record_id: i64,
+    ) -> Result<MessagingSendRecordDetail, StoreError>;
+    async fn notification_dashboard(
+        &self,
+        subject: &MessagingAdminSubject,
+        range_days: i64,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> Result<MessagingDashboardSummary, StoreError>;
 
     // verification policies
     async fn list_verification_policies(
@@ -759,6 +947,23 @@ pub fn parse_channel(value: &str) -> Result<&'static str, String> {
         "email" => Ok("email"),
         _ => Err(format!(
             "channel must be one of: sms, email (found `{value}`)"
+        )),
+    }
+}
+
+/// Outbound message/delivery status vocabulary.
+pub fn parse_outbound_status(value: &str) -> Result<&'static str, String> {
+    match value {
+        "accepted" => Ok("accepted"),
+        "queued" => Ok("queued"),
+        "sent" => Ok("sent"),
+        "delivered" => Ok("delivered"),
+        "failed" => Ok("failed"),
+        "opened" => Ok("opened"),
+        "cancelled" => Ok("cancelled"),
+        "expired" => Ok("expired"),
+        other => Err(format!(
+            "status must be one of: accepted, queued, sent, delivered, failed, opened, cancelled, expired (found `{other}`)"
         )),
     }
 }

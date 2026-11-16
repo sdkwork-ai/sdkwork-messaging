@@ -4,5 +4,6 @@ export interface MessagingEmailSendRuleStep {
   accountName: string;
   fromAddress: string;
   fromName?: string;
-  enabled?: boolean;
+  identityEnabled: boolean;
+  stepEnabled: boolean;
 }

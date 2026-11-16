@@ -7,11 +7,19 @@ import { TemplateListPage } from "./pages/TemplateListPage";
 export { EmailChannelPage } from "./pages/EmailChannelPage";
 export { SmsChannelPage } from "./pages/SmsChannelPage";
 export { TemplateListPage } from "./pages/TemplateListPage";
+export { NotificationDashboardPage } from "./pages/NotificationDashboardPage";
+export {
+  EmailSendRecordsPage,
+  SendRecordsPage,
+  SmsSendRecordsPage,
+} from "./pages/SendRecordsPage";
 export { configureMessagingBackendSdkClient } from "./sdk-client";
 
 export type { SdkworkMessagingEmailChannelPageProps } from "./pages/EmailChannelPage";
 export type { SdkworkMessagingSmsChannelPageProps } from "./pages/SmsChannelPage";
 export type { SdkworkMessagingTemplateListPageProps } from "./pages/TemplateListPage";
+export type { SdkworkMessagingNotificationDashboardPageProps } from "./pages/NotificationDashboardPage";
+export type { SdkworkMessagingSendRecordsPageProps } from "./pages/SendRecordsPage";
 export type { NotifyAdminService };
 
 /** Email template management page (screen `email-templates`). */

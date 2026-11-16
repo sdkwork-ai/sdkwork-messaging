@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use chrono::Utc;
+use chrono::{Duration, NaiveDate, Utc};
 use sdkwork_messaging_delivery_service::EncodedMessagingSecret;
 use sdkwork_utils_rust::{sha256_hash, uuid};
 use sqlx::{PgPool, Row};
@@ -20,14 +20,17 @@ use crate::ports::{
     mask_secret, mask_target, AnnouncementItem, CreateEmailAccountCommand,
     CreateEmailSenderCommand, CreateNotificationCommand, CreateSmsAccountCommand,
     CreateSmsSignatureCommand, CreateTemplateCommand, EmailAccountItem, EmailSendRuleItem,
-    EmailSendRuleStep, EmailSenderItem, MessagingAdminStore, MessagingAdminSubject, MessagingPage,
-    NotificationItem, OutboundMessageItem, ProviderInitialization, PublishAnnouncementCommand,
-    PushMessageItem, SendOutboundMessageCommand, SendPushMessageCommand, SmsAccountItem,
-    SmsSendRuleItem, SmsSendRuleStep, SmsSignatureItem, StoreError, TemplateItem,
-    UpdateEmailAccountCommand, UpdateEmailSendRuleCommand, UpdateEmailSenderCommand,
-    UpdateSmsAccountCommand, UpdateSmsSendRuleCommand, UpdateSmsSignatureCommand,
-    UpdateTemplateCommand, UpdateVerificationPolicyCommand, VerificationPolicyItem,
-    SEND_RULE_SCENARIOS,
+    EmailSendRuleStep, EmailSenderItem, MessagingAdminStore, MessagingAdminSubject,
+    MessagingDashboardChannel, MessagingDashboardProvider, MessagingDashboardScenario,
+    MessagingDashboardStatus, MessagingDashboardSummary, MessagingDashboardTotals,
+    MessagingDashboardTrendPoint, MessagingPage, MessagingSendAttemptItem,
+    MessagingSendRecordDetail, MessagingSendRecordItem, NotificationItem, OutboundMessageItem,
+    ProviderInitialization, PublishAnnouncementCommand, PushMessageItem, SendOutboundMessageCommand,
+    SendPushMessageCommand, SendRecordFilter, SmsAccountItem, SmsSendRuleItem, SmsSendRuleStep,
+    SmsSignatureItem, StoreError, TemplateItem, UpdateEmailAccountCommand,
+    UpdateEmailSendRuleCommand, UpdateEmailSenderCommand, UpdateSmsAccountCommand,
+    UpdateSmsSendRuleCommand, UpdateSmsSignatureCommand, UpdateTemplateCommand,
+    UpdateVerificationPolicyCommand, VerificationPolicyItem, SEND_RULE_SCENARIOS,
 };
 
 pub struct PostgresMessagingAdminStore {
@@ -258,20 +261,17 @@ impl PostgresMessagingAdminStore {
         email_sender_item_from_row(row).map_err(|error| StoreError::Unavailable(error.to_string()))
     }
 
-    /// Resolves stored sender-id chains into routing steps in chain order.
-    /// Senders that disappeared (soft-deleted) are pruned from the view.
+    /// Resolves stored steps into routing steps in chain order.
+    /// Identities that disappeared (soft-deleted) are pruned from the view.
     async fn resolve_email_chain(
         &self,
         subject: &MessagingAdminSubject,
-        sender_ids: &[String],
+        steps: &[StoredSendRuleStep],
     ) -> Result<Vec<EmailSendRuleStep>, StoreError> {
-        if sender_ids.is_empty() {
+        if steps.is_empty() {
             return Ok(Vec::new());
         }
-        let mut parsed = Vec::with_capacity(sender_ids.len());
-        for raw in sender_ids {
-            parsed.push(parse_scope_id(raw, "senderId")?);
-        }
+        let ids: Vec<i64> = steps.iter().map(|step| step.id).collect();
         let rows = sqlx::query(
             "SELECT s.id, s.account_id, a.name AS account_name, s.from_address, s.from_name, s.enabled \
              FROM messaging_email_sender s \
@@ -280,7 +280,7 @@ impl PostgresMessagingAdminStore {
         )
         .bind(subject.tenant_id)
         .bind(subject.organization_id)
-        .bind(&parsed)
+        .bind(&ids)
         .fetch_all(&self.pool)
         .await
         .map_err(|error| StoreError::Unavailable(error.to_string()))?;
@@ -288,16 +288,17 @@ impl PostgresMessagingAdminStore {
             .into_iter()
             .map(|row| (row.get::<i64, _>("id"), row))
             .collect();
-        let mut chain = Vec::with_capacity(parsed.len());
-        for id in parsed {
-            if let Some(row) = by_id.remove(&id) {
+        let mut chain = Vec::with_capacity(steps.len());
+        for step in steps {
+            if let Some(row) = by_id.remove(&step.id) {
                 chain.push(EmailSendRuleStep {
-                    sender_id: id.to_string(),
+                    sender_id: step.id.to_string(),
                     account_id: row.get::<i64, _>("account_id").to_string(),
                     account_name: row.get("account_name"),
                     from_address: row.get("from_address"),
                     from_name: row.get("from_name"),
-                    enabled: row.get("enabled"),
+                    identity_enabled: row.get("enabled"),
+                    step_enabled: step.enabled,
                 });
             }
         }
@@ -327,15 +328,12 @@ impl PostgresMessagingAdminStore {
     async fn resolve_sms_chain(
         &self,
         subject: &MessagingAdminSubject,
-        signature_ids: &[String],
+        steps: &[StoredSendRuleStep],
     ) -> Result<Vec<SmsSendRuleStep>, StoreError> {
-        if signature_ids.is_empty() {
+        if steps.is_empty() {
             return Ok(Vec::new());
         }
-        let mut parsed = Vec::with_capacity(signature_ids.len());
-        for raw in signature_ids {
-            parsed.push(parse_scope_id(raw, "senderId")?);
-        }
+        let ids: Vec<i64> = steps.iter().map(|step| step.id).collect();
         let rows = sqlx::query(
             "SELECT s.id, s.account_id, a.name AS account_name, s.sign_name, s.enabled \
              FROM messaging_sms_signature s \
@@ -344,7 +342,7 @@ impl PostgresMessagingAdminStore {
         )
         .bind(subject.tenant_id)
         .bind(subject.organization_id)
-        .bind(&parsed)
+        .bind(&ids)
         .fetch_all(&self.pool)
         .await
         .map_err(|error| StoreError::Unavailable(error.to_string()))?;
@@ -352,19 +350,64 @@ impl PostgresMessagingAdminStore {
             .into_iter()
             .map(|row| (row.get::<i64, _>("id"), row))
             .collect();
-        let mut chain = Vec::with_capacity(parsed.len());
-        for id in parsed {
-            if let Some(row) = by_id.remove(&id) {
+        let mut chain = Vec::with_capacity(steps.len());
+        for step in steps {
+            if let Some(row) = by_id.remove(&step.id) {
                 chain.push(SmsSendRuleStep {
-                    signature_id: id.to_string(),
+                    signature_id: step.id.to_string(),
                     account_id: row.get::<i64, _>("account_id").to_string(),
                     account_name: row.get("account_name"),
                     sign_name: row.get("sign_name"),
-                    enabled: row.get("enabled"),
+                    identity_enabled: row.get("enabled"),
+                    step_enabled: step.enabled,
                 });
             }
         }
         Ok(chain)
+    }
+}
+
+/// One-line preview for a send record. HTML-heavy email bodies collapse to a
+/// short plain-text excerpt; the full body stays on the record detail.
+fn body_preview(body: &str) -> String {
+    let collapsed = body.split_whitespace().collect::<Vec<_>>().join(" ");
+    let mut chars = collapsed.chars();
+    let preview: String = chars.by_ref().take(160).collect();
+    if chars.next().is_some() {
+        format!("{preview}…")
+    } else {
+        preview
+    }
+}
+
+fn send_record_item_from_row(row: &sqlx::postgres::PgRow) -> MessagingSendRecordItem {
+    let body: String = row.get("body");
+    MessagingSendRecordItem {
+        id: row.get::<i64, _>("id").to_string(),
+        channel: row.get("channel"),
+        target_masked: row.get("target_masked"),
+        subject: row.get("subject"),
+        body: body.clone(),
+        body_preview: body_preview(&body),
+        status: row.get("status"),
+        scenario: row
+            .get::<Option<String>, _>("scenario")
+            .filter(|value| !value.is_empty())
+            .unwrap_or_else(|| "default".to_owned()),
+        template_code: row.get::<Option<String>, _>("template_code"),
+        provider: row.get("provider"),
+        provider_message_id: row.get("provider_message_id"),
+        error_code: row.get("error_code"),
+        error_message: row.get("error_message"),
+        attempt_count: row.get::<i64, _>("attempt_count"),
+        created_at: rfc3339(row.get("created_at")),
+        sent_at: row.get::<Option<chrono::DateTime<Utc>>, _>("sent_at").map(rfc3339),
+        delivered_at: row
+            .get::<Option<chrono::DateTime<Utc>>, _>("delivered_at")
+            .map(rfc3339),
+        failed_at: row
+            .get::<Option<chrono::DateTime<Utc>>, _>("failed_at")
+            .map(rfc3339),
     }
 }
 
@@ -405,47 +448,90 @@ fn parse_expected_version(raw: &str) -> Result<i64, StoreError> {
         })
 }
 
-/// Reads a stored routing chain (`chain_json`) as numeric identity ids.
-fn chain_ids(value: &serde_json::Value) -> Vec<i64> {
+/// One stored routing step. `chain_json` accepts both the legacy bare-id array
+/// (`["950000000213", …]`, every step enabled) and the current object form
+/// (`[{"id":"950000000213","enabled":true}, …]`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct StoredSendRuleStep {
+    id: i64,
+    enabled: bool,
+}
+
+/// Reads a stored routing chain (`chain_json`) into ordered steps.
+fn chain_steps(value: &serde_json::Value) -> Vec<StoredSendRuleStep> {
     value
         .as_array()
         .map(|items| {
             items
                 .iter()
-                .filter_map(|item| {
-                    item.as_str()
-                        .and_then(|raw| raw.trim().parse::<i64>().ok())
+                .filter_map(|item| match item {
+                    serde_json::Value::String(raw) => raw
+                        .trim()
+                        .parse::<i64>()
+                        .ok()
+                        .map(|id| StoredSendRuleStep { id, enabled: true }),
+                    serde_json::Value::Object(map) => {
+                        let id = map
+                            .get("id")
+                            .and_then(|value| value.as_str())
+                            .and_then(|raw| raw.trim().parse::<i64>().ok())
+                            .or_else(|| map.get("id").and_then(serde_json::Value::as_i64))?;
+                        let enabled = map
+                            .get("enabled")
+                            .and_then(serde_json::Value::as_bool)
+                            .unwrap_or(true);
+                        Some(StoredSendRuleStep { id, enabled })
+                    }
+                    _ => None,
                 })
                 .collect()
         })
         .unwrap_or_default()
 }
 
-/// Orders a routing chain by provider delivery priority.
+/// Orders routing steps by provider delivery priority.
 ///
-/// `sort_by_key` is stable, so identities that share a priority keep their
-/// relative order; unknown providers sort last.
-fn order_chain(ids: &[i64], priorities: &HashMap<i64, usize>) -> Vec<i64> {
-    let mut ordered = ids.to_vec();
-    ordered.sort_by_key(|id| priorities.get(id).copied().unwrap_or(usize::MAX));
+/// `sort_by_key` is stable, so steps that share a priority keep their relative
+/// order; unknown providers sort last.
+fn order_steps(
+    steps: &[StoredSendRuleStep],
+    priorities: &HashMap<i64, usize>,
+) -> Vec<StoredSendRuleStep> {
+    let mut ordered = steps.to_vec();
+    ordered.sort_by_key(|step| priorities.get(&step.id).copied().unwrap_or(usize::MAX));
     ordered
 }
 
 /// Appends a newly initialized identity to an existing chain when missing and
-/// re-sorts the result by delivery priority.
-fn extend_chain(existing: &[i64], addition: i64, priorities: &HashMap<i64, usize>) -> Vec<i64> {
-    let mut ids = existing.to_vec();
-    if !ids.contains(&addition) {
-        ids.push(addition);
+/// re-sorts the result by delivery priority. Returns whether the chain changed;
+/// existing step enablement is preserved.
+fn extend_chain(
+    existing: &[StoredSendRuleStep],
+    addition: i64,
+    priorities: &HashMap<i64, usize>,
+) -> (Vec<StoredSendRuleStep>, bool) {
+    if existing.iter().any(|step| step.id == addition) {
+        return (existing.to_vec(), false);
     }
-    order_chain(&ids, priorities)
+    let mut steps = existing.to_vec();
+    steps.push(StoredSendRuleStep {
+        id: addition,
+        enabled: true,
+    });
+    (order_steps(&steps, priorities), true)
 }
 
-/// Serializes a routing chain into the `chain_json` representation (string ids).
-fn chain_json(ids: &[i64]) -> serde_json::Value {
+/// Serializes routing steps into the current `chain_json` object form.
+fn chain_json(steps: &[StoredSendRuleStep]) -> serde_json::Value {
     serde_json::Value::Array(
-        ids.iter()
-            .map(|id| serde_json::Value::String(id.to_string()))
+        steps
+            .iter()
+            .map(|step| {
+                serde_json::json!({
+                    "id": step.id.to_string(),
+                    "enabled": step.enabled,
+                })
+            })
             .collect(),
     )
 }
@@ -997,10 +1083,29 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         }
         let id = self.next_id();
         let message_uuid = uuid();
-        let payload_json = command
+        let mut payload_json = command
             .payload
             .clone()
             .unwrap_or_else(|| serde_json::json!({}));
+        if !payload_json.is_object() {
+            payload_json = serde_json::json!({});
+        }
+        if let Some(scenario) = command
+            .scenario
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            payload_json["scenario"] = serde_json::Value::String(scenario.to_owned());
+        }
+        if let Some(template_code) = command
+            .template_code
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            payload_json["templateCode"] = serde_json::Value::String(template_code.to_owned());
+        }
         let target_hash = sha256_hash(command.target.trim().as_bytes());
         let target_masked = mask_target(command.target.trim());
 
@@ -1046,6 +1151,422 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
             body: command.body.clone(),
             status: "accepted".to_owned(),
             created_at: rfc3339(Utc::now()),
+        })
+    }
+
+    // ------------------------------------------------------------ send records
+
+    async fn list_send_records(
+        &self,
+        subject: &MessagingAdminSubject,
+        channel: &str,
+        filter: &SendRecordFilter,
+    ) -> Result<MessagingPage<MessagingSendRecordItem>, StoreError> {
+        let channel = crate::ports::parse_channel(channel).map_err(StoreError::Invalid)?;
+        if let Some(status) = filter.status.as_deref() {
+            crate::ports::parse_outbound_status(status).map_err(StoreError::Invalid)?;
+        }
+        let keyword_pattern = filter
+            .q
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(|value| format!("%{value}%"));
+        let offset = (filter.page - 1) * filter.page_size;
+
+        let total: i64 = sqlx::query_scalar(
+            "SELECT COUNT(1) FROM messaging_outbound_message \
+             WHERE tenant_id = $1 AND organization_id = $2 AND channel = $3 AND deleted_at IS NULL \
+               AND ($4::text IS NULL OR status = $4) \
+               AND ($5::timestamptz IS NULL OR created_at >= $5) \
+               AND ($6::timestamptz IS NULL OR created_at < $6) \
+               AND ($7::text IS NULL OR target_masked ILIKE $7 OR COALESCE(subject, '') ILIKE $7 \
+                    OR body ILIKE $7)",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .bind(channel)
+        .bind(filter.status.as_deref())
+        .bind(filter.from)
+        .bind(filter.to)
+        .bind(keyword_pattern.as_deref())
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+
+        let rows = sqlx::query(
+            "SELECT m.id, m.channel, m.target_masked, m.subject, m.body, m.status, \
+                    COALESCE(NULLIF(m.payload_json->>'scenario', ''), 'default') AS scenario, \
+                    NULLIF(m.payload_json->>'templateCode', '') AS template_code, \
+                    d.provider, d.provider_message_id, d.error_code, d.error_message, \
+                    d.sent_at, d.delivered_at, d.failed_at, \
+                    COALESCE(a.attempt_count, 0)::bigint AS attempt_count, m.created_at \
+             FROM messaging_outbound_message m \
+             LEFT JOIN LATERAL ( \
+                SELECT dd.provider, dd.provider_message_id, dd.error_code, dd.error_message, \
+                       dd.sent_at, dd.delivered_at, dd.failed_at \
+                FROM messaging_outbound_delivery dd \
+                WHERE dd.outbound_message_id = m.id AND dd.tenant_id = m.tenant_id \
+                  AND dd.organization_id = m.organization_id \
+                ORDER BY dd.created_at DESC, dd.id DESC LIMIT 1 \
+             ) d ON TRUE \
+             LEFT JOIN LATERAL ( \
+                SELECT COUNT(1)::bigint AS attempt_count \
+                FROM messaging_outbound_delivery da \
+                WHERE da.outbound_message_id = m.id AND da.tenant_id = m.tenant_id \
+                  AND da.organization_id = m.organization_id \
+             ) a ON TRUE \
+             WHERE m.tenant_id = $1 AND m.organization_id = $2 AND m.channel = $3 \
+               AND m.deleted_at IS NULL \
+               AND ($4::text IS NULL OR m.status = $4) \
+               AND ($5::timestamptz IS NULL OR m.created_at >= $5) \
+               AND ($6::timestamptz IS NULL OR m.created_at < $6) \
+               AND ($7::text IS NULL OR m.target_masked ILIKE $7 \
+                    OR COALESCE(m.subject, '') ILIKE $7 OR m.body ILIKE $7) \
+             ORDER BY m.created_at DESC, m.id DESC \
+             LIMIT $8 OFFSET $9",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .bind(channel)
+        .bind(filter.status.as_deref())
+        .bind(filter.from)
+        .bind(filter.to)
+        .bind(keyword_pattern.as_deref())
+        .bind(filter.page_size)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+
+        let items = rows
+            .iter()
+            .map(send_record_item_from_row)
+            .collect::<Vec<_>>();
+        Ok(MessagingPage {
+            items,
+            page: filter.page,
+            page_size: filter.page_size,
+            total_items: total,
+        })
+    }
+
+    async fn retrieve_send_record(
+        &self,
+        subject: &MessagingAdminSubject,
+        channel: &str,
+        record_id: i64,
+    ) -> Result<MessagingSendRecordDetail, StoreError> {
+        let channel = crate::ports::parse_channel(channel).map_err(StoreError::Invalid)?;
+        let row = sqlx::query(
+            "SELECT m.id, m.channel, m.target_masked, m.subject, m.body, m.status, \
+                    COALESCE(NULLIF(m.payload_json->>'scenario', ''), 'default') AS scenario, \
+                    NULLIF(m.payload_json->>'templateCode', '') AS template_code, \
+                    d.provider, d.provider_message_id, d.error_code, d.error_message, \
+                    d.sent_at, d.delivered_at, d.failed_at, \
+                    COALESCE(a.attempt_count, 0)::bigint AS attempt_count, m.created_at \
+             FROM messaging_outbound_message m \
+             LEFT JOIN LATERAL ( \
+                SELECT dd.provider, dd.provider_message_id, dd.error_code, dd.error_message, \
+                       dd.sent_at, dd.delivered_at, dd.failed_at \
+                FROM messaging_outbound_delivery dd \
+                WHERE dd.outbound_message_id = m.id AND dd.tenant_id = m.tenant_id \
+                  AND dd.organization_id = m.organization_id \
+                ORDER BY dd.created_at DESC, dd.id DESC LIMIT 1 \
+             ) d ON TRUE \
+             LEFT JOIN LATERAL ( \
+                SELECT COUNT(1)::bigint AS attempt_count \
+                FROM messaging_outbound_delivery da \
+                WHERE da.outbound_message_id = m.id AND da.tenant_id = m.tenant_id \
+                  AND da.organization_id = m.organization_id \
+             ) a ON TRUE \
+             WHERE m.id = $1 AND m.tenant_id = $2 AND m.organization_id = $3 \
+               AND m.channel = $4 AND m.deleted_at IS NULL",
+        )
+        .bind(record_id)
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .bind(channel)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?
+        .ok_or_else(|| StoreError::NotFound("send record not found".to_owned()))?;
+
+        let attempt_rows = sqlx::query(
+            "SELECT id, provider, provider_message_id, status, error_code, error_message, \
+                    sent_at, delivered_at, failed_at, created_at \
+             FROM messaging_outbound_delivery \
+             WHERE outbound_message_id = $1 AND tenant_id = $2 AND organization_id = $3 \
+             ORDER BY created_at ASC, id ASC",
+        )
+        .bind(record_id)
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+
+        let attempts = attempt_rows
+            .iter()
+            .map(|row| MessagingSendAttemptItem {
+                id: row.get::<i64, _>("id").to_string(),
+                provider: row.get("provider"),
+                provider_message_id: row.get("provider_message_id"),
+                status: row.get("status"),
+                error_code: row.get("error_code"),
+                error_message: row.get("error_message"),
+                sent_at: row
+                    .get::<Option<chrono::DateTime<Utc>>, _>("sent_at")
+                    .map(rfc3339),
+                delivered_at: row
+                    .get::<Option<chrono::DateTime<Utc>>, _>("delivered_at")
+                    .map(rfc3339),
+                failed_at: row
+                    .get::<Option<chrono::DateTime<Utc>>, _>("failed_at")
+                    .map(rfc3339),
+                created_at: rfc3339(row.get("created_at")),
+            })
+            .collect();
+
+        Ok(MessagingSendRecordDetail {
+            item: send_record_item_from_row(&row),
+            attempts,
+        })
+    }
+
+    async fn notification_dashboard(
+        &self,
+        subject: &MessagingAdminSubject,
+        range_days: i64,
+        now: chrono::DateTime<Utc>,
+    ) -> Result<MessagingDashboardSummary, StoreError> {
+        let range_days = range_days.clamp(1, 365);
+        let to = now;
+        let from = now - Duration::days(range_days - 1);
+        let from_day: NaiveDate = from.date_naive();
+        let to_day: NaiveDate = to.date_naive();
+
+        let totals_row = sqlx::query(
+            "SELECT COUNT(1)::bigint AS total, \
+                    COUNT(1) FILTER (WHERE channel = 'email')::bigint AS email, \
+                    COUNT(1) FILTER (WHERE channel = 'sms')::bigint AS sms, \
+                    COUNT(1) FILTER (WHERE status IN ('delivered', 'opened'))::bigint AS delivered, \
+                    COUNT(1) FILTER (WHERE status = 'failed')::bigint AS failed, \
+                    COUNT(1) FILTER (WHERE status IN ('accepted', 'queued', 'sent'))::bigint AS pending \
+             FROM messaging_outbound_message \
+             WHERE tenant_id = $1 AND organization_id = $2 AND deleted_at IS NULL \
+               AND created_at >= $3 AND created_at <= $4",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .bind(from)
+        .bind(to)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+
+        let total: i64 = totals_row.get("total");
+        let delivered: i64 = totals_row.get("delivered");
+        let failed: i64 = totals_row.get("failed");
+        let completed = delivered + failed;
+        let success_rate = if completed > 0 {
+            delivered as f64 / completed as f64
+        } else {
+            0.0
+        };
+
+        let channel_rows = sqlx::query(
+            "SELECT channel, COUNT(1)::bigint AS total, \
+                    COUNT(1) FILTER (WHERE status IN ('delivered', 'opened'))::bigint AS delivered, \
+                    COUNT(1) FILTER (WHERE status = 'failed')::bigint AS failed, \
+                    COUNT(1) FILTER (WHERE status IN ('accepted', 'queued', 'sent'))::bigint AS pending \
+             FROM messaging_outbound_message \
+             WHERE tenant_id = $1 AND organization_id = $2 AND deleted_at IS NULL \
+               AND created_at >= $3 AND created_at <= $4 \
+             GROUP BY channel ORDER BY channel",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .bind(from)
+        .bind(to)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        let by_channel = channel_rows
+            .iter()
+            .map(|row| MessagingDashboardChannel {
+                channel: row.get("channel"),
+                total: row.get("total"),
+                delivered: row.get("delivered"),
+                failed: row.get("failed"),
+                pending: row.get("pending"),
+            })
+            .collect();
+
+        let status_rows = sqlx::query(
+            "SELECT status, COUNT(1)::bigint AS count \
+             FROM messaging_outbound_message \
+             WHERE tenant_id = $1 AND organization_id = $2 AND deleted_at IS NULL \
+               AND created_at >= $3 AND created_at <= $4 \
+             GROUP BY status ORDER BY count DESC",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .bind(from)
+        .bind(to)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        let by_status = status_rows
+            .iter()
+            .map(|row| MessagingDashboardStatus {
+                status: row.get("status"),
+                count: row.get("count"),
+            })
+            .collect();
+
+        let scenario_rows = sqlx::query(
+            "SELECT COALESCE(NULLIF(payload_json->>'scenario', ''), 'default') AS scenario, \
+                    channel, COUNT(1)::bigint AS total, \
+                    COUNT(1) FILTER (WHERE status = 'failed')::bigint AS failed \
+             FROM messaging_outbound_message \
+             WHERE tenant_id = $1 AND organization_id = $2 AND deleted_at IS NULL \
+               AND created_at >= $3 AND created_at <= $4 \
+             GROUP BY scenario, channel ORDER BY total DESC LIMIT 10",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .bind(from)
+        .bind(to)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        let by_scenario = scenario_rows
+            .iter()
+            .map(|row| MessagingDashboardScenario {
+                scenario: row.get("scenario"),
+                channel: row.get("channel"),
+                total: row.get("total"),
+                failed: row.get("failed"),
+            })
+            .collect();
+
+        let provider_rows = sqlx::query(
+            "SELECT COALESCE(d.provider, 'unknown') AS provider, m.channel, \
+                    COUNT(1)::bigint AS total, \
+                    COUNT(1) FILTER (WHERE m.status = 'failed')::bigint AS failed \
+             FROM messaging_outbound_message m \
+             LEFT JOIN LATERAL ( \
+                SELECT dd.provider FROM messaging_outbound_delivery dd \
+                WHERE dd.outbound_message_id = m.id AND dd.tenant_id = m.tenant_id \
+                  AND dd.organization_id = m.organization_id \
+                ORDER BY dd.created_at DESC, dd.id DESC LIMIT 1 \
+             ) d ON TRUE \
+             WHERE m.tenant_id = $1 AND m.organization_id = $2 AND m.deleted_at IS NULL \
+               AND m.created_at >= $3 AND m.created_at <= $4 \
+             GROUP BY provider, m.channel ORDER BY total DESC LIMIT 10",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .bind(from)
+        .bind(to)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        let by_provider = provider_rows
+            .iter()
+            .map(|row| MessagingDashboardProvider {
+                provider: row.get("provider"),
+                channel: row.get("channel"),
+                total: row.get("total"),
+                failed: row.get("failed"),
+            })
+            .collect();
+
+        let trend_rows = sqlx::query(
+            "SELECT to_char(date_trunc('day', created_at), 'YYYY-MM-DD') AS day, \
+                    COUNT(1) FILTER (WHERE channel = 'email')::bigint AS email, \
+                    COUNT(1) FILTER (WHERE channel = 'sms')::bigint AS sms, \
+                    COUNT(1) FILTER (WHERE status IN ('delivered', 'opened'))::bigint AS delivered, \
+                    COUNT(1) FILTER (WHERE status = 'failed')::bigint AS failed \
+             FROM messaging_outbound_message \
+             WHERE tenant_id = $1 AND organization_id = $2 AND deleted_at IS NULL \
+               AND created_at >= $3 AND created_at <= $4 \
+             GROUP BY day ORDER BY day",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .bind(from)
+        .bind(to)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        let mut trend_by_day: HashMap<String, (i64, i64, i64, i64)> = HashMap::new();
+        for row in &trend_rows {
+            trend_by_day.insert(
+                row.get("day"),
+                (
+                    row.get("email"),
+                    row.get("sms"),
+                    row.get("delivered"),
+                    row.get("failed"),
+                ),
+            );
+        }
+        let mut trend = Vec::with_capacity(range_days as usize);
+        let mut day = from_day;
+        while day <= to_day {
+            let key = day.format("%Y-%m-%d").to_string();
+            let (email, sms, delivered, failed) = trend_by_day
+                .remove(&key)
+                .unwrap_or((0, 0, 0, 0));
+            trend.push(MessagingDashboardTrendPoint {
+                date: key,
+                email,
+                sms,
+                delivered,
+                failed,
+            });
+            day += Duration::days(1);
+        }
+
+        let failure_filter = SendRecordFilter {
+            status: Some("failed".to_owned()),
+            q: None,
+            from: Some(from),
+            to: Some(to),
+            page: 1,
+            page_size: 5,
+        };
+        let mut recent_failures = Vec::new();
+        for channel in ["email", "sms"] {
+            let page = self
+                .list_send_records(subject, channel, &failure_filter)
+                .await?;
+            recent_failures.extend(page.items);
+        }
+        recent_failures.sort_by(|left, right| right.created_at.cmp(&left.created_at));
+        recent_failures.truncate(5);
+
+        Ok(MessagingDashboardSummary {
+            range_days,
+            from: rfc3339(from),
+            to: rfc3339(to),
+            totals: MessagingDashboardTotals {
+                total,
+                email: totals_row.get("email"),
+                sms: totals_row.get("sms"),
+                delivered,
+                failed,
+                pending: totals_row.get("pending"),
+                success_rate,
+            },
+            by_channel,
+            by_status,
+            by_scenario,
+            by_provider,
+            trend,
+            recent_failures,
         })
     }
 
@@ -1628,7 +2149,16 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
             priorities.insert(sender_id, email_provider_priority(&sender_provider));
             all_sender_ids.push(sender_id);
         }
-        let canonical_chain = order_chain(&all_sender_ids, &priorities);
+        let canonical_chain: Vec<StoredSendRuleStep> = order_steps(
+            &all_sender_ids
+                .iter()
+                .map(|id| StoredSendRuleStep {
+                    id: *id,
+                    enabled: true,
+                })
+                .collect::<Vec<_>>(),
+            &priorities,
+        );
 
         let rule_rows = sqlx::query(
             "SELECT id, scenario, chain_json FROM messaging_email_send_rule \
@@ -1650,9 +2180,10 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         for scenario in SEND_RULE_SCENARIOS {
             match rules.get(*scenario) {
                 Some((rule_id, stored_chain)) => {
-                    let existing_ids = chain_ids(stored_chain);
-                    let next_ids = extend_chain(&existing_ids, identity_id, &priorities);
-                    if next_ids != existing_ids {
+                    let existing_steps = chain_steps(stored_chain);
+                    let (next_steps, changed) =
+                        extend_chain(&existing_steps, identity_id, &priorities);
+                    if changed {
                         sqlx::query(
                             "UPDATE messaging_email_send_rule SET \
                                 chain_json = $4, \
@@ -1663,7 +2194,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
                         .bind(rule_id)
                         .bind(subject.tenant_id)
                         .bind(subject.organization_id)
-                        .bind(chain_json(&next_ids))
+                        .bind(chain_json(&next_steps))
                         .execute(&mut *tx)
                         .await
                         .map_err(|error| StoreError::Unavailable(error.to_string()))?;
@@ -1945,24 +2476,15 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .await
         .map_err(|error| StoreError::Unavailable(error.to_string()))?;
 
-        let mut by_scenario: HashMap<String, (Vec<String>, bool, Option<String>, String)> =
+        let mut by_scenario: HashMap<String, (Vec<StoredSendRuleStep>, bool, Option<String>, String)> =
             HashMap::new();
         for row in rows {
             let scenario: String = row.get("scenario");
             let chain_value: serde_json::Value = row.get("chain_json");
-            let sender_ids = chain_value
-                .as_array()
-                .map(|items| {
-                    items
-                        .iter()
-                        .filter_map(|item| item.as_str().map(str::to_owned))
-                        .collect()
-                })
-                .unwrap_or_default();
             by_scenario.insert(
                 scenario,
                 (
-                    sender_ids,
+                    chain_steps(&chain_value),
                     row.get("enabled"),
                     Some(rfc3339(row.get("updated_at"))),
                     row.get::<i64, _>("version").to_string(),
@@ -1972,10 +2494,10 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
 
         let mut items = Vec::with_capacity(SEND_RULE_SCENARIOS.len());
         for scenario in SEND_RULE_SCENARIOS {
-            let (sender_ids, enabled, updated_at, version) = by_scenario
+            let (steps, enabled, updated_at, version) = by_scenario
                 .remove(*scenario)
                 .unwrap_or_else(|| (Vec::new(), true, None, "0".to_owned()));
-            let chain = self.resolve_email_chain(subject, &sender_ids).await?;
+            let chain = self.resolve_email_chain(subject, &steps).await?;
             items.push(EmailSendRuleItem {
                 scenario: (*scenario).to_owned(),
                 chain,
@@ -1996,41 +2518,45 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
     ) -> Result<EmailSendRuleItem, StoreError> {
         let scenario =
             crate::ports::parse_send_rule_scenario(scenario).map_err(StoreError::Invalid)?;
-        let mut sender_ids = Vec::with_capacity(command.sender_ids.len());
-        for raw in &command.sender_ids {
-            let id = parse_scope_id(raw, "senderId")?;
-            if sender_ids.contains(&id) {
+        let mut steps: Vec<StoredSendRuleStep> = Vec::with_capacity(command.steps.len());
+        for raw in &command.steps {
+            let id = parse_scope_id(&raw.sender_id, "senderId")?;
+            if steps.iter().any(|step| step.id == id) {
                 return Err(StoreError::Invalid(format!(
-                    "send rule chain contains duplicate sender `{raw}`"
+                    "send rule chain contains duplicate sender `{}`",
+                    raw.sender_id
                 )));
             }
-            sender_ids.push(id);
+            steps.push(StoredSendRuleStep {
+                id,
+                enabled: raw.enabled,
+            });
         }
-        if !sender_ids.is_empty() {
+        if command.enabled && !steps.iter().any(|step| step.enabled) {
+            return Err(StoreError::Invalid(
+                "an enabled send rule requires at least one enabled step".to_owned(),
+            ));
+        }
+        if !steps.is_empty() {
+            let ids: Vec<i64> = steps.iter().map(|step| step.id).collect();
             let known: i64 = sqlx::query_scalar(
                 "SELECT COUNT(DISTINCT id) FROM messaging_email_sender \
                  WHERE tenant_id = $1 AND organization_id = $2 AND id = ANY($3) AND deleted_at IS NULL",
             )
             .bind(subject.tenant_id)
             .bind(subject.organization_id)
-            .bind(&sender_ids)
+            .bind(&ids)
             .fetch_one(&self.pool)
             .await
             .map_err(|error| StoreError::Unavailable(error.to_string()))?;
-            if known != sender_ids.len() as i64 {
+            if known != steps.len() as i64 {
                 return Err(StoreError::Invalid(
                     "send rule chain references an unknown email sender".to_owned(),
                 ));
             }
         }
 
-        let chain_json = serde_json::to_value(
-            sender_ids
-                .iter()
-                .map(|id| id.to_string())
-                .collect::<Vec<_>>(),
-        )
-        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        let chain_json = chain_json(&steps);
 
         let row = sqlx::query(
             "INSERT INTO messaging_email_send_rule \
@@ -2064,17 +2590,8 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
             )
         })?;
 
-        let stored_ids: Vec<String> = row
-            .get::<serde_json::Value, _>("chain_json")
-            .as_array()
-            .map(|items| {
-                items
-                    .iter()
-                    .filter_map(|item| item.as_str().map(str::to_owned))
-                    .collect()
-            })
-            .unwrap_or_default();
-        let chain = self.resolve_email_chain(subject, &stored_ids).await?;
+        let stored_steps = chain_steps(&row.get::<serde_json::Value, _>("chain_json"));
+        let chain = self.resolve_email_chain(subject, &stored_steps).await?;
         Ok(EmailSendRuleItem {
             scenario: row.get("scenario"),
             chain,
@@ -2509,7 +3026,16 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
             priorities.insert(signature_id, sms_provider_priority(&signature_provider));
             all_signature_ids.push(signature_id);
         }
-        let canonical_chain = order_chain(&all_signature_ids, &priorities);
+        let canonical_chain: Vec<StoredSendRuleStep> = order_steps(
+            &all_signature_ids
+                .iter()
+                .map(|id| StoredSendRuleStep {
+                    id: *id,
+                    enabled: true,
+                })
+                .collect::<Vec<_>>(),
+            &priorities,
+        );
 
         let rule_rows = sqlx::query(
             "SELECT id, scenario, chain_json FROM messaging_sms_send_rule \
@@ -2531,9 +3057,10 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         for scenario in SEND_RULE_SCENARIOS {
             match rules.get(*scenario) {
                 Some((rule_id, stored_chain)) => {
-                    let existing_ids = chain_ids(stored_chain);
-                    let next_ids = extend_chain(&existing_ids, identity_id, &priorities);
-                    if next_ids != existing_ids {
+                    let existing_steps = chain_steps(stored_chain);
+                    let (next_steps, changed) =
+                        extend_chain(&existing_steps, identity_id, &priorities);
+                    if changed {
                         sqlx::query(
                             "UPDATE messaging_sms_send_rule SET \
                                 chain_json = $4, \
@@ -2544,7 +3071,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
                         .bind(rule_id)
                         .bind(subject.tenant_id)
                         .bind(subject.organization_id)
-                        .bind(chain_json(&next_ids))
+                        .bind(chain_json(&next_steps))
                         .execute(&mut *tx)
                         .await
                         .map_err(|error| StoreError::Unavailable(error.to_string()))?;
@@ -2821,24 +3348,15 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .await
         .map_err(|error| StoreError::Unavailable(error.to_string()))?;
 
-        let mut by_scenario: HashMap<String, (Vec<String>, bool, Option<String>, String)> =
+        let mut by_scenario: HashMap<String, (Vec<StoredSendRuleStep>, bool, Option<String>, String)> =
             HashMap::new();
         for row in rows {
             let scenario: String = row.get("scenario");
             let chain_value: serde_json::Value = row.get("chain_json");
-            let signature_ids = chain_value
-                .as_array()
-                .map(|items| {
-                    items
-                        .iter()
-                        .filter_map(|item| item.as_str().map(str::to_owned))
-                        .collect()
-                })
-                .unwrap_or_default();
             by_scenario.insert(
                 scenario,
                 (
-                    signature_ids,
+                    chain_steps(&chain_value),
                     row.get("enabled"),
                     Some(rfc3339(row.get("updated_at"))),
                     row.get::<i64, _>("version").to_string(),
@@ -2848,10 +3366,10 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
 
         let mut items = Vec::with_capacity(SEND_RULE_SCENARIOS.len());
         for scenario in SEND_RULE_SCENARIOS {
-            let (signature_ids, enabled, updated_at, version) = by_scenario
+            let (steps, enabled, updated_at, version) = by_scenario
                 .remove(*scenario)
                 .unwrap_or_else(|| (Vec::new(), true, None, "0".to_owned()));
-            let chain = self.resolve_sms_chain(subject, &signature_ids).await?;
+            let chain = self.resolve_sms_chain(subject, &steps).await?;
             items.push(SmsSendRuleItem {
                 scenario: (*scenario).to_owned(),
                 chain,
@@ -2872,41 +3390,45 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
     ) -> Result<SmsSendRuleItem, StoreError> {
         let scenario =
             crate::ports::parse_send_rule_scenario(scenario).map_err(StoreError::Invalid)?;
-        let mut signature_ids = Vec::with_capacity(command.signature_ids.len());
-        for raw in &command.signature_ids {
-            let id = parse_scope_id(raw, "signatureId")?;
-            if signature_ids.contains(&id) {
+        let mut steps: Vec<StoredSendRuleStep> = Vec::with_capacity(command.steps.len());
+        for raw in &command.steps {
+            let id = parse_scope_id(&raw.signature_id, "signatureId")?;
+            if steps.iter().any(|step| step.id == id) {
                 return Err(StoreError::Invalid(format!(
-                    "send rule chain contains duplicate signature `{raw}`"
+                    "send rule chain contains duplicate signature `{}`",
+                    raw.signature_id
                 )));
             }
-            signature_ids.push(id);
+            steps.push(StoredSendRuleStep {
+                id,
+                enabled: raw.enabled,
+            });
         }
-        if !signature_ids.is_empty() {
+        if command.enabled && !steps.iter().any(|step| step.enabled) {
+            return Err(StoreError::Invalid(
+                "an enabled send rule requires at least one enabled step".to_owned(),
+            ));
+        }
+        if !steps.is_empty() {
+            let ids: Vec<i64> = steps.iter().map(|step| step.id).collect();
             let known: i64 = sqlx::query_scalar(
                 "SELECT COUNT(DISTINCT id) FROM messaging_sms_signature \
                  WHERE tenant_id = $1 AND organization_id = $2 AND id = ANY($3) AND deleted_at IS NULL",
             )
             .bind(subject.tenant_id)
             .bind(subject.organization_id)
-            .bind(&signature_ids)
+            .bind(&ids)
             .fetch_one(&self.pool)
             .await
             .map_err(|error| StoreError::Unavailable(error.to_string()))?;
-            if known != signature_ids.len() as i64 {
+            if known != steps.len() as i64 {
                 return Err(StoreError::Invalid(
                     "send rule chain references an unknown sms signature".to_owned(),
                 ));
             }
         }
 
-        let chain_json = serde_json::to_value(
-            signature_ids
-                .iter()
-                .map(|id| id.to_string())
-                .collect::<Vec<_>>(),
-        )
-        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        let chain_json = chain_json(&steps);
 
         let row = sqlx::query(
             "INSERT INTO messaging_sms_send_rule \
@@ -2940,17 +3462,8 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
             )
         })?;
 
-        let stored_ids: Vec<String> = row
-            .get::<serde_json::Value, _>("chain_json")
-            .as_array()
-            .map(|items| {
-                items
-                    .iter()
-                    .filter_map(|item| item.as_str().map(str::to_owned))
-                    .collect()
-            })
-            .unwrap_or_default();
-        let chain = self.resolve_sms_chain(subject, &stored_ids).await?;
+        let stored_steps = chain_steps(&row.get::<serde_json::Value, _>("chain_json"));
+        let chain = self.resolve_sms_chain(subject, &stored_steps).await?;
         Ok(SmsSendRuleItem {
             scenario: row.get("scenario"),
             chain,
@@ -3304,4 +3817,110 @@ fn template_item_from_row(row: sqlx::postgres::PgRow) -> Result<TemplateItem, sq
             .get::<Option<i64>, _>("created_by")
             .map(|value| value.to_string()),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn legacy_chain_arrays_enable_every_step() {
+        let steps = chain_steps(&serde_json::json!(["10", "20"]));
+        assert_eq!(
+            steps,
+            vec![
+                StoredSendRuleStep {
+                    id: 10,
+                    enabled: true
+                },
+                StoredSendRuleStep {
+                    id: 20,
+                    enabled: true
+                }
+            ]
+        );
+    }
+
+    #[test]
+    fn object_chain_preserves_step_enablement() {
+        let steps = chain_steps(&serde_json::json!([
+            { "id": "10", "enabled": false },
+            { "id": "20", "enabled": true }
+        ]));
+        assert_eq!(
+            steps,
+            vec![
+                StoredSendRuleStep {
+                    id: 10,
+                    enabled: false
+                },
+                StoredSendRuleStep {
+                    id: 20,
+                    enabled: true
+                }
+            ]
+        );
+        // A missing `enabled` flag defaults to active (forward-compatible).
+        let steps = chain_steps(&serde_json::json!([{ "id": "30" }]));
+        assert_eq!(steps[0].enabled, true);
+    }
+
+    #[test]
+    fn chain_serialization_uses_the_object_shape() {
+        let value = chain_json(&[
+            StoredSendRuleStep {
+                id: 10,
+                enabled: true,
+            },
+            StoredSendRuleStep {
+                id: 20,
+                enabled: false,
+            },
+        ]);
+        assert_eq!(
+            value,
+            serde_json::json!([
+                { "id": "10", "enabled": true },
+                { "id": "20", "enabled": false }
+            ])
+        );
+    }
+
+    #[test]
+    fn extend_chain_preserves_existing_order_and_disablement() {
+        let mut priorities = HashMap::new();
+        priorities.insert(1, 0);
+        priorities.insert(2, 1);
+        priorities.insert(3, 2);
+        let existing = vec![
+            StoredSendRuleStep {
+                id: 1,
+                enabled: true,
+            },
+            StoredSendRuleStep {
+                id: 2,
+                enabled: false,
+            },
+        ];
+        let (steps, changed) = extend_chain(&existing, 3, &priorities);
+        assert!(changed);
+        assert_eq!(steps.len(), 3);
+        assert_eq!(steps[0].id, 1);
+        assert_eq!(steps[1].id, 2);
+        assert!(!steps[1].enabled, "existing step disablement is preserved");
+        assert_eq!(steps[2].id, 3);
+
+        let (unchanged, changed) = extend_chain(&steps, 2, &priorities);
+        assert!(!changed, "an existing step must not be appended again");
+        assert_eq!(unchanged, steps);
+    }
+
+    #[test]
+    fn body_preview_collapses_whitespace_and_truncates() {
+        assert_eq!(body_preview("hello \n  world"), "hello world");
+        let long = "x".repeat(200);
+        let preview = body_preview(&long);
+        assert!(preview.ends_with('…'));
+        assert_eq!(preview.chars().count(), 161);
+    }
 }

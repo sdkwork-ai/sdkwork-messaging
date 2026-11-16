@@ -1,7 +1,7 @@
 import { backendApiPath } from './paths';
 import type { ApiRequestOptions, HttpClient } from '../http/client';
 
-import type { MessagingAnnouncement, MessagingAnnouncementPublishRequest, MessagingAnnouncementResponse, MessagingEmailAccount, MessagingEmailAccountCreateRequest, MessagingEmailAccountResponse, MessagingEmailAccountUpdateRequest, MessagingEmailSender, MessagingEmailSenderCreateRequest, MessagingEmailSenderResponse, MessagingEmailSenderUpdateRequest, MessagingEmailSendRule, MessagingEmailSendRuleResponse, MessagingEmailSendRuleUpdateRequest, MessagingNotification, MessagingNotificationCreateRequest, MessagingNotificationResponse, MessagingOutboundMessage, MessagingOutboundMessageResponse, MessagingOutboundMessageSendRequest, MessagingProviderInitializeResponse, MessagingPushMessage, MessagingPushMessageResponse, MessagingPushMessageSendRequest, MessagingSmsAccount, MessagingSmsAccountCreateRequest, MessagingSmsAccountResponse, MessagingSmsAccountUpdateRequest, MessagingSmsSendRule, MessagingSmsSendRuleResponse, MessagingSmsSendRuleUpdateRequest, MessagingSmsSignature, MessagingSmsSignatureCreateRequest, MessagingSmsSignatureResponse, MessagingSmsSignatureUpdateRequest, MessagingTemplate, MessagingTemplateCreateRequest, MessagingTemplateResponse, MessagingTemplateUpdateRequest, MessagingVerificationPolicy, MessagingVerificationPolicyResponse, MessagingVerificationPolicyUpdateRequest, PageInfo } from '../types';
+import type { MessagingAnnouncement, MessagingAnnouncementPublishRequest, MessagingAnnouncementResponse, MessagingDashboardSummary, MessagingEmailAccount, MessagingEmailAccountCreateRequest, MessagingEmailAccountResponse, MessagingEmailAccountUpdateRequest, MessagingEmailSender, MessagingEmailSenderCreateRequest, MessagingEmailSenderResponse, MessagingEmailSenderUpdateRequest, MessagingEmailSendRule, MessagingEmailSendRuleResponse, MessagingEmailSendRuleUpdateRequest, MessagingNotification, MessagingNotificationCreateRequest, MessagingNotificationResponse, MessagingOutboundMessage, MessagingOutboundMessageResponse, MessagingOutboundMessageSendRequest, MessagingProviderInitializeResponse, MessagingPushMessage, MessagingPushMessageResponse, MessagingPushMessageSendRequest, MessagingSendRecord, MessagingSmsAccount, MessagingSmsAccountCreateRequest, MessagingSmsAccountResponse, MessagingSmsAccountUpdateRequest, MessagingSmsSendRule, MessagingSmsSendRuleResponse, MessagingSmsSendRuleUpdateRequest, MessagingSmsSignature, MessagingSmsSignatureCreateRequest, MessagingSmsSignatureResponse, MessagingSmsSignatureUpdateRequest, MessagingTemplate, MessagingTemplateCreateRequest, MessagingTemplateResponse, MessagingTemplateUpdateRequest, MessagingVerificationPolicy, MessagingVerificationPolicyResponse, MessagingVerificationPolicyUpdateRequest, PageInfo } from '../types';
 
 
 export interface MessagingTemplatesListParams {
@@ -586,6 +586,99 @@ export class MessagingVerificationPoliciesApi {
   }
 }
 
+export interface MessagingDashboardRetrieveParams {
+  range?: number;
+}
+
+export class MessagingDashboardApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** messaging.dashboard.retrieve */
+  async retrieve(params?: MessagingDashboardRetrieveParams, requestOptions?: ApiRequestOptions): Promise<MessagingDashboardSummary> {
+    const query = buildQueryString([
+      { name: 'range', value: params?.range, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<MessagingDashboardSummary>(appendQueryString(backendApiPath(`/messaging/dashboard`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'item' });
+  }
+}
+
+export interface MessagingSmsSendRecordsListParams {
+  status?: 'accepted' | 'queued' | 'sent' | 'delivered' | 'failed' | 'opened' | 'cancelled' | 'expired';
+  q?: string;
+  from_?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export class MessagingSmsSendRecordsApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** messaging.smsSendRecords.list */
+  async list(params?: MessagingSmsSendRecordsListParams, requestOptions?: ApiRequestOptions): Promise<{ items: MessagingSendRecord[]; pageInfo: PageInfo; }> {
+    const query = buildQueryString([
+      { name: 'status', value: params?.status, style: 'form', explode: true, allowReserved: false },
+      { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
+      { name: 'from', value: params?.from_, style: 'form', explode: true, allowReserved: false },
+      { name: 'to', value: params?.to, style: 'form', explode: true, allowReserved: false },
+      { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
+      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<{ items: MessagingSendRecord[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/sms/send_records`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
+  }
+
+/** messaging.smsSendRecords.retrieve */
+  async retrieve(recordId: string, requestOptions?: ApiRequestOptions): Promise<MessagingSendRecord> {
+    return this.client.request<MessagingSendRecord>(backendApiPath(`/messaging/sms/send_records/${serializePathParameter(recordId, { name: 'recordId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'item' });
+  }
+}
+
+export interface MessagingEmailSendRecordsListParams {
+  status?: 'accepted' | 'queued' | 'sent' | 'delivered' | 'failed' | 'opened' | 'cancelled' | 'expired';
+  q?: string;
+  from_?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export class MessagingEmailSendRecordsApi {
+  private client: HttpClient;
+
+  constructor(client: HttpClient) {
+    this.client = client;
+  }
+
+
+/** messaging.emailSendRecords.list */
+  async list(params?: MessagingEmailSendRecordsListParams, requestOptions?: ApiRequestOptions): Promise<{ items: MessagingSendRecord[]; pageInfo: PageInfo; }> {
+    const query = buildQueryString([
+      { name: 'status', value: params?.status, style: 'form', explode: true, allowReserved: false },
+      { name: 'q', value: params?.q, style: 'form', explode: true, allowReserved: false },
+      { name: 'from', value: params?.from_, style: 'form', explode: true, allowReserved: false },
+      { name: 'to', value: params?.to, style: 'form', explode: true, allowReserved: false },
+      { name: 'page', value: params?.page, style: 'form', explode: true, allowReserved: false },
+      { name: 'page_size', value: params?.pageSize, style: 'form', explode: true, allowReserved: false },
+    ]);
+    return this.client.request<{ items: MessagingSendRecord[]; pageInfo: PageInfo; }>(appendQueryString(backendApiPath(`/messaging/email/send_records`), query), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'page' });
+  }
+
+/** messaging.emailSendRecords.retrieve */
+  async retrieve(recordId: string, requestOptions?: ApiRequestOptions): Promise<MessagingSendRecord> {
+    return this.client.request<MessagingSendRecord>(backendApiPath(`/messaging/email/send_records/${serializePathParameter(recordId, { name: 'recordId', style: 'simple', explode: false })}`), { ...(requestOptions?.signal !== undefined ? { signal: requestOptions.signal } : {}), ...(requestOptions?.timeout !== undefined ? { timeout: requestOptions.timeout } : {}), method: 'GET' as any, sdkworkUnwrapKind: 'item' });
+  }
+}
+
 export interface MessagingOutboundMessagesListParams {
   page?: number;
   pageSize?: number;
@@ -743,6 +836,9 @@ export class MessagingApi {
   public readonly announcements: MessagingAnnouncementsApi;
   public readonly pushMessages: MessagingPushMessagesApi;
   public readonly outboundMessages: MessagingOutboundMessagesApi;
+  public readonly emailSendRecords: MessagingEmailSendRecordsApi;
+  public readonly smsSendRecords: MessagingSmsSendRecordsApi;
+  public readonly dashboard: MessagingDashboardApi;
   public readonly verificationPolicies: MessagingVerificationPoliciesApi;
   public readonly emailAccounts: MessagingEmailAccountsApi;
   public readonly emailProviders: MessagingEmailProvidersApi;
@@ -759,6 +855,9 @@ export class MessagingApi {
     this.announcements = new MessagingAnnouncementsApi(client);
     this.pushMessages = new MessagingPushMessagesApi(client);
     this.outboundMessages = new MessagingOutboundMessagesApi(client);
+    this.emailSendRecords = new MessagingEmailSendRecordsApi(client);
+    this.smsSendRecords = new MessagingSmsSendRecordsApi(client);
+    this.dashboard = new MessagingDashboardApi(client);
     this.verificationPolicies = new MessagingVerificationPoliciesApi(client);
     this.emailAccounts = new MessagingEmailAccountsApi(client);
     this.emailProviders = new MessagingEmailProvidersApi(client);

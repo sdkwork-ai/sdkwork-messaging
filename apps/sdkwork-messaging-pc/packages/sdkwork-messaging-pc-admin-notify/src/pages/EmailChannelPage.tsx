@@ -61,6 +61,19 @@ import {
   type MessagingEmailSender,
   type NotifyAdminService,
 } from "../notifyAdminService";
+import {
+  addDraftStep,
+  createRuleDraft,
+  isDraftDirty,
+  moveDraftStep,
+  removeDraftStep,
+  reorderDraftToPriority,
+  resetDraftToSaved,
+  setDraftEnabled,
+  toggleDraftStep,
+  validateDraft,
+  type SendRuleDraft,
+} from "../sendRuleDraft";
 
 export interface SdkworkMessagingEmailChannelPageProps {
   service?: NotifyAdminService;
@@ -1253,9 +1266,7 @@ function SendersPanel({ admin }: { admin: NotifyAdminService }) {
 function RulesPanel({ admin }: { admin: NotifyAdminService }) {
   const { t } = useTranslation();
   const [senders, setSenders] = useState<MessagingEmailSender[]>([]);
-  const [chains, setChains] = useState<Record<string, string[]>>({});
-  const [ruleEnabled, setRuleEnabled] = useState<Record<string, boolean>>({});
-  const [ruleVersions, setRuleVersions] = useState<Record<string, string>>({});
+  const [drafts, setDrafts] = useState<Record<string, SendRuleDraft>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -1267,17 +1278,20 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
       admin.listEmailSenders({ page: 1, pageSize: 100 }),
     ]);
     setSenders(senderPage.items);
-    const nextChains: Record<string, string[]> = {};
-    const nextEnabled: Record<string, boolean> = {};
-    const nextVersions: Record<string, string> = {};
+    const next: Record<string, SendRuleDraft> = {};
     for (const rule of ruleItems) {
-      nextChains[rule.scenario] = rule.chain.map((step) => step.senderId);
-      nextEnabled[rule.scenario] = rule.enabled;
-      nextVersions[rule.scenario] = rule.version;
+      next[rule.scenario] = createRuleDraft({
+        enabled: rule.enabled,
+        steps: rule.chain.map((step) => ({
+          id: step.senderId,
+          identityEnabled: step.identityEnabled,
+          stepEnabled: step.stepEnabled,
+        })),
+        version: rule.version,
+        updatedAt: rule.updatedAt ?? null,
+      });
     }
-    setChains(nextChains);
-    setRuleEnabled(nextEnabled);
-    setRuleVersions(nextVersions);
+    setDrafts(next);
   }, [admin]);
 
   const runLoad = useCallback(async () => {
@@ -1304,36 +1318,65 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
     return index;
   }, [senders]);
 
-  const setChain = (scenario: MessagingEmailSendScenario, senderIds: string[]) => {
-    setChains((current) => ({ ...current, [scenario]: senderIds }));
+  const updateDraft = (
+    scenario: MessagingEmailSendScenario,
+    updater: (draft: SendRuleDraft) => SendRuleDraft,
+  ) => {
+    setDrafts((current) => {
+      const draft = current[scenario];
+      if (!draft) {
+        return current;
+      }
+      return { ...current, [scenario]: updater(draft) };
+    });
   };
 
-  const moveStep = (scenario: MessagingEmailSendScenario, index: number, offset: -1 | 1) => {
-    const chain = [...(chains[scenario] ?? [])];
-    const target = index + offset;
-    if (target < 0 || target >= chain.length) {
-      return;
-    }
-    [chain[index], chain[target]] = [chain[target], chain[index]];
-    setChain(scenario, chain);
-  };
+  /** Recommended fallback order = the default scenario chain's order. */
+  const recommendedOrder = useMemo(() => {
+    const chain = drafts.default?.steps ?? [];
+    return chain.map((step) => step.id);
+  }, [drafts.default]);
 
   const saveScenario = async (scenario: MessagingEmailSendScenario) => {
+    const draft = drafts[scenario];
+    if (!draft) {
+      return;
+    }
+    const validation = validateDraft(draft);
+    if (validation) {
+      setError(t(`admin.notify.rules.validation.${validation}`));
+      return;
+    }
     setSavingScenario(scenario);
     setError(null);
     setNotice(null);
     try {
-      await admin.updateEmailSendRule(scenario, {
-        senderIds: chains[scenario] ?? [],
-        enabled: ruleEnabled[scenario] ?? false,
-        expectedVersion: ruleVersions[scenario] ?? "0",
+      const updated = await admin.updateEmailSendRule(scenario, {
+        steps: draft.steps.map((step) => ({
+          senderId: step.id,
+          enabled: step.stepEnabled,
+        })),
+        enabled: draft.enabled,
+        expectedVersion: draft.version,
       });
+      setDrafts((current) => ({
+        ...current,
+        [scenario]: createRuleDraft({
+          enabled: updated.enabled,
+          steps: updated.chain.map((step) => ({
+            id: step.senderId,
+            identityEnabled: step.identityEnabled,
+            stepEnabled: step.stepEnabled,
+          })),
+          version: updated.version,
+          updatedAt: updated.updatedAt ?? null,
+        }),
+      }));
       setNotice(t("admin.notify.common.saved"));
-      await load();
     } catch (error) {
       if (isConflictError(error)) {
         setError(t("admin.notify.common.conflict"));
-        await load();
+        await runLoad();
       } else {
         setError(t("admin.notify.rules.saveFailed"));
       }
@@ -1359,15 +1402,23 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
       ) : null}
       <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
         {EMAIL_SEND_SCENARIOS.map((scenario) => {
-          const chain = chains[scenario] ?? [];
-          const available = senders.filter((sender) => !chain.includes(sender.id));
+          const draft = drafts[scenario];
+          if (!draft) {
+            return null;
+          }
+          const available = senders.filter(
+            (sender) => !draft.steps.some((step) => step.id === sender.id),
+          );
+          const validation = validateDraft(draft);
+          const dirty = isDraftDirty(draft);
+          const activeSteps = draft.steps.filter((step) => step.stepEnabled).length;
           return (
             <article
               key={scenario}
               className="flex min-w-0 flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#1a1a1a]"
             >
               <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <h3 className="inline-flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-white">
                     <Route className="h-4 w-4 text-sky-500" />
                     {t(`admin.notify.rules.scenario.${scenario}`)}
@@ -1375,52 +1426,100 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     {t(`admin.notify.rules.scenario.${scenario}.description`)}
                   </p>
+                  <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-400 dark:text-slate-500">
+                    <span>
+                      {t("admin.notify.rules.stepSummary", {
+                        total: draft.steps.length,
+                        active: activeSteps,
+                      })}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    <span>
+                      {draft.updatedAt
+                        ? t("admin.notify.rules.updatedAt", {
+                            time: new Date(draft.updatedAt).toLocaleString(),
+                          })
+                        : t("admin.notify.rules.neverSaved")}
+                    </span>
+                    {dirty ? (
+                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                        {t("admin.notify.rules.unsaved")}
+                      </span>
+                    ) : null}
+                  </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <ToggleInput
-                    checked={ruleEnabled[scenario] ?? false}
+                    checked={draft.enabled}
                     ariaLabel={t("admin.notify.rules.toggleAria", {
                       scenario: t(`admin.notify.rules.scenario.${scenario}`),
                     })}
                     onChange={(value) =>
-                      setRuleEnabled((current) => ({ ...current, [scenario]: value }))
+                      updateDraft(scenario, (current) => setDraftEnabled(current, value))
                     }
                   />
                   <span className="text-[11px] text-slate-400 dark:text-slate-500">
-                    {ruleEnabled[scenario]
+                    {draft.enabled
                       ? t("admin.notify.common.enabled")
                       : t("admin.notify.rules.disabledRule")}
                   </span>
                 </div>
               </div>
+              {validation ? (
+                <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
+                  {t(`admin.notify.rules.validation.${validation}`)}
+                </p>
+              ) : null}
               <ol className="flex flex-col gap-2">
-                {chain.map((senderId, index) => {
-                  const sender = senderById.get(senderId);
+                {draft.steps.map((step, index) => {
+                  const sender = senderById.get(step.id);
                   return (
                     <li
-                      key={senderId}
-                      className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-white/10"
+                      key={step.id}
+                      className={`flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-white/10 ${
+                        step.stepEnabled ? "" : "opacity-60"
+                      }`}
                     >
                       <span className="w-5 shrink-0 text-center text-xs text-slate-400 dark:text-slate-500">
                         {index + 1}
                       </span>
-                      <span className="min-w-0 flex-1 truncate font-mono text-xs text-slate-700 dark:text-slate-200">
-                        {sender?.fromAddress ?? senderId}
-                        {sender ? (
-                          <span className="ml-2 font-sans text-slate-400 dark:text-slate-500">
-                            {sender.accountName}
-                          </span>
-                        ) : null}
-                      </span>
-                      {sender && !sender.enabled ? (
-                        <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
-                          {t("admin.notify.rules.disabledSender")}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-mono text-xs text-slate-700 dark:text-slate-200">
+                          {sender?.fromAddress ?? step.id}
                         </span>
-                      ) : null}
+                        <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500">
+                          {sender?.accountName ?? t("admin.notify.rules.unknownIdentity")}
+                          {!step.identityEnabled ? (
+                            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                              {t("admin.notify.rules.identityDisabled")}
+                            </span>
+                          ) : null}
+                          {!step.stepEnabled ? (
+                            <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] text-slate-600 dark:bg-white/10 dark:text-slate-300">
+                              {t("admin.notify.rules.stepDisabled")}
+                            </span>
+                          ) : null}
+                        </span>
+                      </span>
+                      <ToggleInput
+                        checked={step.stepEnabled}
+                        ariaLabel={t("admin.notify.rules.stepToggleAria", {
+                          name: sender?.fromAddress ?? step.id,
+                        })}
+                        onChange={(value) =>
+                          updateDraft(scenario, (current) =>
+                            toggleDraftStep(current, step.id, value),
+                          )
+                        }
+                      />
                       <button
                         type="button"
-                        aria-label="move up"
-                        onClick={() => moveStep(scenario, index, -1)}
+                        aria-label={t("admin.notify.rules.moveUp")}
+                        onClick={() =>
+                          updateDraft(scenario, (current) =>
+                            moveDraftStep(current, index, -1),
+                          )
+                        }
                         disabled={index === 0}
                         className="rounded p-1 text-slate-400 hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-white/10"
                       >
@@ -1428,20 +1527,23 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
                       </button>
                       <button
                         type="button"
-                        aria-label="move down"
-                        onClick={() => moveStep(scenario, index, 1)}
-                        disabled={index === chain.length - 1}
+                        aria-label={t("admin.notify.rules.moveDown")}
+                        onClick={() =>
+                          updateDraft(scenario, (current) =>
+                            moveDraftStep(current, index, 1),
+                          )
+                        }
+                        disabled={index === draft.steps.length - 1}
                         className="rounded p-1 text-slate-400 hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-white/10"
                       >
                         <ArrowDown className="h-3.5 w-3.5" />
                       </button>
                       <button
                         type="button"
-                        aria-label="remove"
+                        aria-label={t("admin.notify.rules.removeStep")}
                         onClick={() =>
-                          setChain(
-                            scenario,
-                            chain.filter((id) => id !== senderId),
+                          updateDraft(scenario, (current) =>
+                            removeDraftStep(current, step.id),
                           )
                         }
                         className="rounded p-1 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10"
@@ -1451,7 +1553,7 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
                     </li>
                   );
                 })}
-                {chain.length === 0 ? (
+                {draft.steps.length === 0 ? (
                   <li className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-center text-xs text-slate-400 dark:border-white/10 dark:text-slate-500">
                     {t("admin.notify.rules.chainEmpty")}
                   </li>
@@ -1463,8 +1565,11 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
                   disabled={available.length === 0}
                   onChange={(event) => {
                     const value = event.target.value;
+                    const sender = senderById.get(value);
                     if (value) {
-                      setChain(scenario, [...chain, value]);
+                      updateDraft(scenario, (current) =>
+                        addDraftStep(current, value, sender?.enabled ?? true),
+                      );
                     }
                   }}
                   className={`${inputClass} max-w-xs flex-1`}
@@ -1473,12 +1578,29 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
                   {available.map((sender) => (
                     <option key={sender.id} value={sender.id}>
                       {sender.fromAddress} · {sender.accountName}
+                      {sender.enabled ? "" : ` · ${t("admin.notify.rules.identityDisabled")}`}
                     </option>
                   ))}
                 </select>
+                <SecondaryButton
+                  onClick={() => updateDraft(scenario, resetDraftToSaved)}
+                  disabled={!dirty}
+                >
+                  {t("admin.notify.rules.reset")}
+                </SecondaryButton>
+                <SecondaryButton
+                  onClick={() =>
+                    updateDraft(scenario, (current) =>
+                      reorderDraftToPriority(current, recommendedOrder),
+                    )
+                  }
+                  disabled={draft.steps.length < 2}
+                >
+                  {t("admin.notify.rules.recommendedOrder")}
+                </SecondaryButton>
                 <PrimaryButton
                   onClick={() => void saveScenario(scenario)}
-                  disabled={savingScenario === scenario}
+                  disabled={savingScenario === scenario || !dirty || validation !== null}
                 >
                   {savingScenario === scenario
                     ? t("admin.notify.common.saving")

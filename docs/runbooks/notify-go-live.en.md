@@ -75,6 +75,13 @@ pnpm run db:drift:check
 
 Expected: `status=seeded`, `pending_migrations=0`, drift clean.
 `/admin/notify/email` shows 13 accounts; `/admin/notify/sms` shows 8 accounts.
+`/admin/notify/overview` provides the notification dashboard (volume, delivery
+success rate, scenario/provider distribution, recent failures);
+`/admin/notify/email-records` and `/admin/notify/sms-records` provide send
+records with delivery attempt timelines. Send rules support per-step
+enable/disable (identity vs step), empty/all-disabled validation, recommended
+ordering, and unsaved-change tracking; see
+[notification-center.md](../domains/notification-center.md).
 
 If a console is still empty (for example an older installation that did not
 converge this module), no redeploy is required: the empty state lists every

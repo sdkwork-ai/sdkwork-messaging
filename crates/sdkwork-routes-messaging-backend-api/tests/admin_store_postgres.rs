@@ -382,7 +382,12 @@ async fn send_rule_chain_resolves_and_blocks_sender_deletion_while_referenced() 
             &test.subject_t1o1,
             "default",
             &sdkwork_routes_messaging_backend_api::ports::UpdateEmailSendRuleCommand {
-                sender_ids: vec![sender.id.clone()],
+                steps: vec![
+                    sdkwork_routes_messaging_backend_api::ports::EmailSendRuleStepCommand {
+                        sender_id: sender.id.clone(),
+                        enabled: true,
+                    },
+                ],
                 enabled: true,
                 expected_version: "0".to_owned(),
             },
@@ -421,7 +426,12 @@ async fn send_rule_chain_resolves_and_blocks_sender_deletion_while_referenced() 
             &test.subject_t1o1,
             "default",
             &sdkwork_routes_messaging_backend_api::ports::UpdateEmailSendRuleCommand {
-                sender_ids: vec!["999999".to_owned()],
+                steps: vec![
+                    sdkwork_routes_messaging_backend_api::ports::EmailSendRuleStepCommand {
+                        sender_id: "999999".to_owned(),
+                        enabled: true,
+                    },
+                ],
                 enabled: true,
                 expected_version: rule.version.clone(),
             },

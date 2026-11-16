@@ -6,7 +6,7 @@ import { alignOpenApiOperationPatterns } from "../../sdkwork-specs/tools/lib/ali
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const GENERATOR_PATH = path.resolve(ROOT, "../sdkwork-sdk-generator/bin/sdkgen.js");
-const VERSION = "1.3.0";
+const VERSION = "1.4.0";
 const OWNER = "sdkwork-messaging";
 
 const FAMILIES = [
@@ -56,6 +56,23 @@ const FAMILIES = [
       route("POST", "/backend/v3/api/messaging/push_messages", "messaging.pushMessages.send", "messaging.pushMessages", "messaging.push_messages.send", "MessagingPushMessageSendRequest", "MessagingPushMessageResponse", true),
       route("GET", "/backend/v3/api/messaging/outbound_messages", "messaging.outboundMessages.list", "messaging.outboundMessages", "messaging.outbound_messages.list", null, "MessagingOutboundMessageListResponse", false),
       route("POST", "/backend/v3/api/messaging/outbound_messages", "messaging.outboundMessages.send", "messaging.outboundMessages", "messaging.outbound_messages.send", "MessagingOutboundMessageSendRequest", "MessagingOutboundMessageResponse", true),
+      route("GET", "/backend/v3/api/messaging/email/send_records", "messaging.emailSendRecords.list", "messaging.emailSendRecords", "messaging.email_send_records.list", null, "MessagingSendRecordListResponse", false, [
+        queryParameter("status", { type: "string", enum: ["accepted", "queued", "sent", "delivered", "failed", "opened", "cancelled", "expired"] }),
+        queryParameter("q", { type: "string", maxLength: 128 }),
+        queryParameter("from", { type: "string", maxLength: 40 }),
+        queryParameter("to", { type: "string", maxLength: 40 }),
+      ], "messaging.outboundMessages.get"),
+      route("GET", "/backend/v3/api/messaging/email/send_records/{recordId}", "messaging.emailSendRecords.retrieve", "messaging.emailSendRecords", "messaging.email_send_records.retrieve", null, "MessagingSendRecord", false, [pathParameter("recordId")], "messaging.outboundMessages.get", false),
+      route("GET", "/backend/v3/api/messaging/sms/send_records", "messaging.smsSendRecords.list", "messaging.smsSendRecords", "messaging.sms_send_records.list", null, "MessagingSendRecordListResponse", false, [
+        queryParameter("status", { type: "string", enum: ["accepted", "queued", "sent", "delivered", "failed", "opened", "cancelled", "expired"] }),
+        queryParameter("q", { type: "string", maxLength: 128 }),
+        queryParameter("from", { type: "string", maxLength: 40 }),
+        queryParameter("to", { type: "string", maxLength: 40 }),
+      ], "messaging.outboundMessages.get"),
+      route("GET", "/backend/v3/api/messaging/sms/send_records/{recordId}", "messaging.smsSendRecords.retrieve", "messaging.smsSendRecords", "messaging.sms_send_records.retrieve", null, "MessagingSendRecord", false, [pathParameter("recordId")], "messaging.outboundMessages.get", false),
+      route("GET", "/backend/v3/api/messaging/dashboard", "messaging.dashboard.retrieve", "messaging.dashboard", "messaging.dashboard.retrieve", null, "MessagingDashboardSummary", false, [
+        queryParameter("range", { type: "integer", minimum: 1, maximum: 365, default: 30 }),
+      ], "messaging.notifications.get", false),
       route("GET", "/backend/v3/api/messaging/verification_policies", "messaging.verificationPolicies.list", "messaging.verificationPolicies", "messaging.verification_policies.list", null, "MessagingVerificationPolicyListResponse", false),
       route("PUT", "/backend/v3/api/messaging/verification_policies/{policyId}", "messaging.verificationPolicies.update", "messaging.verificationPolicies", "messaging.verification_policies.update", "MessagingVerificationPolicyUpdateRequest", "MessagingVerificationPolicyResponse", true, [pathParameter("policyId")]),
       route("GET", "/backend/v3/api/messaging/email/accounts", "messaging.emailAccounts.list", "messaging.emailAccounts", "messaging.emailAccounts.list", null, "MessagingEmailAccountListResponse", false),
@@ -121,7 +138,7 @@ async function writeText(filePath, value) {
   await writeFile(filePath, value, "utf8");
 }
 
-function route(method, routePath, operationId, resource, auditEvent, requestSchema, responseSchema, idempotent, parameters = [], permission = null) {
+function route(method, routePath, operationId, resource, auditEvent, requestSchema, responseSchema, idempotent, parameters = [], permission = null, pageable = true) {
   return {
     method,
     path: routePath,
@@ -133,6 +150,7 @@ function route(method, routePath, operationId, resource, auditEvent, requestSche
     idempotent,
     parameters,
     permission,
+    pageable,
   };
 }
 
@@ -491,12 +509,106 @@ function schemas() {
       subject: { type: "string" },
       body: { type: "string", minLength: 1 },
       payload: metadata,
+      scenario: { type: "string", maxLength: 64 },
+      templateCode: { type: "string", maxLength: 160 },
     }),
     MessagingOutboundMessageResponse: object(["item", "requestId"], {
       item: { $ref: "#/components/schemas/MessagingOutboundMessage" },
       requestId,
     }),
     MessagingOutboundMessageListResponse: envelope("MessagingOutboundMessageListResponse", "MessagingOutboundMessage"),
+    MessagingSendAttempt: object(["id", "status", "createdAt"], {
+      id,
+      provider: { type: "string" },
+      providerMessageId: { type: "string" },
+      status: { type: "string", enum: ["accepted", "queued", "sent", "delivered", "failed", "opened", "cancelled", "expired"] },
+      errorCode: { type: "string" },
+      errorMessage: { type: "string" },
+      sentAt: { type: "string", format: "date-time" },
+      deliveredAt: { type: "string", format: "date-time" },
+      failedAt: { type: "string", format: "date-time" },
+      createdAt: { type: "string", format: "date-time" },
+    }),
+    MessagingSendRecord: object(["id", "channel", "targetMasked", "bodyPreview", "status", "scenario", "attemptCount", "createdAt"], {
+      id,
+      channel: directChannel,
+      targetMasked: { type: "string" },
+      subject: { type: "string" },
+      body: { type: "string" },
+      bodyPreview: { type: "string" },
+      status: { type: "string", enum: ["accepted", "queued", "sent", "delivered", "failed", "opened", "cancelled", "expired"] },
+      scenario: { type: "string", minLength: 1, maxLength: 64 },
+      templateCode: { type: "string", maxLength: 160 },
+      provider: { type: "string" },
+      providerMessageId: { type: "string" },
+      errorCode: { type: "string" },
+      errorMessage: { type: "string" },
+      attemptCount: { type: "integer", minimum: 0 },
+      createdAt: { type: "string", format: "date-time" },
+      sentAt: { type: "string", format: "date-time" },
+      deliveredAt: { type: "string", format: "date-time" },
+      failedAt: { type: "string", format: "date-time" },
+      attempts: {
+        type: "array",
+        items: { $ref: "#/components/schemas/MessagingSendAttempt" },
+      },
+    }),
+    MessagingSendRecordListResponse: envelope("MessagingSendRecordListResponse", "MessagingSendRecord"),
+    MessagingSendRecordDetailResponse: object(["item", "requestId"], {
+      item: { $ref: "#/components/schemas/MessagingSendRecord" },
+      requestId,
+    }),
+    MessagingDashboardTotals: object(["total", "email", "sms", "delivered", "failed", "pending", "successRate"], {
+      total: { type: "integer", minimum: 0 },
+      email: { type: "integer", minimum: 0 },
+      sms: { type: "integer", minimum: 0 },
+      delivered: { type: "integer", minimum: 0 },
+      failed: { type: "integer", minimum: 0 },
+      pending: { type: "integer", minimum: 0 },
+      successRate: { type: "number", minimum: 0, maximum: 1 },
+    }),
+    MessagingDashboardChannel: object(["channel", "total", "delivered", "failed", "pending"], {
+      channel: directChannel,
+      total: { type: "integer", minimum: 0 },
+      delivered: { type: "integer", minimum: 0 },
+      failed: { type: "integer", minimum: 0 },
+      pending: { type: "integer", minimum: 0 },
+    }),
+    MessagingDashboardStatus: object(["status", "count"], {
+      status: { type: "string", enum: ["accepted", "queued", "sent", "delivered", "failed", "opened", "cancelled", "expired"] },
+      count: { type: "integer", minimum: 0 },
+    }),
+    MessagingDashboardScenario: object(["scenario", "channel", "total", "failed"], {
+      scenario: { type: "string", minLength: 1, maxLength: 64 },
+      channel: directChannel,
+      total: { type: "integer", minimum: 0 },
+      failed: { type: "integer", minimum: 0 },
+    }),
+    MessagingDashboardProvider: object(["provider", "channel", "total", "failed"], {
+      provider: { type: "string", minLength: 1 },
+      channel: directChannel,
+      total: { type: "integer", minimum: 0 },
+      failed: { type: "integer", minimum: 0 },
+    }),
+    MessagingDashboardTrendPoint: object(["date", "email", "sms", "delivered", "failed"], {
+      date: { type: "string", pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+      email: { type: "integer", minimum: 0 },
+      sms: { type: "integer", minimum: 0 },
+      delivered: { type: "integer", minimum: 0 },
+      failed: { type: "integer", minimum: 0 },
+    }),
+    MessagingDashboardSummary: object(["rangeDays", "from", "to", "totals", "byChannel", "byStatus", "byScenario", "byProvider", "trend", "recentFailures"], {
+      rangeDays: { type: "integer", minimum: 1, maximum: 365 },
+      from: { type: "string", format: "date-time" },
+      to: { type: "string", format: "date-time" },
+      totals: { $ref: "#/components/schemas/MessagingDashboardTotals" },
+      byChannel: { type: "array", items: { $ref: "#/components/schemas/MessagingDashboardChannel" } },
+      byStatus: { type: "array", items: { $ref: "#/components/schemas/MessagingDashboardStatus" } },
+      byScenario: { type: "array", items: { $ref: "#/components/schemas/MessagingDashboardScenario" } },
+      byProvider: { type: "array", items: { $ref: "#/components/schemas/MessagingDashboardProvider" } },
+      trend: { type: "array", items: { $ref: "#/components/schemas/MessagingDashboardTrendPoint" } },
+      recentFailures: { type: "array", items: { $ref: "#/components/schemas/MessagingSendRecord" } },
+    }),
     MessagingVerificationCodeCreateRequest: object(["sceneCode", "target"], {
       sceneCode: { type: "string", minLength: 1, maxLength: 160 },
       target: { type: "string", minLength: 1, writeOnly: true, "x-sensitive": true },
@@ -599,12 +711,13 @@ function schemas() {
       requestId,
     }),
     MessagingSmsSignatureListResponse: envelope("MessagingSmsSignatureListResponse", "MessagingSmsSignature"),
-    MessagingSmsSendRuleStep: object(["signatureId", "accountId", "accountName", "signName"], {
+    MessagingSmsSendRuleStep: object(["signatureId", "accountId", "accountName", "signName", "identityEnabled", "stepEnabled"], {
       signatureId: id,
       accountId: id,
       accountName: { type: "string", minLength: 1 },
       signName: { type: "string", minLength: 1, maxLength: 64 },
-      enabled: { type: "boolean" },
+      identityEnabled: { type: "boolean" },
+      stepEnabled: { type: "boolean" },
     }),
     MessagingSmsSendRule: object(["scenario", "chain", "enabled", "version"], {
       scenario: { type: "string", enum: ["default", "verification_code", "system_notification", "marketing"] },
@@ -616,11 +729,15 @@ function schemas() {
       updatedAt: { type: "string", format: "date-time" },
       version: int64,
     }),
-    MessagingSmsSendRuleUpdateRequest: object(["signatureIds", "enabled", "expectedVersion"], {
-      signatureIds: {
+    MessagingSmsSendRuleStepUpdate: object(["signatureId", "enabled"], {
+      signatureId: id,
+      enabled: { type: "boolean" },
+    }),
+    MessagingSmsSendRuleUpdateRequest: object(["steps", "enabled", "expectedVersion"], {
+      steps: {
         type: "array",
         maxItems: 50,
-        items: id,
+        items: { $ref: "#/components/schemas/MessagingSmsSendRuleStepUpdate" },
       },
       enabled: { type: "boolean" },
       expectedVersion: int64,
@@ -700,13 +817,14 @@ function schemas() {
       requestId,
     }),
     MessagingEmailSenderListResponse: envelope("MessagingEmailSenderListResponse", "MessagingEmailSender"),
-    MessagingEmailSendRuleStep: object(["senderId", "accountId", "accountName", "fromAddress"], {
+    MessagingEmailSendRuleStep: object(["senderId", "accountId", "accountName", "fromAddress", "identityEnabled", "stepEnabled"], {
       senderId: id,
       accountId: id,
       accountName: { type: "string", minLength: 1 },
       fromAddress: { type: "string", minLength: 3, maxLength: 320 },
       fromName: { type: "string", maxLength: 192 },
-      enabled: { type: "boolean" },
+      identityEnabled: { type: "boolean" },
+      stepEnabled: { type: "boolean" },
     }),
     MessagingEmailSendRule: object(["scenario", "chain", "enabled", "version"], {
       scenario: { type: "string", enum: ["default", "verification_code", "system_notification", "marketing"] },
@@ -718,11 +836,15 @@ function schemas() {
       updatedAt: { type: "string", format: "date-time" },
       version: int64,
     }),
-    MessagingEmailSendRuleUpdateRequest: object(["senderIds", "enabled", "expectedVersion"], {
-      senderIds: {
+    MessagingEmailSendRuleStepUpdate: object(["senderId", "enabled"], {
+      senderId: id,
+      enabled: { type: "boolean" },
+    }),
+    MessagingEmailSendRuleUpdateRequest: object(["steps", "enabled", "expectedVersion"], {
+      steps: {
         type: "array",
         maxItems: 50,
-        items: id,
+        items: { $ref: "#/components/schemas/MessagingEmailSendRuleStepUpdate" },
       },
       enabled: { type: "boolean" },
       expectedVersion: int64,
@@ -845,7 +967,7 @@ function operation(family, routeItem) {
     parameters: [
       ...routeItem.parameters,
       ...(routeItem.idempotent ? [idempotencyHeaderParameter()] : []),
-      ...(routeItem.method === "GET" ? pageParameters() : []),
+      ...(routeItem.method === "GET" && routeItem.pageable ? pageParameters() : []),
     ],
     responses:
       routeItem.method === "DELETE"

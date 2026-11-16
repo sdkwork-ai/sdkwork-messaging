@@ -28,10 +28,9 @@ client.setAccessToken('your-access-token');
 
 // Use the SDK
 const params = {
-  page: 1,
-  page_size: 2,
+  range: 1,
 };
-const result = await client.messaging.notifications.list(params);
+const result = await client.messaging.dashboard.retrieve(params);
 ```
 
 ## Authentication
@@ -65,12 +64,11 @@ const client = new SdkworkBackendClient({
 ### messaging
 
 ```typescript
-// messaging.notifications.list
+// messaging.dashboard.retrieve
 const params = {
-  page: 1,
-  page_size: 2,
+  range: 1,
 };
-const result = await client.messaging.notifications.list(params);
+const result = await client.messaging.dashboard.retrieve(params);
 ```
 
 ## Error Handling
@@ -80,10 +78,9 @@ import { SdkworkBackendClient, NetworkError, TimeoutError, AuthenticationError }
 
 try {
   const params = {
-    page: 1,
-    page_size: 2,
+    range: 1,
   };
-  const result = await client.messaging.notifications.list(params);
+  const result = await client.messaging.dashboard.retrieve(params);
 } catch (error) {
   if (error instanceof AuthenticationError) {
     console.error('Authentication failed:', error.message);
