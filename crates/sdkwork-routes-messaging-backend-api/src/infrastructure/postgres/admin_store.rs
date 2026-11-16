@@ -25,12 +25,13 @@ use crate::ports::{
     MessagingDashboardStatus, MessagingDashboardSummary, MessagingDashboardTotals,
     MessagingDashboardTrendPoint, MessagingPage, MessagingSendAttemptItem,
     MessagingSendRecordDetail, MessagingSendRecordItem, NotificationItem, OutboundMessageItem,
-    ProviderInitialization, PublishAnnouncementCommand, PushMessageItem, SendOutboundMessageCommand,
-    SendPushMessageCommand, SendRecordFilter, SmsAccountItem, SmsSendRuleItem, SmsSendRuleStep,
-    SmsSignatureItem, StoreError, TemplateItem, UpdateEmailAccountCommand,
-    UpdateEmailSendRuleCommand, UpdateEmailSenderCommand, UpdateSmsAccountCommand,
-    UpdateSmsSendRuleCommand, UpdateSmsSignatureCommand, UpdateTemplateCommand,
-    UpdateVerificationPolicyCommand, VerificationPolicyItem, SEND_RULE_SCENARIOS,
+    ProviderInitialization, PublishAnnouncementCommand, PushMessageItem,
+    SendOutboundMessageCommand, SendPushMessageCommand, SendRecordFilter, SmsAccountItem,
+    SmsSendRuleItem, SmsSendRuleStep, SmsSignatureItem, StoreError, TemplateItem,
+    UpdateEmailAccountCommand, UpdateEmailSendRuleCommand, UpdateEmailSenderCommand,
+    UpdateSmsAccountCommand, UpdateSmsSendRuleCommand, UpdateSmsSignatureCommand,
+    UpdateTemplateCommand, UpdateVerificationPolicyCommand, VerificationPolicyItem,
+    SEND_RULE_SCENARIOS,
 };
 
 pub struct PostgresMessagingAdminStore {
@@ -367,10 +368,31 @@ impl PostgresMessagingAdminStore {
     }
 }
 
+/// Escapes PostgreSQL `LIKE` metacharacters so a keyword search matches the
+/// literal operator input instead of turning into a wildcard query.
+fn escape_like_pattern(value: &str) -> String {
+    value
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_")
+}
+
 /// One-line preview for a send record. HTML-heavy email bodies collapse to a
 /// short plain-text excerpt; the full body stays on the record detail.
 fn body_preview(body: &str) -> String {
-    let collapsed = body.split_whitespace().collect::<Vec<_>>().join(" ");
+    // Strip HTML tags first: email bodies are HTML, and a raw tag stream is a
+    // poor one-line preview in the console table.
+    let mut text = String::with_capacity(body.len());
+    let mut in_tag = false;
+    for character in body.chars() {
+        match character {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
+            _ if !in_tag => text.push(character),
+            _ => {}
+        }
+    }
+    let collapsed = text.split_whitespace().collect::<Vec<_>>().join(" ");
     let mut chars = collapsed.chars();
     let preview: String = chars.by_ref().take(160).collect();
     if chars.next().is_some() {
@@ -401,7 +423,9 @@ fn send_record_item_from_row(row: &sqlx::postgres::PgRow) -> MessagingSendRecord
         error_message: row.get("error_message"),
         attempt_count: row.get::<i64, _>("attempt_count"),
         created_at: rfc3339(row.get("created_at")),
-        sent_at: row.get::<Option<chrono::DateTime<Utc>>, _>("sent_at").map(rfc3339),
+        sent_at: row
+            .get::<Option<chrono::DateTime<Utc>>, _>("sent_at")
+            .map(rfc3339),
         delivered_at: row
             .get::<Option<chrono::DateTime<Utc>>, _>("delivered_at")
             .map(rfc3339),
@@ -1081,6 +1105,30 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         if command.target.trim().is_empty() {
             return Err(StoreError::Invalid("target must not be empty".to_owned()));
         }
+        if let Some(scenario) = command
+            .scenario
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            if scenario.chars().count() > 64 {
+                return Err(StoreError::Invalid(
+                    "scenario must be at most 64 characters".to_owned(),
+                ));
+            }
+        }
+        if let Some(template_code) = command
+            .template_code
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            if template_code.chars().count() > 160 {
+                return Err(StoreError::Invalid(
+                    "templateCode must be at most 160 characters".to_owned(),
+                ));
+            }
+        }
         let id = self.next_id();
         let message_uuid = uuid();
         let mut payload_json = command
@@ -1166,12 +1214,19 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         if let Some(status) = filter.status.as_deref() {
             crate::ports::parse_outbound_status(status).map_err(StoreError::Invalid)?;
         }
+        if let Some(q) = filter.q.as_deref() {
+            if q.chars().count() > 128 {
+                return Err(StoreError::Invalid(
+                    "q must be at most 128 characters".to_owned(),
+                ));
+            }
+        }
         let keyword_pattern = filter
             .q
             .as_deref()
             .map(str::trim)
             .filter(|value| !value.is_empty())
-            .map(|value| format!("%{value}%"));
+            .map(|value| format!("%{}%", escape_like_pattern(value)));
         let offset = (filter.page - 1) * filter.page_size;
 
         let total: i64 = sqlx::query_scalar(
@@ -1342,8 +1397,16 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
     ) -> Result<MessagingDashboardSummary, StoreError> {
         let range_days = range_days.clamp(1, 365);
         let to = now;
-        let from = now - Duration::days(range_days - 1);
-        let from_day: NaiveDate = from.date_naive();
+        // The window and the trend must agree: both start at the beginning of
+        // the first UTC day, otherwise the first day's totals would exclude the
+        // hours before "now" while the trend bucket includes them.
+        let from_day: NaiveDate = (now - Duration::days(range_days - 1)).date_naive();
+        let from = chrono::DateTime::<Utc>::from_naive_utc_and_offset(
+            from_day.and_hms_opt(0, 0, 0).ok_or_else(|| {
+                StoreError::Unavailable("dashboard window start is out of range".to_owned())
+            })?,
+            Utc,
+        );
         let to_day: NaiveDate = to.date_naive();
 
         let totals_row = sqlx::query(
@@ -1517,9 +1580,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         let mut day = from_day;
         while day <= to_day {
             let key = day.format("%Y-%m-%d").to_string();
-            let (email, sms, delivered, failed) = trend_by_day
-                .remove(&key)
-                .unwrap_or((0, 0, 0, 0));
+            let (email, sms, delivered, failed) = trend_by_day.remove(&key).unwrap_or((0, 0, 0, 0));
             trend.push(MessagingDashboardTrendPoint {
                 date: key,
                 email,
@@ -1933,7 +1994,9 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
                AND EXISTS ( \
                    SELECT 1 FROM messaging_email_sender s \
                    WHERE s.account_id = $3 AND s.tenant_id = $1 AND s.organization_id = $2 \
-                     AND s.deleted_at IS NULL AND r.chain_json @> to_jsonb(s.id::text) \
+                     AND s.deleted_at IS NULL \
+                     AND (r.chain_json @> to_jsonb(s.id::text) \
+                          OR r.chain_json @> jsonb_build_array(jsonb_build_object('id', s.id::text))) \
                )",
         )
         .bind(subject.tenant_id)
@@ -1995,9 +2058,8 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         subject: &MessagingAdminSubject,
         provider: &str,
     ) -> Result<ProviderInitialization, StoreError> {
-        let preset = email_provider_default(provider).ok_or_else(|| {
-            StoreError::Invalid(format!("unknown email provider `{provider}`"))
-        })?;
+        let preset = email_provider_default(provider)
+            .ok_or_else(|| StoreError::Invalid(format!("unknown email provider `{provider}`")))?;
         let config = preset_config(preset.config_json);
 
         // One transaction: account + sender + rules converge together or not at
@@ -2424,7 +2486,8 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         let referenced: i64 = sqlx::query_scalar(
             "SELECT COUNT(1) FROM messaging_email_send_rule \
              WHERE tenant_id = $1 AND organization_id = $2 AND deleted_at IS NULL \
-               AND chain_json @> to_jsonb($3::text)",
+               AND (chain_json @> to_jsonb($3::text) \
+                    OR chain_json @> jsonb_build_array(jsonb_build_object('id', $3::text)))",
         )
         .bind(subject.tenant_id)
         .bind(subject.organization_id)
@@ -2476,8 +2539,10 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .await
         .map_err(|error| StoreError::Unavailable(error.to_string()))?;
 
-        let mut by_scenario: HashMap<String, (Vec<StoredSendRuleStep>, bool, Option<String>, String)> =
-            HashMap::new();
+        let mut by_scenario: HashMap<
+            String,
+            (Vec<StoredSendRuleStep>, bool, Option<String>, String),
+        > = HashMap::new();
         for row in rows {
             let scenario: String = row.get("scenario");
             let chain_value: serde_json::Value = row.get("chain_json");
@@ -2822,7 +2887,9 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
                AND EXISTS ( \
                    SELECT 1 FROM messaging_sms_signature s \
                    WHERE s.account_id = $3 AND s.tenant_id = $1 AND s.organization_id = $2 \
-                     AND s.deleted_at IS NULL AND r.chain_json @> to_jsonb(s.id::text) \
+                     AND s.deleted_at IS NULL \
+                     AND (r.chain_json @> to_jsonb(s.id::text) \
+                          OR r.chain_json @> jsonb_build_array(jsonb_build_object('id', s.id::text))) \
                )",
         )
         .bind(subject.tenant_id)
@@ -3296,7 +3363,8 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         let referenced: i64 = sqlx::query_scalar(
             "SELECT COUNT(1) FROM messaging_sms_send_rule \
              WHERE tenant_id = $1 AND organization_id = $2 AND deleted_at IS NULL \
-               AND chain_json @> to_jsonb($3::text)",
+               AND (chain_json @> to_jsonb($3::text) \
+                    OR chain_json @> jsonb_build_array(jsonb_build_object('id', $3::text)))",
         )
         .bind(subject.tenant_id)
         .bind(subject.organization_id)
@@ -3348,8 +3416,10 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .await
         .map_err(|error| StoreError::Unavailable(error.to_string()))?;
 
-        let mut by_scenario: HashMap<String, (Vec<StoredSendRuleStep>, bool, Option<String>, String)> =
-            HashMap::new();
+        let mut by_scenario: HashMap<
+            String,
+            (Vec<StoredSendRuleStep>, bool, Option<String>, String),
+        > = HashMap::new();
         for row in rows {
             let scenario: String = row.get("scenario");
             let chain_value: serde_json::Value = row.get("chain_json");
@@ -3862,7 +3932,7 @@ mod tests {
         );
         // A missing `enabled` flag defaults to active (forward-compatible).
         let steps = chain_steps(&serde_json::json!([{ "id": "30" }]));
-        assert_eq!(steps[0].enabled, true);
+        assert!(steps[0].enabled);
     }
 
     #[test]
@@ -3918,9 +3988,17 @@ mod tests {
     #[test]
     fn body_preview_collapses_whitespace_and_truncates() {
         assert_eq!(body_preview("hello \n  world"), "hello world");
+        assert_eq!(body_preview("<p>hello</p> \n <b>world</b>"), "hello world");
+        assert_eq!(body_preview("<p>only</p>"), "only");
         let long = "x".repeat(200);
         let preview = body_preview(&long);
         assert!(preview.ends_with('…'));
         assert_eq!(preview.chars().count(), 161);
+    }
+
+    #[test]
+    fn keyword_patterns_escape_like_metacharacters() {
+        assert_eq!(escape_like_pattern("100%_done\\"), "100\\%\\_done\\\\");
+        assert_eq!(escape_like_pattern("plain"), "plain");
     }
 }

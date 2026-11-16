@@ -224,6 +224,31 @@ async fn provider_initialize_is_complete_idempotent_and_non_destructive() {
         !updated_rule.chain[1].identity_enabled,
         "the gmail identity stays disabled by its provider preset"
     );
+    // Object-shaped chains must still block deleting a referenced sender.
+    let blocked_sender = store
+        .delete_email_sender(
+            &subject,
+            gmail_sender_id.parse::<i64>().unwrap(),
+            "it-rule-key",
+        )
+        .await;
+    assert!(
+        matches!(blocked_sender, Err(StoreError::Conflict(_))),
+        "a sender referenced by an object-shaped chain must not be deleted"
+    );
+    let accounts = store
+        .list_email_accounts(&subject, 1, 20)
+        .await
+        .expect("list email accounts");
+    for account in &accounts.items {
+        let blocked_account = store
+            .delete_email_account(&subject, account.id.parse::<i64>().unwrap(), "it-rule-key")
+            .await;
+        assert!(
+            matches!(blocked_account, Err(StoreError::Conflict(_))),
+            "an email account referenced by an object-shaped chain must not be deleted"
+        );
+    }
 
     // An enabled rule with zero enabled steps is rejected.
     let invalid = store
@@ -244,6 +269,84 @@ async fn provider_initialize_is_complete_idempotent_and_non_destructive() {
         )
         .await;
     assert!(matches!(invalid, Err(StoreError::Invalid(_))));
+
+    // A legacy string-array chain (the seeded shape) is still read as an
+    // all-enabled chain and can be edited through the step-based API.
+    let legacy_chain = serde_json::json!([enterprise_sender_id.clone()]);
+    sqlx::query(
+        "UPDATE messaging_email_send_rule SET chain_json = $3, enabled = TRUE, \
+         version = version + 1 \
+         WHERE tenant_id = $1 AND organization_id = $2 AND scenario = 'verification_code'",
+    )
+    .bind(subject.tenant_id)
+    .bind(subject.organization_id)
+    .bind(&legacy_chain)
+    .execute(&pool)
+    .await
+    .expect("store a legacy chain rule");
+    let stored: serde_json::Value = sqlx::query_scalar(
+        "SELECT chain_json FROM messaging_email_send_rule \
+         WHERE tenant_id = $1 AND organization_id = $2 AND scenario = 'verification_code'",
+    )
+    .bind(subject.tenant_id)
+    .bind(subject.organization_id)
+    .fetch_one(&pool)
+    .await
+    .expect("read legacy chain");
+    assert_eq!(
+        stored, legacy_chain,
+        "legacy chain is preserved until rewritten"
+    );
+    let listed = store
+        .list_email_send_rules(&subject)
+        .await
+        .expect("list legacy rule");
+    let legacy_rule = listed
+        .iter()
+        .find(|rule| rule.scenario == "verification_code")
+        .expect("verification_code rule");
+    assert_eq!(legacy_rule.chain.len(), 1);
+    assert!(legacy_rule.chain[0].step_enabled);
+    assert!(legacy_rule.chain[0].identity_enabled);
+    let marketing_version = listed
+        .iter()
+        .find(|rule| rule.scenario == "marketing")
+        .expect("marketing rule")
+        .version
+        .clone();
+
+    // Updating through the step API rewrites the stored shape to objects.
+    store
+        .update_email_send_rule(
+            &subject,
+            "marketing",
+            &sdkwork_routes_messaging_backend_api::ports::UpdateEmailSendRuleCommand {
+                steps: vec![
+                    sdkwork_routes_messaging_backend_api::ports::EmailSendRuleStepCommand {
+                        sender_id: enterprise_sender_id.clone(),
+                        enabled: false,
+                    },
+                ],
+                enabled: false,
+                expected_version: marketing_version,
+            },
+            "it-rule-key",
+        )
+        .await
+        .expect("write the object chain shape");
+    let rewritten: serde_json::Value = sqlx::query_scalar(
+        "SELECT chain_json FROM messaging_email_send_rule \
+         WHERE tenant_id = $1 AND organization_id = $2 AND scenario = 'marketing'",
+    )
+    .bind(subject.tenant_id)
+    .bind(subject.organization_id)
+    .fetch_one(&pool)
+    .await
+    .expect("read rewritten chain");
+    assert_eq!(
+        rewritten,
+        serde_json::json!([{ "id": enterprise_sender_id, "enabled": false }])
+    );
 
     // --- unknown provider is rejected, not created
     assert!(matches!(
@@ -285,6 +388,29 @@ async fn provider_initialize_is_complete_idempotent_and_non_destructive() {
         assert_eq!(rule.chain.len(), 1);
         assert_eq!(rule.chain[0].signature_id, signatures.items[0].id);
     }
+    // Object-shaped SMS chains must also block deleting a referenced signature.
+    let blocked_signature = store
+        .delete_sms_signature(
+            &subject,
+            signatures.items[0].id.parse::<i64>().unwrap(),
+            "it-rule-key",
+        )
+        .await;
+    assert!(
+        matches!(blocked_signature, Err(StoreError::Conflict(_))),
+        "a signature referenced by an object-shaped chain must not be deleted"
+    );
+    let blocked_sms_account = store
+        .delete_sms_account(
+            &subject,
+            sms_accounts.items[0].id.parse::<i64>().unwrap(),
+            "it-rule-key",
+        )
+        .await;
+    assert!(
+        matches!(blocked_sms_account, Err(StoreError::Conflict(_))),
+        "an sms account referenced by an object-shaped chain must not be deleted"
+    );
     assert!(matches!(
         store.initialize_sms_provider(&subject, "exchange").await,
         Err(StoreError::Invalid(_))
@@ -312,7 +438,9 @@ async fn provider_initialize_is_complete_idempotent_and_non_destructive() {
 #[ignore = "requires SDKWORK_MESSAGING_TEST_DATABASE_URL (PostgreSQL)"]
 async fn send_records_and_dashboard_aggregate_real_deliveries() {
     use chrono::Utc;
-    use sdkwork_routes_messaging_backend_api::ports::{SendOutboundMessageCommand, SendRecordFilter};
+    use sdkwork_routes_messaging_backend_api::ports::{
+        SendOutboundMessageCommand, SendRecordFilter,
+    };
 
     let database_url = database_url();
     let mut admin = PgConnection::connect(&database_url)
@@ -454,7 +582,10 @@ async fn send_records_and_dashboard_aggregate_real_deliveries() {
     let delivered_item = &delivered.items[0];
     assert_eq!(delivered_item.id, email_delivered.id);
     assert_eq!(delivered_item.scenario, "verification_code");
-    assert_eq!(delivered_item.template_code.as_deref(), Some("verification_code"));
+    assert_eq!(
+        delivered_item.template_code.as_deref(),
+        Some("verification_code")
+    );
     assert_eq!(delivered_item.provider.as_deref(), Some("enterprise_mail"));
     assert_eq!(delivered_item.attempt_count, 1);
     assert!(delivered_item.delivered_at.is_some());
@@ -470,6 +601,18 @@ async fn send_records_and_dashboard_aggregate_real_deliveries() {
     assert_eq!(by_keyword.total_items, 1);
     assert_eq!(by_keyword.items[0].id, email_delivered.id);
 
+    // A future date window returns an empty page and an honest total.
+    let future_filter = SendRecordFilter {
+        from: Some(now + chrono::Duration::days(1)),
+        ..filter.clone()
+    };
+    let future_page = store
+        .list_send_records(&subject, "email", &future_filter)
+        .await
+        .expect("future window");
+    assert_eq!(future_page.total_items, 0);
+    assert!(future_page.items.is_empty());
+
     let detail = store
         .retrieve_send_record(
             &subject,
@@ -479,7 +622,10 @@ async fn send_records_and_dashboard_aggregate_real_deliveries() {
         .await
         .expect("retrieve email record detail");
     assert_eq!(detail.attempts.len(), 1);
-    assert_eq!(detail.attempts[0].provider.as_deref(), Some("enterprise_mail"));
+    assert_eq!(
+        detail.attempts[0].provider.as_deref(),
+        Some("enterprise_mail")
+    );
     assert_eq!(detail.attempts[0].status, "delivered");
     assert!(matches!(
         store
@@ -540,6 +686,14 @@ async fn send_records_and_dashboard_aggregate_real_deliveries() {
     let today = dashboard.trend.last().expect("today bucket");
     assert_eq!(today.email, 2);
     assert_eq!(today.sms, 1);
+    let trend_email: i64 = dashboard.trend.iter().map(|point| point.email).sum();
+    let trend_sms: i64 = dashboard.trend.iter().map(|point| point.sms).sum();
+    let trend_delivered: i64 = dashboard.trend.iter().map(|point| point.delivered).sum();
+    let trend_failed: i64 = dashboard.trend.iter().map(|point| point.failed).sum();
+    assert_eq!(trend_email, dashboard.totals.email);
+    assert_eq!(trend_sms, dashboard.totals.sms);
+    assert_eq!(trend_delivered, dashboard.totals.delivered);
+    assert_eq!(trend_failed, dashboard.totals.failed);
 
     // Keep the compiler honest about the unused pending record id.
     assert!(!email_pending.id.is_empty());

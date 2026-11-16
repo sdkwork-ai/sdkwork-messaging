@@ -667,7 +667,14 @@ fn parse_date_bound(
         )
     })?;
     let date = if end_exclusive {
-        date + chrono::Duration::days(1)
+        date.checked_add_signed(chrono::Duration::days(1))
+            .ok_or_else(|| {
+                problem_response(
+                    StatusCode::BAD_REQUEST,
+                    "Bad Request",
+                    format!("{field} is out of range"),
+                )
+            })?
     } else {
         date
     };
@@ -1821,5 +1828,40 @@ async fn delete_template(
     {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(error) => store_error_response(error),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn date_bounds_accept_dates_and_rfc3339() {
+        let from = parse_date_bound(Some("2026-11-16"), "from", false)
+            .expect("date-only from")
+            .expect("from value");
+        assert_eq!(from.to_rfc3339(), "2026-11-16T00:00:00+00:00");
+
+        let to = parse_date_bound(Some("2026-11-16"), "to", true)
+            .expect("date-only to")
+            .expect("to value");
+        assert_eq!(to.to_rfc3339(), "2026-11-17T00:00:00+00:00");
+
+        let instant = parse_date_bound(Some("2026-11-16T08:30:00+08:00"), "from", false)
+            .expect("rfc3339 from")
+            .expect("from value");
+        assert_eq!(instant.to_rfc3339(), "2026-11-16T00:30:00+00:00");
+    }
+
+    #[test]
+    fn date_bounds_reject_invalid_and_overflowing_values() {
+        assert!(parse_date_bound(Some("not-a-date"), "from", false).is_err());
+        assert!(parse_date_bound(Some("2026-13-01"), "from", false).is_err());
+        // chrono's date range is wide enough for a 9999 year; the checked add
+        // still guards the true boundary instead of panicking.
+        assert!(parse_date_bound(Some("9999-12-31"), "to", true).is_ok());
+        assert!(parse_date_bound(Some("   "), "from", false)
+            .expect("blank is ignored")
+            .is_none());
     }
 }

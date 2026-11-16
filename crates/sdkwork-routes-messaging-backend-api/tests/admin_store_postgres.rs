@@ -553,7 +553,10 @@ async fn provider_initialize_converges_accounts_identities_and_rules() {
         .expect("list email accounts");
     assert_eq!(accounts.total_items, 1);
     assert_eq!(accounts.items[0].provider, "enterprise_mail");
-    assert!(accounts.items[0].enabled, "default email account is enabled");
+    assert!(
+        accounts.items[0].enabled,
+        "default email account is enabled"
+    );
 
     let senders = test
         .store
