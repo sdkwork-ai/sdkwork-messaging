@@ -33,6 +33,7 @@ export type {
   MessagingEmailSender,
   MessagingEmailSenderCreateRequest,
   MessagingEmailSenderUpdateRequest,
+  MessagingProviderInitializeResponse,
   MessagingSendAttempt,
   MessagingSendRecord,
   MessagingSmsAccount,

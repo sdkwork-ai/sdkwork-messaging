@@ -65,7 +65,29 @@ new writes use the object form:
 `{ "steps": [{ "senderId"|"signatureId": "…", "enabled": true }], "enabled": true,
 "expectedVersion": "3" }` and uses optimistic concurrency.
 
-## 2. Send records
+## 2. Provider directory and initialization
+
+The email and SMS account tabs render a provider directory containing every
+provider in the shipped catalog, not only rows that already exist. Each card
+shows the provider's local brand mark, the localized name and description, and
+whether the provider is initialized, has credentials, and is enabled.
+
+The install seed creates one account, one sender/signature identity, and one
+ordered routing chain per provider for the canonical tenant, so a fresh
+installation opens with every provider visible and only credentials missing.
+For any other tenant/organization, or after a provider row was removed, the
+directory's **Complete missing providers** action calls the same idempotent
+provider initialization as the add-provider picker; it creates the account,
+identity, and routing steps for every missing provider at once.
+
+The add-provider picker initializes the selected provider before opening its
+editor, so the operator edits the preset account rather than creating a bare
+account row without a sender/signature or rule step. Brand marks are inline
+local assets: official vendor glyphs where an openly licensed mark exists, and
+official-wordmark/brand-color tiles for vendors without one. The console never
+loads a remote logo.
+
+## 3. Send records
 
 `messaging_outbound_message` is the record anchor; `messaging_outbound_delivery`
 holds ordered provider attempts.
@@ -90,7 +112,7 @@ Status vocabulary: `accepted`, `queued`, `sent`, `delivered`, `failed`,
 `opened`, `cancelled`, `expired`. The delivery worker owns message status
 transitions; records never invent a terminal status from a stale message row.
 
-## 3. Notification dashboard
+## 4. Notification dashboard
 
 `GET /backend/v3/api/messaging/dashboard?range=7|30|90` aggregates the same
 records over a rolling UTC window:
@@ -107,7 +129,7 @@ The console renders the aggregation as KPI cards, a daily trend, status/
 scenario/provider breakdowns, and a recent-failure list. It does not recompute
 metrics client-side.
 
-## 4. Non-goals for this phase
+## 5. Non-goals for this phase
 
 - Per-provider rate limits, quiet hours, and weighted routing (the chain is a
   deterministic ordered failover).

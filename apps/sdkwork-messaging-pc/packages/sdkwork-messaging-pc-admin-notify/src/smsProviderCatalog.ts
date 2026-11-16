@@ -39,6 +39,10 @@ export interface SmsProviderCatalogEntry {
   fields: readonly SmsProviderFieldSpec[];
   /** i18n key describing the secret material stored for this provider. */
   secretLabelKey: string;
+  /** i18n key of the provider-specific credential setup step. */
+  setupHintKey?: string;
+  /** Official console page where the operator obtains the credential. */
+  consoleUrl?: string;
 }
 
 export const SMS_PROVIDER_CATALOG: readonly SmsProviderCatalogEntry[] = [
@@ -64,6 +68,8 @@ export const SMS_PROVIDER_CATALOG: readonly SmsProviderCatalogEntry[] = [
       },
     ],
     secretLabelKey: "admin.notify.sms.secretLabel.secretKey",
+    setupHintKey: "admin.notify.smsProviders.tencent.setupHint",
+    consoleUrl: "https://console.cloud.tencent.com/smsv2",
   },
   {
     provider: "aliyun",
@@ -79,6 +85,8 @@ export const SMS_PROVIDER_CATALOG: readonly SmsProviderCatalogEntry[] = [
       },
     ],
     secretLabelKey: "admin.notify.sms.secretLabel.accessKeySecret",
+    setupHintKey: "admin.notify.smsProviders.aliyun.setupHint",
+    consoleUrl: "https://dysms.console.aliyun.com/",
   },
   {
     provider: "huawei",
@@ -94,6 +102,8 @@ export const SMS_PROVIDER_CATALOG: readonly SmsProviderCatalogEntry[] = [
       },
     ],
     secretLabelKey: "admin.notify.sms.secretLabel.appSecret",
+    setupHintKey: "admin.notify.smsProviders.huawei.setupHint",
+    consoleUrl: "https://console.huaweicloud.com/sms/",
   },
   {
     provider: "yuntongxun",
@@ -113,6 +123,8 @@ export const SMS_PROVIDER_CATALOG: readonly SmsProviderCatalogEntry[] = [
       },
     ],
     secretLabelKey: "admin.notify.sms.secretLabel.authToken",
+    setupHintKey: "admin.notify.smsProviders.yuntongxun.setupHint",
+    consoleUrl: "https://www.yuntongxun.com/",
   },
   {
     provider: "submail",
@@ -127,6 +139,8 @@ export const SMS_PROVIDER_CATALOG: readonly SmsProviderCatalogEntry[] = [
       },
     ],
     secretLabelKey: "admin.notify.sms.secretLabel.appKey",
+    setupHintKey: "admin.notify.smsProviders.submail.setupHint",
+    consoleUrl: "https://www.mysubmail.com/",
   },
   {
     provider: "chuanglan",
@@ -141,6 +155,8 @@ export const SMS_PROVIDER_CATALOG: readonly SmsProviderCatalogEntry[] = [
       },
     ],
     secretLabelKey: "admin.notify.sms.secretLabel.password",
+    setupHintKey: "admin.notify.smsProviders.chuanglan.setupHint",
+    consoleUrl: "https://www.253.com/",
   },
   {
     provider: "twilio",
@@ -155,6 +171,8 @@ export const SMS_PROVIDER_CATALOG: readonly SmsProviderCatalogEntry[] = [
       },
     ],
     secretLabelKey: "admin.notify.sms.secretLabel.authToken",
+    setupHintKey: "admin.notify.smsProviders.twilio.setupHint",
+    consoleUrl: "https://console.twilio.com/",
   },
   {
     provider: "generic_http",
@@ -168,6 +186,7 @@ export const SMS_PROVIDER_CATALOG: readonly SmsProviderCatalogEntry[] = [
       },
     ],
     secretLabelKey: "admin.notify.sms.secretLabel.token",
+    setupHintKey: "admin.notify.smsProviders.generic_http.setupHint",
   },
 ];
 

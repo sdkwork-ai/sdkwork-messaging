@@ -11,6 +11,7 @@ import type {
   MessagingEmailSender,
   MessagingEmailSenderCreateRequest,
   MessagingEmailSenderUpdateRequest,
+  MessagingProviderInitializeResponse,
   MessagingSendRecord,
   MessagingSmsAccount,
   MessagingSmsAccountCreateRequest,
@@ -38,6 +39,7 @@ export type {
   MessagingEmailSender,
   MessagingEmailSenderCreateRequest,
   MessagingEmailSenderUpdateRequest,
+  MessagingProviderInitializeResponse,
   MessagingSendAttempt,
   MessagingSendRecord,
   MessagingSmsAccount,
@@ -246,8 +248,10 @@ async function deleteEmailAccount(accountId: string): Promise<void> {
  * account preset, sender identity, and scenario routing steps. Missing config
  * keys are merged; existing values and credentials are preserved.
  */
-async function initializeEmailProvider(provider: MessagingEmailProvider): Promise<void> {
-  await messagingBackendSdkClient().messaging.emailProviders.initialize(provider, {
+async function initializeEmailProvider(
+  provider: MessagingEmailProvider,
+): Promise<MessagingProviderInitializeResponse> {
+  return await messagingBackendSdkClient().messaging.emailProviders.initialize(provider, {
     idempotencyKey: nextIdempotencyKey(),
   });
 }
@@ -354,8 +358,10 @@ async function deleteSmsAccount(accountId: string): Promise<void> {
  * preset, signature identity, and scenario routing steps. Missing config keys
  * are merged; existing values and credentials are preserved.
  */
-async function initializeSmsProvider(provider: MessagingSmsProvider): Promise<void> {
-  await messagingBackendSdkClient().messaging.smsProviders.initialize(provider, {
+async function initializeSmsProvider(
+  provider: MessagingSmsProvider,
+): Promise<MessagingProviderInitializeResponse> {
+  return await messagingBackendSdkClient().messaging.smsProviders.initialize(provider, {
     idempotencyKey: nextIdempotencyKey(),
   });
 }
@@ -518,7 +524,9 @@ export interface NotifyAdminService {
     input: MessagingEmailAccountUpdateRequest,
   ): Promise<MessagingEmailAccount>;
   deleteEmailAccount(accountId: string): Promise<void>;
-  initializeEmailProvider(provider: MessagingEmailProvider): Promise<void>;
+  initializeEmailProvider(
+    provider: MessagingEmailProvider,
+  ): Promise<MessagingProviderInitializeResponse>;
   listEmailSenders(params: {
     accountId?: string;
     page?: number;
@@ -542,7 +550,9 @@ export interface NotifyAdminService {
     input: MessagingSmsAccountUpdateRequest,
   ): Promise<MessagingSmsAccount>;
   deleteSmsAccount(accountId: string): Promise<void>;
-  initializeSmsProvider(provider: MessagingSmsProvider): Promise<void>;
+  initializeSmsProvider(
+    provider: MessagingSmsProvider,
+  ): Promise<MessagingProviderInitializeResponse>;
   listSmsSignatures(params: {
     accountId?: string;
     page?: number;
