@@ -214,7 +214,7 @@ async fn template_provider_bindings_sync_and_resolve_for_the_selected_provider()
                 channel: "sms".to_owned(),
                 target: "+8613800000000".to_owned(),
                 subject: None,
-                body: "Order 42 paid.".to_owned(),
+                body: String::new(),
                 payload: None,
                 scenario: Some("system_notification".to_owned()),
                 template_code: Some("order_paid".to_owned()),
@@ -233,6 +233,16 @@ async fn template_provider_bindings_sync_and_resolve_for_the_selected_provider()
     assert_eq!(payload["provider"], "tencent");
     assert_eq!(payload["templateCode"], "order_paid");
     assert_eq!(payload["providerTemplateId"], "1234567");
+    let stored_body: String =
+        sqlx::query_scalar("SELECT body FROM messaging_outbound_message WHERE id = $1")
+            .bind(sent.id.parse::<i64>().unwrap())
+            .fetch_one(&pool)
+            .await
+            .expect("read sent body");
+    assert_eq!(
+        stored_body, "Order {{orderId}} paid.",
+        "an empty command body must be filled from the registered template"
+    );
 
     assert!(matches!(
         store

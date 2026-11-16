@@ -1151,6 +1151,8 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         }
         let id = self.next_id();
         let message_uuid = uuid();
+        let mut resolved_body = command.body.clone();
+        let mut resolved_subject = command.subject.clone();
         let mut payload_json = command
             .payload
             .clone()
@@ -1174,9 +1176,15 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         {
             payload_json["templateCode"] = serde_json::Value::String(template_code.to_owned());
             if let Some(provider) = provider {
-                let (_, binding) = self
+                let (template, binding) = self
                     .resolve_template_for_provider(subject, channel, template_code, provider)
                     .await?;
+                if resolved_body.trim().is_empty() {
+                    resolved_body = template.content.clone();
+                }
+                if resolved_subject.is_none() {
+                    resolved_subject = template.subject.clone();
+                }
                 payload_json["provider"] = serde_json::Value::String(provider.to_owned());
                 payload_json["providerTemplateId"] =
                     serde_json::Value::String(binding.provider_template_id.unwrap_or_default());
@@ -1200,11 +1208,11 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .bind(&command.channel)
         .bind(&target_hash)
         .bind(&target_masked)
-        .bind(&command.subject)
-        .bind(&command.body)
+        .bind(&resolved_subject)
+        .bind(&resolved_body)
         .bind(&payload_json)
         .bind(idempotency_key)
-        .bind(sha256_hash(command.body.as_bytes()))
+        .bind(sha256_hash(resolved_body.as_bytes()))
         .bind(subject.operator_id)
         .execute(&self.pool)
         .await

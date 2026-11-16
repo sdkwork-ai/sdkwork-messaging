@@ -106,9 +106,10 @@ Aliyun id.
   .../providers/{provider}` records a provider-specific id.
 - Sending with `templateCode` + `provider` resolves the active template and that
   provider's binding before insert. The outbound payload carries `provider`,
-  `templateCode`, and `providerTemplateId`; a missing or unsynced binding is a
-  400 instead of a silent fallback. Email and SMS template codes stay aligned
-  across locales; channel-specific wording may differ.
+  `templateCode`, and `providerTemplateId`; an empty command body is filled from
+  the registered template content (and subject for email), and a missing or
+  unsynced binding is a 400 instead of a silent fallback. Email and SMS template
+  codes stay aligned across locales; channel-specific wording may differ.
 
 ## 4. Send records
 
