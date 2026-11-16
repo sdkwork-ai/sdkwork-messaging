@@ -58,7 +58,7 @@ export const MESSAGING_ADMIN_MENU: SdkworkMessagingAdminNotifyMenu = {
   moduleId: "notifyCenter",
   groups: [
     {
-      groupKey: "admin.menu.notify.overview",
+      groupKey: "admin.header.notifyCenter",
       items: [
         {
           path: "/admin/notify/overview",
