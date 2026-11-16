@@ -27,9 +27,11 @@ import {
   inputClass,
 } from "./form";
 import { TemplatePreview } from "./template-preview";
+import { TemplateProviderBindings } from "./TemplateProviderBindings";
 import type {
   MessagingTemplateApprovalStatus,
   MessagingTemplateStatus,
+  NotifyAdminService,
 } from "../notifyAdminService";
 import { smsMetrics, renderTemplatePreview, sampleValueForVariable } from "../templatePreview";
 import {
@@ -57,6 +59,9 @@ export interface TemplateEditorPanelProps {
   onCancel: () => void;
   onDelete?: () => void;
   onDuplicate?: () => void;
+  /** Existing template id; enables the provider-binding panel in edit mode. */
+  templateId?: string;
+  service?: NotifyAdminService;
 }
 
 const STATUS_OPTIONS: readonly MessagingTemplateStatus[] = ["draft", "active", "disabled"];
@@ -98,6 +103,8 @@ export function TemplateEditorPanel({
   onCancel,
   onDelete,
   onDuplicate,
+  templateId,
+  service,
 }: TemplateEditorPanelProps) {
   const { t } = useTranslation();
   const contentRef = useRef<HTMLTextAreaElement>(null);
@@ -451,6 +458,13 @@ export function TemplateEditorPanel({
                   : t("admin.notify.templates.variableHint")}
               </p>
             </section>
+            {mode === "edit" && templateId ? (
+              <TemplateProviderBindings
+                channel={channel}
+                templateId={templateId}
+                service={service}
+              />
+            ) : null}
           </div>
 
           <div className="min-w-0 space-y-4 2xl:sticky 2xl:top-0">

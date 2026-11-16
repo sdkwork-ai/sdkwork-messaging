@@ -93,8 +93,14 @@ const EMAIL_CODES = [
 describe("localized template seed manifest", () => {
   it("registers one locale file per active locale in the standard profile", () => {
     const standard = SEED_MANIFEST.profiles.standard;
-    expect(standard?.locales["zh-CN"]).toEqual(["001_message_templates.sql"]);
-    expect(standard?.locales["en-US"]).toEqual(["001_message_templates.sql"]);
+    expect(standard?.locales["zh-CN"]).toEqual([
+      "001_message_templates.sql",
+      "002_template_provider_defaults.sql",
+    ]);
+    expect(standard?.locales["en-US"]).toEqual([
+      "001_message_templates.sql",
+      "002_template_provider_defaults.sql",
+    ]);
     expect(SEED_MANIFEST.profiles.minimal.locales["zh-CN"]).toEqual([]);
   });
 
@@ -107,7 +113,10 @@ describe("localized template seed manifest", () => {
         .update(JSON.stringify(set.files))
         .digest("hex");
       expect(set.checksum).toBe(`sha256:${expected}`);
-      expect(set.files).toEqual([`locales/${locale}/001_message_templates.sql`]);
+      expect(set.files).toEqual([
+        `locales/${locale}/001_message_templates.sql`,
+        `locales/${locale}/002_template_provider_defaults.sql`,
+      ]);
     }
   });
 

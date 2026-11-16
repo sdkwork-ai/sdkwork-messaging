@@ -3,9 +3,8 @@ import { useTranslation } from "react-i18next";
 import {
   ArrowDown,
   ArrowUp,
-  Building2,
+  ExternalLink,
   KeyRound,
-  MessageSquareText,
   Plus,
   Route,
   Trash2,
@@ -24,6 +23,8 @@ import {
   ToggleInput,
   inputClass,
 } from "../components/form";
+import { ProviderDirectory } from "../components/ProviderDirectory";
+import { ProviderLogo } from "../providerLogos";
 import { SlideOver } from "../components/slide-over";
 import { ListPager } from "../components/list-pager";
 import { PageErrorBoundary } from "../components/page-error-boundary";
@@ -78,16 +79,6 @@ function readConfig(config: Record<string, unknown> | undefined, key: string): s
   return typeof value === "string" ? value : "";
 }
 
-function ProviderBadge({ provider }: { provider: string }) {
-  const { t } = useTranslation();
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-      <MessageSquareText className="h-3 w-3" />
-      {t(`admin.notify.smsProviders.${provider}.name`, provider)}
-    </span>
-  );
-}
-
 interface AccountFormState {
   name: string;
   fields: Record<string, string>;
@@ -95,13 +86,16 @@ interface AccountFormState {
   enabled: boolean;
 }
 
-function emptyAccountForm(entry: (typeof SMS_PROVIDER_CATALOG)[number]): AccountFormState {
+function emptyAccountForm(
+  entry: (typeof SMS_PROVIDER_CATALOG)[number],
+  name: string,
+): AccountFormState {
   const defaults = smsProviderConfigDefaults(entry);
   const fields: Record<string, string> = {};
   for (const field of entry.fields) {
     fields[field.key] = defaults[field.key] ?? "";
   }
-  return { name: "", fields, secret: "", enabled: true };
+  return { name, fields, secret: "", enabled: false };
 }
 
 function accountFormFromItem(
@@ -144,6 +138,7 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
   const [initializingProvider, setInitializingProvider] = useState<MessagingSmsProvider | null>(
     null,
   );
+  const [initializingAll, setInitializingAll] = useState(false);
 
   const fetchPage = useCallback(
     async (targetPage: number) => {
@@ -203,8 +198,12 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
     if (!entry) {
       return;
     }
-    setPickedProvider(provider);
-    setForm(emptyAccountForm(entry));
+    const existing = accounts.find((account) => account.provider === provider);
+    if (existing) {
+      beginEdit(existing);
+      return;
+    }
+    void initializeAndConfigure(provider);
   };
 
   const beginEdit = (account: MessagingSmsAccount) => {
@@ -229,6 +228,24 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
     const name = form.name.trim();
     if (!name) {
       setError(t("admin.notify.sms.nameRequired"));
+      return;
+    }
+    const endpointField = entry.fields.find(
+      (field) => field.key === "endpoint" || field.key === "apiBaseUrl",
+    );
+    if (endpointField && !(form.fields[endpointField.key] ?? "").trim()) {
+      setError(t("admin.notify.sms.endpointRequired"));
+      return;
+    }
+    const missingField = entry.fields.find(
+      (field) => !field.preset && !(form.fields[field.key] ?? "").trim(),
+    );
+    if (missingField) {
+      setError(
+        t("admin.notify.sms.fieldRequired", {
+          field: t(missingField.labelKey),
+        }),
+      );
       return;
     }
     setSaving(true);
@@ -337,13 +354,101 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
     }
   };
 
+  const initializeAndConfigure = async (provider: MessagingSmsProvider) => {
+    setInitializingProvider(provider);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await admin.initializeSmsProvider(provider);
+      const pageResult = await admin.listSmsAccounts({ page: 1, pageSize: 200 });
+      const account =
+        pageResult.items.find((item) => item.id === result.resourceId) ??
+        pageResult.items.find((item) => item.provider === provider);
+      await reload();
+      if (account) {
+        beginEdit(account);
+        setNotice(
+          t("admin.notify.sms.initDone", {
+            provider: t(`admin.notify.smsProviders.${provider}.name`, provider),
+          }),
+        );
+      } else {
+        const entry = smsProviderCatalogEntry(provider);
+        if (entry) {
+          setPickedProvider(provider);
+          setEditing(null);
+          setForm(emptyAccountForm(entry, t(entry.nameKey)));
+          setCatalogOpen(true);
+        }
+      }
+    } catch {
+      setError(t("admin.notify.sms.initFailed"));
+      const entry = smsProviderCatalogEntry(provider);
+      if (entry) {
+        setPickedProvider(provider);
+        setEditing(null);
+        setForm(emptyAccountForm(entry, t(entry.nameKey)));
+        setCatalogOpen(true);
+      }
+    } finally {
+      setInitializingProvider(null);
+    }
+  };
+
+  const initializeMissingProviders = async () => {
+    setInitializingAll(true);
+    setError(null);
+    setNotice(null);
+    let done = 0;
+    let failed = 0;
+    try {
+      for (const entry of SMS_PROVIDER_CATALOG) {
+        if (accounts.some((account) => account.provider === entry.provider)) {
+          continue;
+        }
+        try {
+          await admin.initializeSmsProvider(entry.provider);
+          done += 1;
+        } catch {
+          failed += 1;
+        }
+      }
+      await reload();
+      setNotice(
+        failed === 0
+          ? t("admin.notify.providers.initAllDone", { count: done })
+          : t("admin.notify.providers.initAllPartial", { done, failed }),
+      );
+    } catch {
+      setError(t("admin.notify.sms.initFailed"));
+    } finally {
+      setInitializingAll(false);
+    }
+  };
+
+  const directoryEntries = useMemo(
+    () =>
+      SMS_PROVIDER_CATALOG.map((entry) => {
+        const account = accounts.find((item) => item.provider === entry.provider);
+        return {
+          provider: entry.provider,
+          label: t(entry.nameKey),
+          description: t(entry.descriptionKey),
+          account: account
+            ? { name: account.name, enabled: account.enabled, hasSecret: account.hasSecret }
+            : undefined,
+        };
+      }),
+    [accounts, t],
+  );
+
   const drawerEntry = pickedProvider ? smsProviderCatalogEntry(pickedProvider) : undefined;
 
   return (
     <section className="flex min-h-0 w-full flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          {t("admin.notify.sms.accountsHint")}
+          {t("admin.notify.sms.accountsHint", { count: SMS_PROVIDER_CATALOG.length })}
         </p>
         <PrimaryButton onClick={beginCreate}>
           <span className="inline-flex items-center gap-2">
@@ -352,6 +457,19 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
           </span>
         </PrimaryButton>
       </div>
+      <ProviderDirectory
+        entries={directoryEntries}
+        initializingProvider={initializingProvider}
+        initializingAll={initializingAll}
+        onInitialize={(provider) => void initializeAndConfigure(provider as MessagingSmsProvider)}
+        onEdit={(provider) => {
+          const account = accounts.find((item) => item.provider === provider);
+          if (account) {
+            beginEdit(account);
+          }
+        }}
+        onInitializeAll={() => void initializeMissingProviders()}
+      />
       {error ? <ErrorState message={error} onRetry={() => void runLoad(page)} /> : null}
       {notice ? (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
@@ -360,36 +478,6 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
       ) : null}
       {loading ? (
         <LoadingState label={t("admin.notify.common.loading")} />
-      ) : accounts.length === 0 && page === 1 ? (
-        <section className="rounded-xl border border-dashed border-slate-300 p-5 dark:border-white/15">
-          <h3 className="text-sm font-semibold text-slate-800 dark:text-white">
-            {t("admin.notify.sms.emptyInitTitle")}
-          </h3>
-          <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-            {t("admin.notify.sms.emptyInitHint")}
-          </p>
-          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            {SMS_PROVIDER_CATALOG.map((entry) => (
-              <button
-                key={entry.provider}
-                type="button"
-                disabled={initializingProvider !== null}
-                onClick={() => void initializeProvider(entry.provider)}
-                className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 text-left text-xs font-medium text-slate-700 transition hover:border-sky-400 hover:bg-sky-50/60 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-slate-200 dark:hover:border-sky-500/50 dark:hover:bg-sky-500/5"
-              >
-                <span className="inline-flex min-w-0 items-center gap-2">
-                  <MessageSquareText className="h-3.5 w-3.5 shrink-0 text-sky-500" />
-                  <span className="truncate">{t(entry.nameKey)}</span>
-                </span>
-                <span className="shrink-0 text-[11px] text-sky-600 dark:text-sky-400">
-                  {initializingProvider === entry.provider
-                    ? t("admin.notify.common.initializing")
-                    : t("admin.notify.common.initialize")}
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
@@ -399,12 +487,22 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
                 className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#1a1a1a]"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="truncate text-sm font-semibold text-slate-800 dark:text-white">
-                      {account.name}
-                    </h3>
-                    <div className="mt-1.5">
-                      <ProviderBadge provider={account.provider} />
+                  <div className="flex min-w-0 items-start gap-2.5">
+                    <ProviderLogo
+                      provider={account.provider}
+                      label={t(`admin.notify.smsProviders.${account.provider}.name`, account.provider)}
+                      size={32}
+                    />
+                    <div className="min-w-0">
+                      <h3 className="truncate text-sm font-semibold text-slate-800 dark:text-white">
+                        {t(
+                          `admin.notify.smsProviders.${account.provider}.name`,
+                          account.provider,
+                        )}
+                      </h3>
+                      <div className="truncate text-xs text-slate-400 dark:text-slate-500">
+                        {account.name}
+                      </div>
                     </div>
                   </div>
                   <ToggleInput
@@ -510,15 +608,23 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
                 <button
                   key={entry.provider}
                   type="button"
+                  disabled={initializingProvider !== null}
                   onClick={() => pickProvider(entry.provider)}
-                  className="flex flex-col items-start gap-1.5 rounded-xl border border-slate-200 p-4 text-left transition hover:border-emerald-400 hover:bg-emerald-50/60 dark:border-white/10 dark:hover:border-emerald-500/50 dark:hover:bg-emerald-500/5"
+                  className="flex flex-col items-start gap-1.5 rounded-xl border border-slate-200 p-4 text-left transition hover:border-emerald-400 hover:bg-emerald-50/60 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:hover:border-emerald-500/50 dark:hover:bg-emerald-500/5"
                 >
                   <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-white">
-                    <Building2 className="h-4 w-4 text-emerald-500" />
+                    <ProviderLogo provider={entry.provider} label={t(entry.nameKey)} size={30} />
                     {t(entry.nameKey)}
                   </span>
                   <span className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                     {t(entry.descriptionKey)}
+                  </span>
+                  <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                    {initializingProvider === entry.provider
+                      ? t("admin.notify.providers.initializing")
+                      : accounts.some((account) => account.provider === entry.provider)
+                        ? t("admin.notify.providers.configure")
+                        : t("admin.notify.providers.initialize")}
                   </span>
                 </button>
               ))}
@@ -546,9 +652,11 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
               <Field
                 label={t(drawerEntry.secretLabelKey)}
                 hint={
-                  editing?.hasSecret
-                    ? t("admin.notify.common.secretConfiguredHint")
-                    : t("admin.notify.common.secretEmptyHint")
+                  drawerEntry.setupHintKey
+                    ? t(drawerEntry.setupHintKey)
+                    : editing?.hasSecret
+                      ? t("admin.notify.common.secretConfiguredHint")
+                      : t("admin.notify.common.secretEmptyHint")
                 }
               >
                 <div className="relative">
@@ -563,6 +671,17 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
                   ) : null}
                 </div>
               </Field>
+              {drawerEntry.consoleUrl ? (
+                <a
+                  href={drawerEntry.consoleUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 hover:text-emerald-700 hover:underline dark:text-emerald-400 dark:hover:text-emerald-300"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  {t("admin.notify.common.openProviderConsole")}
+                </a>
+              ) : null}
               <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3 dark:bg-white/5">
                 <div>
                   <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
@@ -570,6 +689,9 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
                   </p>
                   <p className="text-xs text-slate-400 dark:text-slate-500">
                     {t("admin.notify.sms.enabledHint")}
+                  </p>
+                  <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+                    {t("admin.notify.sms.identityEnableHint")}
                   </p>
                 </div>
                 <ToggleInput

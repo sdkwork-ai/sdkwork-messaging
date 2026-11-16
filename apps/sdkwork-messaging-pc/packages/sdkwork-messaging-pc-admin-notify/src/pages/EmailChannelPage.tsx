@@ -3,10 +3,9 @@ import { useTranslation } from "react-i18next";
 import {
   ArrowDown,
   ArrowUp,
-  Building2,
+  ExternalLink,
   Inbox,
   KeyRound,
-  Mail,
   Plus,
   Route,
   Send,
@@ -26,6 +25,8 @@ import {
   ToggleInput,
   inputClass,
 } from "../components/form";
+import { ProviderDirectory } from "../components/ProviderDirectory";
+import { ProviderLogo } from "../providerLogos";
 import { SlideOver } from "../components/slide-over";
 import { ListPager } from "../components/list-pager";
 import { PageErrorBoundary } from "../components/page-error-boundary";
@@ -94,15 +95,6 @@ const RECEIVE_PROTOCOL_OPTIONS: readonly EmailReceiveProtocol[] = ["imap", "pop3
 /** Translation function type derived from the hook, kept free of a direct i18next dependency. */
 type Translate = ReturnType<typeof useTranslation>["t"];
 
-function ProviderBadge({ provider }: { provider: string }) {
-  const { t } = useTranslation();
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">
-      <Mail className="h-3 w-3" />
-      {t(`admin.notify.emailProviders.${provider}.name`, provider)}
-    </span>
-  );
-}
 
 /**
  * Send-side summary of an account. HTTP API providers show their endpoint;
@@ -167,13 +159,13 @@ function endpointFromPreset(
   return endpoint ?? { host: "", port: fallbackPort, encryption: "ssl" };
 }
 
-function emptyAccountForm(entry: EmailProviderCatalogEntry): AccountFormState {
+function emptyAccountForm(entry: EmailProviderCatalogEntry, name: string): AccountFormState {
   const config = parseEmailAccountConfig(providerConfigDefaults(entry));
   return {
-    name: "",
-    username: "",
+    name,
+    username: config.username ?? "",
     secret: "",
-    enabled: true,
+    enabled: false,
     receiveEnabled: Boolean(entry.receive),
     sendHost: config.send?.host ?? "",
     sendPort: config.send?.port ?? "",
@@ -249,6 +241,7 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
   const [initializingProvider, setInitializingProvider] = useState<MessagingEmailProvider | null>(
     null,
   );
+  const [initializingAll, setInitializingAll] = useState(false);
 
   const fetchPage = useCallback(
     async (targetPage: number) => {
@@ -304,8 +297,12 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
     if (!entry) {
       return;
     }
-    setPickedProvider(provider);
-    setForm(emptyAccountForm(entry));
+    const existing = accounts.find((account) => account.provider === provider);
+    if (existing) {
+      beginEdit(existing);
+      return;
+    }
+    void initializeAndConfigure(provider);
   };
 
   const beginEdit = (account: MessagingEmailAccount) => {
@@ -331,6 +328,18 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
     const name = form.name.trim();
     if (!name) {
       setError(t("admin.notify.email.nameRequired"));
+      return;
+    }
+    if (entry.transport === "smtp" && !form.sendHost.trim()) {
+      setError(t("admin.notify.email.hostRequired"));
+      return;
+    }
+    if (entry.transport === "http_api" && !form.apiBaseUrl.trim()) {
+      setError(t("admin.notify.email.apiBaseUrlRequired"));
+      return;
+    }
+    if (!form.username.trim()) {
+      setError(t("admin.notify.email.usernameRequired"));
       return;
     }
     setSaving(true);
@@ -445,13 +454,114 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
     }
   };
 
+  const initializeAndConfigure = async (provider: MessagingEmailProvider) => {
+    setInitializingProvider(provider);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await admin.initializeEmailProvider(provider);
+      const pageResult = await admin.listEmailAccounts({ page: 1, pageSize: 200 });
+      const account =
+        pageResult.items.find((item) => item.id === result.resourceId) ??
+        pageResult.items.find((item) => item.provider === provider);
+      await reload();
+      if (account) {
+        beginEdit(account);
+        setNotice(
+          t("admin.notify.email.initDone", {
+            provider: t(`admin.notify.emailProviders.${provider}.name`, provider),
+          }),
+        );
+      } else {
+        const entry = emailProviderCatalogEntry(provider);
+        if (entry) {
+          setPickedProvider(provider);
+          setEditing(null);
+          setForm(emptyAccountForm(entry, t(entry.nameKey)));
+          setCatalogOpen(true);
+        }
+      }
+    } catch {
+      setError(t("admin.notify.email.initFailed"));
+      const entry = emailProviderCatalogEntry(provider);
+      if (entry) {
+        setPickedProvider(provider);
+        setEditing(null);
+        setForm(emptyAccountForm(entry, t(entry.nameKey)));
+        setCatalogOpen(true);
+      }
+    } finally {
+      setInitializingProvider(null);
+    }
+  };
+
+  const initializeMissingProviders = async () => {
+    setInitializingAll(true);
+    setError(null);
+    setNotice(null);
+    let done = 0;
+    let failed = 0;
+    try {
+      for (const entry of EMAIL_PROVIDER_CATALOG) {
+        if (accounts.some((account) => account.provider === entry.provider)) {
+          continue;
+        }
+        try {
+          await admin.initializeEmailProvider(entry.provider);
+          done += 1;
+        } catch {
+          failed += 1;
+        }
+      }
+      await reload();
+      setNotice(
+        failed === 0
+          ? t("admin.notify.providers.initAllDone", { count: done })
+          : t("admin.notify.providers.initAllPartial", { done, failed }),
+      );
+    } catch {
+      setError(t("admin.notify.email.initFailed"));
+    } finally {
+      setInitializingAll(false);
+    }
+  };
+
+  const directoryEntries = useMemo(
+    () =>
+      EMAIL_PROVIDER_CATALOG.map((entry) => {
+        const account = accounts.find((item) => item.provider === entry.provider);
+        return {
+          provider: entry.provider,
+          label: t(entry.nameKey),
+          description: t(entry.descriptionKey),
+          account: account
+            ? { name: account.name, enabled: account.enabled, hasSecret: account.hasSecret }
+            : undefined,
+        };
+      }),
+    [accounts, t],
+  );
+
   const drawerEntry = pickedProvider ? emailProviderCatalogEntry(pickedProvider) : undefined;
 
   return (
     <section className="flex min-h-0 w-full flex-col gap-4">
       <p className="text-sm text-slate-500 dark:text-slate-400">
-        {t("admin.notify.email.accountsHint")}
+        {t("admin.notify.email.accountsHint", { count: EMAIL_PROVIDER_CATALOG.length })}
       </p>
+      <ProviderDirectory
+        entries={directoryEntries}
+        initializingProvider={initializingProvider}
+        initializingAll={initializingAll}
+        onInitialize={(provider) => void initializeAndConfigure(provider as MessagingEmailProvider)}
+        onEdit={(provider) => {
+          const account = accounts.find((item) => item.provider === provider);
+          if (account) {
+            beginEdit(account);
+          }
+        }}
+        onInitializeAll={() => void initializeMissingProviders()}
+      />
       {error ? <ErrorState message={error} onRetry={() => void runLoad(page)} /> : null}
       {notice ? (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
@@ -462,37 +572,6 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
         <LoadingState label={t("admin.notify.common.loading")} />
       ) : (
         <>
-          {accounts.length === 0 ? (
-            <section className="rounded-xl border border-dashed border-slate-300 p-5 dark:border-white/15">
-              <h3 className="text-sm font-semibold text-slate-800 dark:text-white">
-                {t("admin.notify.email.emptyInitTitle")}
-              </h3>
-              <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                {t("admin.notify.email.emptyInitHint")}
-              </p>
-              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                {EMAIL_PROVIDER_CATALOG.map((entry) => (
-                  <button
-                    key={entry.provider}
-                    type="button"
-                    disabled={initializingProvider !== null}
-                    onClick={() => void initializeProvider(entry.provider)}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 text-left text-xs font-medium text-slate-700 transition hover:border-sky-400 hover:bg-sky-50/60 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-slate-200 dark:hover:border-sky-500/50 dark:hover:bg-sky-500/5"
-                  >
-                    <span className="inline-flex min-w-0 items-center gap-2">
-                      <Building2 className="h-3.5 w-3.5 shrink-0 text-sky-500" />
-                      <span className="truncate">{t(entry.nameKey)}</span>
-                    </span>
-                    <span className="shrink-0 text-[11px] text-sky-600 dark:text-sky-400">
-                      {initializingProvider === entry.provider
-                        ? t("admin.notify.common.initializing")
-                        : t("admin.notify.common.initialize")}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          ) : null}
           <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#1a1a1a]">
             <table className="w-full min-w-[960px] text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
@@ -533,18 +612,28 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
                       className="border-b border-slate-100 last:border-0 align-top hover:bg-slate-50 dark:border-white/5 dark:hover:bg-white/5"
                     >
                       <td className="px-4 py-4">
-                        <div className="min-w-0">
-                          <div className="truncate font-medium text-slate-800 dark:text-white">
-                            {account.name}
-                          </div>
-                          <div className="mt-1.5">
-                            <ProviderBadge provider={account.provider} />
-                          </div>
-                          <div className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
-                            <KeyRound className="h-3.5 w-3.5" />
-                            {account.hasSecret
-                              ? account.keyDisplayMasked
-                              : t("admin.notify.common.secretEmptyHint")}
+                        <div className="flex min-w-0 items-start gap-2.5">
+                          <ProviderLogo
+                            provider={account.provider}
+                            label={t(`admin.notify.emailProviders.${account.provider}.name`, account.provider)}
+                            size={30}
+                          />
+                          <div className="min-w-0">
+                            <div className="truncate font-medium text-slate-800 dark:text-white">
+                              {t(
+                                `admin.notify.emailProviders.${account.provider}.name`,
+                                account.provider,
+                              )}
+                            </div>
+                            <div className="truncate text-xs text-slate-400 dark:text-slate-500">
+                              {account.name}
+                            </div>
+                            <div className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
+                              <KeyRound className="h-3.5 w-3.5" />
+                              {account.hasSecret
+                                ? account.keyDisplayMasked
+                                : t("admin.notify.common.secretEmptyHint")}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -662,15 +751,23 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
                 <button
                   key={entry.provider}
                   type="button"
+                  disabled={initializingProvider !== null}
                   onClick={() => pickProvider(entry.provider)}
-                  className="flex flex-col items-start gap-1.5 rounded-xl border border-slate-200 p-4 text-left transition hover:border-sky-400 hover:bg-sky-50/60 dark:border-white/10 dark:hover:border-sky-500/50 dark:hover:bg-sky-500/5"
+                  className="flex flex-col items-start gap-1.5 rounded-xl border border-slate-200 p-4 text-left transition hover:border-sky-400 hover:bg-sky-50/60 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:hover:border-sky-500/50 dark:hover:bg-sky-500/5"
                 >
                   <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-white">
-                    <Building2 className="h-4 w-4 text-sky-500" />
+                    <ProviderLogo provider={entry.provider} label={t(entry.nameKey)} size={30} />
                     {t(entry.nameKey)}
                   </span>
                   <span className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                     {t(entry.descriptionKey)}
+                  </span>
+                  <span className="text-[11px] font-medium text-sky-600 dark:text-sky-400">
+                    {initializingProvider === entry.provider
+                      ? t("admin.notify.providers.initializing")
+                      : accounts.some((account) => account.provider === entry.provider)
+                        ? t("admin.notify.providers.configure")
+                        : t("admin.notify.providers.initialize")}
                   </span>
                 </button>
               ))}
@@ -719,6 +816,17 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
                   ) : null}
                 </div>
               </Field>
+              {drawerEntry.consoleUrl ? (
+                <a
+                  href={drawerEntry.consoleUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-sky-600 hover:text-sky-700 hover:underline dark:text-sky-400 dark:hover:text-sky-300"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  {t("admin.notify.common.openProviderConsole")}
+                </a>
+              ) : null}
 
               <section className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-white/10">
                 <header className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-white">
@@ -857,6 +965,9 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
                   </div>
                 ) : null}
               </div>
+              <p className="text-xs leading-relaxed text-amber-600 dark:text-amber-400">
+                {t("admin.notify.email.identityEnableHint")}
+              </p>
             </div>
           ) : null}
         </SlideOver>

@@ -93,7 +93,7 @@ pub fn resolve_app_root() -> PathBuf {
 /// provider, sender/signature, rule, and template seeds land during a packaged
 /// deployment instead of only at a development gateway boot.
 pub fn database_module() -> Result<DefaultDatabaseModule, String> {
-    DefaultDatabaseModule::from_app_root(&resolve_app_root())
+    DefaultDatabaseModule::from_app_root(resolve_app_root())
         .map_err(|error| format!("load messaging database module failed: {error}"))
 }
 
@@ -110,6 +110,10 @@ mod tests {
         include_str!("../../../database/seeds/locales/zh-CN/001_message_templates.sql");
     const EN_TEMPLATES: &str =
         include_str!("../../../database/seeds/locales/en-US/001_message_templates.sql");
+    const ZH_TEMPLATE_PROVIDERS: &str =
+        include_str!("../../../database/seeds/locales/zh-CN/002_template_provider_defaults.sql");
+    const EN_TEMPLATE_PROVIDERS: &str =
+        include_str!("../../../database/seeds/locales/en-US/002_template_provider_defaults.sql");
 
     /// The standard profile backs every explicit install/upgrade; provider,
     /// identity, rule, and template seeds have to be registered there or
@@ -131,6 +135,12 @@ mod tests {
             assert!(
                 SEED_MANIFEST.contains(&format!("locales/{locale}/001_message_templates.sql")),
                 "the standard seed profile must register the {locale} template seed"
+            );
+            assert!(
+                SEED_MANIFEST.contains(&format!(
+                    "locales/{locale}/002_template_provider_defaults.sql"
+                )),
+                "the standard seed profile must register the {locale} provider-binding seed"
             );
         }
     }
@@ -194,6 +204,31 @@ mod tests {
             4,
             "one sms routing rule per scenario"
         );
+    }
+
+    /// Provider bindings ship for every seeded template and channel. Email
+    /// bindings start synced with a provider-local reference; SMS bindings start
+    /// pending because the carrier must approve a template id first.
+    #[test]
+    fn template_provider_seed_covers_both_channels() {
+        for (locale, sql) in [
+            ("zh-CN", ZH_TEMPLATE_PROVIDERS),
+            ("en-US", EN_TEMPLATE_PROVIDERS),
+        ] {
+            assert!(
+                sql.contains(&format!(
+                    "uuid LIKE 'seed-tpl-{}-%'",
+                    if locale == "zh-CN" { "zh" } else { "en" }
+                )),
+                "{locale} binding seed must target its own template set"
+            );
+            assert!(sql.contains("(0, 'email', 'smtp')"));
+            assert!(sql.contains("(12, 'email', 'resend')"));
+            assert!(sql.contains("(0, 'sms', 'tencent')"));
+            assert!(sql.contains("(7, 'sms', 'generic_http')"));
+            assert!(sql.contains("provider_template_id_required"));
+            assert!(sql.contains("ON CONFLICT DO NOTHING"));
+        }
     }
 
     /// Both active locales ship the full ten-email/ten-sms template set.

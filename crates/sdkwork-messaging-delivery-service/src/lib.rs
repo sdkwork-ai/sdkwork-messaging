@@ -151,6 +151,13 @@ pub struct MessagingOutboundMessageRequest {
     pub idempotency_key: String,
     pub subject: Option<String>,
     pub target: String,
+    /// Business template code, when the message was rendered from a template.
+    pub template_code: Option<String>,
+    /// Provider selected by the routing chain.
+    pub provider: Option<String>,
+    /// Provider-side template id resolved for the selected provider. SMS
+    /// adapters must send this id instead of resubmitting free-form content.
+    pub provider_template_id: Option<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

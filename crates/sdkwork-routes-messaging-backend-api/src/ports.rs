@@ -148,6 +148,10 @@ pub struct SendOutboundMessageCommand {
     pub scenario: Option<String>,
     /// Template code used to render the message, when one was applied.
     pub template_code: Option<String>,
+    /// Provider selected for this send. When set together with `templateCode`,
+    /// the provider-specific template binding is resolved and its external id is
+    /// carried on the message payload for the delivery adapter.
+    pub provider: Option<String>,
 }
 
 // ------------------------------------------------------------- send records
@@ -632,6 +636,50 @@ pub struct UpdateTemplateCommand {
     pub expected_version: String,
 }
 
+/// One provider-specific registration of a message template.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TemplateProviderBindingItem {
+    pub provider: String,
+    /// Provider-side template id (SMS carrier template id, email provider
+    /// template id, or the local rendering reference for SMTP providers).
+    pub provider_template_id: Option<String>,
+    pub provider_template_name: Option<String>,
+    pub sync_status: String,
+    pub sync_message: Option<String>,
+    pub last_synced_at: Option<String>,
+    pub version: String,
+}
+
+/// Command for one-click registration of a template with every provider of its
+/// channel (or only the requested subset).
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncTemplateProvidersCommand {
+    pub providers: Option<Vec<String>>,
+    /// Replace an existing provider template id with the deterministic local
+    /// reference. Defaults to false; operator-entered ids are never overwritten.
+    pub overwrite: Option<bool>,
+}
+
+/// Manual update of one provider binding, normally used after the provider
+/// approves a template and returns its real template id.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateTemplateProviderCommand {
+    pub provider_template_id: Option<String>,
+    pub provider_template_name: Option<String>,
+    pub sync_status: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TemplateProviderSyncResult {
+    pub synced: usize,
+    pub pending_approval: usize,
+    pub items: Vec<TemplateProviderBindingItem>,
+}
+
 // -------------------------------------------------------------------- store
 
 /// Outcome of an idempotent provider initialization command.
@@ -950,6 +998,47 @@ pub trait MessagingAdminStore: Send + Sync {
         template_id: i64,
         idempotency_key: &str,
     ) -> Result<(), StoreError>;
+
+    /// Provider-specific registrations of one template, ordered by provider
+    /// priority so the console renders the default sender first.
+    async fn list_template_providers(
+        &self,
+        subject: &MessagingAdminSubject,
+        template_id: i64,
+    ) -> Result<Vec<TemplateProviderBindingItem>, StoreError>;
+
+    /// One-click registration of a template with every provider of its channel
+    /// (or the requested subset). Never overwrites an operator-entered id unless
+    /// `overwrite` is true; returns the complete binding set.
+    async fn sync_template_providers(
+        &self,
+        subject: &MessagingAdminSubject,
+        template_id: i64,
+        command: &SyncTemplateProvidersCommand,
+        idempotency_key: &str,
+    ) -> Result<TemplateProviderSyncResult, StoreError>;
+
+    /// Records the provider-side template id / approval state for one binding.
+    /// Creates the binding when the provider was not registered yet.
+    async fn update_template_provider(
+        &self,
+        subject: &MessagingAdminSubject,
+        template_id: i64,
+        provider: &str,
+        command: &UpdateTemplateProviderCommand,
+        idempotency_key: &str,
+    ) -> Result<TemplateProviderBindingItem, StoreError>;
+
+    /// Resolves the active template and its provider-specific external id for a
+    /// send. Delivery consumers call this after the routing chain selected a
+    /// provider; a missing/unsynchronized binding is a 400, not a silent fallback.
+    async fn resolve_template_for_provider(
+        &self,
+        subject: &MessagingAdminSubject,
+        channel: &str,
+        template_code: &str,
+        provider: &str,
+    ) -> Result<(TemplateItem, TemplateProviderBindingItem), StoreError>;
 }
 
 // ---------------------------------------------------------- enum validation
@@ -1154,6 +1243,32 @@ pub fn parse_template_status(value: Option<&str>) -> Result<&'static str, String
         "disabled" => Ok("disabled"),
         other => Err(format!(
             "status must be one of: draft, active, disabled (found `{other}`)"
+        )),
+    }
+}
+
+/// Validates that `provider` belongs to the template's channel.
+pub fn parse_template_channel_provider(
+    channel: &str,
+    provider: &str,
+) -> Result<&'static str, String> {
+    match channel {
+        "email" => parse_email_provider(provider),
+        "sms" => parse_sms_provider(provider),
+        other => Err(format!(
+            "channel must be one of: sms, email (found `{other}`)"
+        )),
+    }
+}
+
+pub fn parse_template_provider_sync_status(value: Option<&str>) -> Result<&'static str, String> {
+    match value.unwrap_or("pending_approval") {
+        "not_synced" => Ok("not_synced"),
+        "pending_approval" => Ok("pending_approval"),
+        "synced" => Ok("synced"),
+        "failed" => Ok("failed"),
+        other => Err(format!(
+            "syncStatus must be one of: not_synced, pending_approval, synced, failed (found `{other}`)"
         )),
     }
 }

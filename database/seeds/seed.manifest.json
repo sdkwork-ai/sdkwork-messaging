@@ -31,10 +31,12 @@
       ],
       "locales": {
         "zh-CN": [
-          "001_message_templates.sql"
+          "001_message_templates.sql",
+          "002_template_provider_defaults.sql"
         ],
         "en-US": [
-          "001_message_templates.sql"
+          "001_message_templates.sql",
+          "002_template_provider_defaults.sql"
         ]
       }
     }
@@ -45,17 +47,19 @@
     "zh-CN": {
       "version": "1.0.0",
       "required": true,
-      "checksum": "sha256:343e25d2c2b39cef95160fa705889710a7722bf776e5efadff049a5365a46845",
+      "checksum": "sha256:2cd58cd32512ea9ca6281bc8a5e70255a03e0cf12734e5021e73c23f293cb6d4",
       "files": [
-        "locales/zh-CN/001_message_templates.sql"
+        "locales/zh-CN/001_message_templates.sql",
+        "locales/zh-CN/002_template_provider_defaults.sql"
       ]
     },
     "en-US": {
       "version": "1.0.0",
       "required": false,
-      "checksum": "sha256:ff0efe874660f2238f2efc7c67130ede50ef6c408d8b6814a0e55f43b43ca458",
+      "checksum": "sha256:7f72a4f4a6a179705bc631aefb9a81c247c81720746030a4fce9caad040fdc42",
       "files": [
-        "locales/en-US/001_message_templates.sql"
+        "locales/en-US/001_message_templates.sql",
+        "locales/en-US/002_template_provider_defaults.sql"
       ]
     }
   }

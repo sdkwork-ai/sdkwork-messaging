@@ -27,11 +27,12 @@ use crate::ports::{
     MessagingSendRecordDetail, MessagingSendRecordItem, NotificationItem, OutboundMessageItem,
     ProviderInitialization, PublishAnnouncementCommand, PushMessageItem,
     SendOutboundMessageCommand, SendPushMessageCommand, SendRecordFilter, SmsAccountItem,
-    SmsSendRuleItem, SmsSendRuleStep, SmsSignatureItem, StoreError, TemplateItem,
+    SmsSendRuleItem, SmsSendRuleStep, SmsSignatureItem, StoreError, SyncTemplateProvidersCommand,
+    TemplateItem, TemplateProviderBindingItem, TemplateProviderSyncResult,
     UpdateEmailAccountCommand, UpdateEmailSendRuleCommand, UpdateEmailSenderCommand,
     UpdateSmsAccountCommand, UpdateSmsSendRuleCommand, UpdateSmsSignatureCommand,
-    UpdateTemplateCommand, UpdateVerificationPolicyCommand, VerificationPolicyItem,
-    SEND_RULE_SCENARIOS,
+    UpdateTemplateCommand, UpdateTemplateProviderCommand, UpdateVerificationPolicyCommand,
+    VerificationPolicyItem, SEND_RULE_SCENARIOS,
 };
 
 pub struct PostgresMessagingAdminStore {
@@ -1111,9 +1112,18 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         command: &SendOutboundMessageCommand,
         idempotency_key: &str,
     ) -> Result<OutboundMessageItem, StoreError> {
-        crate::ports::parse_channel(&command.channel).map_err(StoreError::Invalid)?;
+        let channel = crate::ports::parse_channel(&command.channel).map_err(StoreError::Invalid)?;
         if command.target.trim().is_empty() {
             return Err(StoreError::Invalid("target must not be empty".to_owned()));
+        }
+        let provider = command
+            .provider
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty());
+        if let Some(provider) = provider {
+            crate::ports::parse_template_channel_provider(channel, provider)
+                .map_err(StoreError::Invalid)?;
         }
         if let Some(scenario) = command
             .scenario
@@ -1141,6 +1151,8 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         }
         let id = self.next_id();
         let message_uuid = uuid();
+        let mut resolved_body = command.body.clone();
+        let mut resolved_subject = command.subject.clone();
         let mut payload_json = command
             .payload
             .clone()
@@ -1163,6 +1175,22 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
             .filter(|value| !value.is_empty())
         {
             payload_json["templateCode"] = serde_json::Value::String(template_code.to_owned());
+            if let Some(provider) = provider {
+                let (template, binding) = self
+                    .resolve_template_for_provider(subject, channel, template_code, provider)
+                    .await?;
+                if resolved_body.trim().is_empty() {
+                    resolved_body = template.content.clone();
+                }
+                if resolved_subject.is_none() {
+                    resolved_subject = template.subject.clone();
+                }
+                payload_json["provider"] = serde_json::Value::String(provider.to_owned());
+                payload_json["providerTemplateId"] =
+                    serde_json::Value::String(binding.provider_template_id.unwrap_or_default());
+            }
+        } else if let Some(provider) = provider {
+            payload_json["provider"] = serde_json::Value::String(provider.to_owned());
         }
         let target_hash = sha256_hash(command.target.trim().as_bytes());
         let target_masked = mask_target(command.target.trim());
@@ -1180,11 +1208,11 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .bind(&command.channel)
         .bind(&target_hash)
         .bind(&target_masked)
-        .bind(&command.subject)
-        .bind(&command.body)
+        .bind(&resolved_subject)
+        .bind(&resolved_body)
         .bind(&payload_json)
         .bind(idempotency_key)
-        .bind(sha256_hash(command.body.as_bytes()))
+        .bind(sha256_hash(resolved_body.as_bytes()))
         .bind(subject.operator_id)
         .execute(&self.pool)
         .await
@@ -3818,6 +3846,380 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         }
         Ok(())
     }
+
+    async fn list_template_providers(
+        &self,
+        subject: &MessagingAdminSubject,
+        template_id: i64,
+    ) -> Result<Vec<TemplateProviderBindingItem>, StoreError> {
+        let channel = self.template_channel(subject, template_id).await?;
+        let rows = sqlx::query(
+            "SELECT provider, provider_template_id, provider_template_name, sync_status, \
+                    sync_message, last_synced_at, version \
+             FROM messaging_template_provider \
+             WHERE tenant_id = $1 AND organization_id = $2 AND template_id = $3",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .bind(template_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        let mut items = rows
+            .into_iter()
+            .map(template_provider_binding_from_row)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        items.sort_by_key(|item| template_provider_priority(&channel, &item.provider));
+        Ok(items)
+    }
+
+    async fn sync_template_providers(
+        &self,
+        subject: &MessagingAdminSubject,
+        template_id: i64,
+        command: &SyncTemplateProvidersCommand,
+        _idempotency_key: &str,
+    ) -> Result<TemplateProviderSyncResult, StoreError> {
+        let (channel, template_code, template_name) =
+            self.template_identity(subject, template_id).await?;
+        let mut providers: Vec<&'static str> = match command.providers.as_ref() {
+            Some(values) => {
+                let mut deduped = Vec::new();
+                for value in values {
+                    let provider = crate::ports::parse_template_channel_provider(&channel, value)
+                        .map_err(StoreError::Invalid)?;
+                    if !deduped.contains(&provider) {
+                        deduped.push(provider);
+                    }
+                }
+                deduped
+            }
+            None => template_providers_for_channel(&channel),
+        };
+        if providers.is_empty() {
+            return Err(StoreError::Invalid(
+                "at least one provider is required".to_owned(),
+            ));
+        }
+        providers.sort_by_key(|provider| template_provider_priority(&channel, provider));
+        let overwrite = command.overwrite.unwrap_or(false);
+        for provider in providers {
+            let provider_template_id = if channel == "email" {
+                Some(format!("{provider}:{template_code}"))
+            } else {
+                None
+            };
+            sqlx::query(
+                "INSERT INTO messaging_template_provider \
+                 (id, uuid, tenant_id, organization_id, template_id, channel, provider, \
+                  provider_template_id, provider_template_name, sync_status, sync_message, \
+                  last_synced_at, created_by) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, \
+                         CASE WHEN $6 = 'email' THEN 'synced' ELSE 'pending_approval' END, \
+                         CASE WHEN $6 = 'email' THEN NULL ELSE 'provider_template_id_required' END, \
+                         CASE WHEN $6 = 'email' THEN CURRENT_TIMESTAMP ELSE NULL END, $10) \
+                 ON CONFLICT (tenant_id, organization_id, template_id, provider) DO UPDATE SET \
+                    provider_template_id = CASE \
+                        WHEN $11 AND $6 = 'email' THEN EXCLUDED.provider_template_id \
+                        WHEN COALESCE(messaging_template_provider.provider_template_id, '') = '' \
+                            THEN EXCLUDED.provider_template_id \
+                        ELSE messaging_template_provider.provider_template_id END, \
+                    provider_template_name = EXCLUDED.provider_template_name, \
+                    sync_status = CASE \
+                        WHEN $6 = 'email' THEN 'synced' \
+                        WHEN COALESCE(messaging_template_provider.provider_template_id, '') <> '' \
+                            THEN 'synced' \
+                        ELSE 'pending_approval' END, \
+                    sync_message = CASE \
+                        WHEN $6 = 'email' THEN NULL \
+                        WHEN COALESCE(messaging_template_provider.provider_template_id, '') <> '' \
+                            THEN NULL \
+                        ELSE 'provider_template_id_required' END, \
+                    last_synced_at = CASE \
+                        WHEN $6 = 'email' THEN CURRENT_TIMESTAMP \
+                        WHEN COALESCE(messaging_template_provider.provider_template_id, '') <> '' \
+                            THEN CURRENT_TIMESTAMP \
+                        ELSE messaging_template_provider.last_synced_at END, \
+                    updated_by = $10, \
+                    updated_at = CURRENT_TIMESTAMP, \
+                    version = messaging_template_provider.version + 1",
+            )
+            .bind(self.next_id())
+            .bind(uuid())
+            .bind(subject.tenant_id)
+            .bind(subject.organization_id)
+            .bind(template_id)
+            .bind(&channel)
+            .bind(provider)
+            .bind(provider_template_id)
+            .bind(&template_name)
+            .bind(subject.operator_id)
+            .bind(overwrite)
+            .execute(&self.pool)
+            .await
+            .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        }
+        self.list_template_providers(subject, template_id)
+            .await
+            .map(|items| TemplateProviderSyncResult {
+                synced: items
+                    .iter()
+                    .filter(|item| item.sync_status == "synced")
+                    .count(),
+                pending_approval: items
+                    .iter()
+                    .filter(|item| item.sync_status == "pending_approval")
+                    .count(),
+                items,
+            })
+    }
+
+    async fn update_template_provider(
+        &self,
+        subject: &MessagingAdminSubject,
+        template_id: i64,
+        provider: &str,
+        command: &UpdateTemplateProviderCommand,
+        _idempotency_key: &str,
+    ) -> Result<TemplateProviderBindingItem, StoreError> {
+        let (channel, _template_code, template_name) =
+            self.template_identity(subject, template_id).await?;
+        let provider = crate::ports::parse_template_channel_provider(&channel, provider)
+            .map_err(StoreError::Invalid)?;
+        let provider_template_id = command
+            .provider_template_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_owned);
+        if provider_template_id
+            .as_deref()
+            .is_some_and(|value| value.chars().count() > 192)
+        {
+            return Err(StoreError::Invalid(
+                "providerTemplateId must be at most 192 characters".to_owned(),
+            ));
+        }
+        let provider_template_name = command
+            .provider_template_name
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_owned)
+            .unwrap_or(template_name);
+        if provider_template_name.chars().count() > 192 {
+            return Err(StoreError::Invalid(
+                "providerTemplateName must be at most 192 characters".to_owned(),
+            ));
+        }
+        let sync_status =
+            crate::ports::parse_template_provider_sync_status(command.sync_status.as_deref())
+                .map_err(StoreError::Invalid)?;
+        let sync_status = if command.sync_status.is_none() {
+            if provider_template_id.is_some() {
+                "synced"
+            } else {
+                "pending_approval"
+            }
+        } else {
+            sync_status
+        };
+        if sync_status == "synced" && provider_template_id.is_none() {
+            return Err(StoreError::Invalid(
+                "providerTemplateId is required when syncStatus is synced".to_owned(),
+            ));
+        }
+        let row = sqlx::query(
+            "INSERT INTO messaging_template_provider \
+             (id, uuid, tenant_id, organization_id, template_id, channel, provider, \
+              provider_template_id, provider_template_name, sync_status, sync_message, \
+              last_synced_at, updated_by) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, \
+                     CASE WHEN $10 = 'synced' THEN NULL ELSE 'provider_template_id_required' END, \
+                     CASE WHEN $10 = 'synced' THEN CURRENT_TIMESTAMP ELSE NULL END, $11) \
+             ON CONFLICT (tenant_id, organization_id, template_id, provider) DO UPDATE SET \
+                provider_template_id = EXCLUDED.provider_template_id, \
+                provider_template_name = EXCLUDED.provider_template_name, \
+                sync_status = EXCLUDED.sync_status, \
+                sync_message = EXCLUDED.sync_message, \
+                last_synced_at = CASE \
+                    WHEN EXCLUDED.sync_status = 'synced' THEN CURRENT_TIMESTAMP \
+                    ELSE messaging_template_provider.last_synced_at END, \
+                updated_by = EXCLUDED.updated_by, \
+                updated_at = CURRENT_TIMESTAMP, \
+                version = messaging_template_provider.version + 1 \
+             RETURNING provider, provider_template_id, provider_template_name, sync_status, \
+                       sync_message, last_synced_at, version",
+        )
+        .bind(self.next_id())
+        .bind(uuid())
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .bind(template_id)
+        .bind(&channel)
+        .bind(provider)
+        .bind(&provider_template_id)
+        .bind(&provider_template_name)
+        .bind(sync_status)
+        .bind(subject.operator_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        template_provider_binding_from_row(row)
+            .map_err(|error| StoreError::Unavailable(error.to_string()))
+    }
+
+    async fn resolve_template_for_provider(
+        &self,
+        subject: &MessagingAdminSubject,
+        channel: &str,
+        template_code: &str,
+        provider: &str,
+    ) -> Result<(TemplateItem, TemplateProviderBindingItem), StoreError> {
+        let channel = crate::ports::parse_channel(channel).map_err(StoreError::Invalid)?;
+        let provider = crate::ports::parse_template_channel_provider(channel, provider)
+            .map_err(StoreError::Invalid)?;
+        let template_row = sqlx::query(
+            "SELECT id, uuid, channel, template_code, name, subject, content, variables_json, \
+                    approval_status, approval_note, status, version, created_at, updated_at, created_by \
+             FROM messaging_template \
+             WHERE tenant_id = $1 AND organization_id = $2 AND channel = $3 \
+               AND template_code = $4 AND status = 'active' AND deleted_at IS NULL",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .bind(channel)
+        .bind(template_code)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?
+        .ok_or_else(|| {
+            StoreError::Invalid(format!(
+                "active template `{template_code}` was not found for channel `{channel}`"
+            ))
+        })?;
+        let template = template_item_from_row(template_row)
+            .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        let binding_row = sqlx::query(
+            "SELECT provider, provider_template_id, provider_template_name, sync_status, \
+                    sync_message, last_synced_at, version \
+             FROM messaging_template_provider \
+             WHERE tenant_id = $1 AND organization_id = $2 AND template_id = $3 AND provider = $4",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .bind(template.id.parse::<i64>().unwrap_or_default())
+        .bind(provider)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?
+        .ok_or_else(|| {
+            StoreError::Invalid(format!(
+                "template `{template_code}` is not registered with provider `{provider}`"
+            ))
+        })?;
+        let binding = template_provider_binding_from_row(binding_row)
+            .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        if binding
+            .provider_template_id
+            .as_deref()
+            .unwrap_or_default()
+            .trim()
+            .is_empty()
+        {
+            return Err(StoreError::Invalid(format!(
+                "template `{template_code}` has no provider template id for `{provider}`"
+            )));
+        }
+        if binding.sync_status != "synced" {
+            return Err(StoreError::Invalid(format!(
+                "template `{template_code}` is not synced for provider `{provider}`"
+            )));
+        }
+        Ok((template, binding))
+    }
+}
+
+impl PostgresMessagingAdminStore {
+    async fn template_channel(
+        &self,
+        subject: &MessagingAdminSubject,
+        template_id: i64,
+    ) -> Result<String, StoreError> {
+        sqlx::query_scalar(
+            "SELECT channel FROM messaging_template \
+             WHERE id = $1 AND tenant_id = $2 AND organization_id = $3 AND deleted_at IS NULL",
+        )
+        .bind(template_id)
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?
+        .ok_or_else(|| StoreError::NotFound("template not found".to_owned()))
+    }
+
+    async fn template_identity(
+        &self,
+        subject: &MessagingAdminSubject,
+        template_id: i64,
+    ) -> Result<(String, String, String), StoreError> {
+        let row = sqlx::query(
+            "SELECT channel, template_code, name FROM messaging_template \
+             WHERE id = $1 AND tenant_id = $2 AND organization_id = $3 AND deleted_at IS NULL",
+        )
+        .bind(template_id)
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?
+        .ok_or_else(|| StoreError::NotFound("template not found".to_owned()))?;
+        Ok((
+            row.get("channel"),
+            row.get("template_code"),
+            row.get("name"),
+        ))
+    }
+}
+
+fn template_providers_for_channel(channel: &str) -> Vec<&'static str> {
+    match channel {
+        "email" => crate::application::provider_defaults::EMAIL_PROVIDER_DEFAULTS
+            .iter()
+            .map(|preset| preset.provider)
+            .collect(),
+        "sms" => crate::application::provider_defaults::SMS_PROVIDER_DEFAULTS
+            .iter()
+            .map(|preset| preset.provider)
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+fn template_provider_priority(channel: &str, provider: &str) -> usize {
+    match channel {
+        "email" => crate::application::provider_defaults::email_provider_priority(provider),
+        "sms" => crate::application::provider_defaults::sms_provider_priority(provider),
+        _ => usize::MAX,
+    }
+}
+
+fn template_provider_binding_from_row(
+    row: sqlx::postgres::PgRow,
+) -> Result<TemplateProviderBindingItem, sqlx::Error> {
+    Ok(TemplateProviderBindingItem {
+        provider: row.get("provider"),
+        provider_template_id: row.get("provider_template_id"),
+        provider_template_name: row.get("provider_template_name"),
+        sync_status: row.get("sync_status"),
+        sync_message: row.get("sync_message"),
+        last_synced_at: row
+            .get::<Option<chrono::DateTime<chrono::Utc>>, _>("last_synced_at")
+            .map(rfc3339),
+        version: row.get::<i64, _>("version").to_string(),
+    })
 }
 
 fn extract_template_variables(content: &str) -> Vec<String> {

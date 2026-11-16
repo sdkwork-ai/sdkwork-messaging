@@ -281,4 +281,14 @@ describe("SMS channel initialization seed", () => {
     // Re-seeding must never overwrite operator edits.
     expect(SEED_SQL.match(/\nON CONFLICT DO NOTHING;/gu)).toHaveLength(3);
   });
+
+  it("gives every named provider a console link and credential guidance", () => {
+    for (const entry of SMS_PROVIDER_CATALOG) {
+      if (entry.provider === "generic_http") {
+        continue;
+      }
+      expect(entry.consoleUrl, `${entry.provider} console link`).toMatch(/^https:\/\//u);
+      expect(entry.setupHintKey, `${entry.provider} setup hint`).toBeTruthy();
+    }
+  });
 });

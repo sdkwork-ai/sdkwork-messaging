@@ -488,6 +488,7 @@ async fn send_records_and_dashboard_aggregate_real_deliveries() {
                 payload: None,
                 scenario: Some("verification_code".to_owned()),
                 template_code: Some("verification_code".to_owned()),
+                provider: None,
             },
             "record-email-1",
         )
@@ -504,6 +505,7 @@ async fn send_records_and_dashboard_aggregate_real_deliveries() {
                 payload: None,
                 scenario: None,
                 template_code: None,
+                provider: None,
             },
             "record-email-2",
         )
@@ -520,6 +522,7 @@ async fn send_records_and_dashboard_aggregate_real_deliveries() {
                 payload: None,
                 scenario: Some("marketing".to_owned()),
                 template_code: None,
+                provider: None,
             },
             "record-sms-1",
         )

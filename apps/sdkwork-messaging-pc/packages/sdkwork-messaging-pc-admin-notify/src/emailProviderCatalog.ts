@@ -42,6 +42,8 @@ export interface EmailProviderCatalogEntry {
   secretLabelKey: string;
   /** i18n key of the provider-specific setup step (auth code, app password…). */
   setupHintKey?: string;
+  /** Official console page where the operator obtains the credential. */
+  consoleUrl?: string;
   /**
    * Default login mailbox pre-filled for the provider. Optional: most
    * providers cannot know the operator's mailbox, but the default enterprise
@@ -101,6 +103,7 @@ export const EMAIL_PROVIDER_CATALOG: readonly EmailProviderCatalogEntry[] = [
     descriptionKey: "admin.notify.emailProviders.enterprise_mail.description",
     secretLabelKey: "admin.notify.email.secretLabel.authCode",
     setupHintKey: "admin.notify.emailProviders.enterprise_mail.setupHint",
+    consoleUrl: "https://exmail.qq.com/",
     username: "no-reply@birdcoder.com",
     send: { host: "smtp.exmail.qq.com", port: "465", encryption: SSL },
     receive: MAILBOX_PRESETS.enterprise_mail,
@@ -112,6 +115,7 @@ export const EMAIL_PROVIDER_CATALOG: readonly EmailProviderCatalogEntry[] = [
     descriptionKey: "admin.notify.emailProviders.tencent_mail.description",
     secretLabelKey: "admin.notify.email.secretLabel.authCode",
     setupHintKey: "admin.notify.emailProviders.tencent_mail.setupHint",
+    consoleUrl: "https://mail.qq.com/",
     send: { host: "smtp.qq.com", port: "465", encryption: SSL },
     receive: MAILBOX_PRESETS.tencent_mail,
   },
@@ -122,6 +126,7 @@ export const EMAIL_PROVIDER_CATALOG: readonly EmailProviderCatalogEntry[] = [
     descriptionKey: "admin.notify.emailProviders.mail_139.description",
     secretLabelKey: "admin.notify.email.secretLabel.authCode",
     setupHintKey: "admin.notify.emailProviders.mail_139.setupHint",
+    consoleUrl: "https://mail.10086.cn/",
     send: { host: "smtp.139.com", port: "465", encryption: SSL },
     receive: MAILBOX_PRESETS.mail_139,
   },
@@ -132,6 +137,7 @@ export const EMAIL_PROVIDER_CATALOG: readonly EmailProviderCatalogEntry[] = [
     descriptionKey: "admin.notify.emailProviders.gmail.description",
     secretLabelKey: "admin.notify.email.secretLabel.appPassword",
     setupHintKey: "admin.notify.emailProviders.gmail.setupHint",
+    consoleUrl: "https://myaccount.google.com/apppasswords",
     send: { host: "smtp.gmail.com", port: "465", encryption: SSL },
     receive: MAILBOX_PRESETS.gmail,
   },
@@ -142,6 +148,7 @@ export const EMAIL_PROVIDER_CATALOG: readonly EmailProviderCatalogEntry[] = [
     descriptionKey: "admin.notify.emailProviders.microsoft.description",
     secretLabelKey: "admin.notify.email.secretLabel.appPassword",
     setupHintKey: "admin.notify.emailProviders.microsoft.setupHint",
+    consoleUrl: "https://account.microsoft.com/security",
     send: { host: "smtp.office365.com", port: "587", encryption: STARTTLS },
     receive: MAILBOX_PRESETS.microsoft,
   },
@@ -151,6 +158,8 @@ export const EMAIL_PROVIDER_CATALOG: readonly EmailProviderCatalogEntry[] = [
     nameKey: "admin.notify.emailProviders.aliyun.name",
     descriptionKey: "admin.notify.emailProviders.aliyun.description",
     secretLabelKey: "admin.notify.email.secretLabel.accessKeySecret",
+    setupHintKey: "admin.notify.emailProviders.aliyun.setupHint",
+    consoleUrl: "https://dm.console.aliyun.com/",
     send: { host: "smtpdm.aliyun.com", port: "465", encryption: SSL },
   },
   {
@@ -159,6 +168,8 @@ export const EMAIL_PROVIDER_CATALOG: readonly EmailProviderCatalogEntry[] = [
     nameKey: "admin.notify.emailProviders.tencent.name",
     descriptionKey: "admin.notify.emailProviders.tencent.description",
     secretLabelKey: "admin.notify.email.secretLabel.smtpPassword",
+    setupHintKey: "admin.notify.emailProviders.tencent.setupHint",
+    consoleUrl: "https://console.cloud.tencent.com/ses",
     send: { host: "smtp.qcloudmail.com", port: "465", encryption: SSL },
   },
   {
@@ -167,6 +178,8 @@ export const EMAIL_PROVIDER_CATALOG: readonly EmailProviderCatalogEntry[] = [
     nameKey: "admin.notify.emailProviders.amazon_ses.name",
     descriptionKey: "admin.notify.emailProviders.amazon_ses.description",
     secretLabelKey: "admin.notify.email.secretLabel.smtpPassword",
+    setupHintKey: "admin.notify.emailProviders.amazon_ses.setupHint",
+    consoleUrl: "https://console.aws.amazon.com/ses/",
     send: { host: "email-smtp.us-east-1.amazonaws.com", port: "465", encryption: SSL },
     region: "us-east-1",
   },
@@ -176,6 +189,8 @@ export const EMAIL_PROVIDER_CATALOG: readonly EmailProviderCatalogEntry[] = [
     nameKey: "admin.notify.emailProviders.sendgrid.name",
     descriptionKey: "admin.notify.emailProviders.sendgrid.description",
     secretLabelKey: "admin.notify.email.secretLabel.apiKey",
+    setupHintKey: "admin.notify.emailProviders.sendgrid.setupHint",
+    consoleUrl: "https://app.sendgrid.com/settings/api_keys",
     send: null,
     apiBaseUrl: "https://api.sendgrid.com",
   },
@@ -185,6 +200,8 @@ export const EMAIL_PROVIDER_CATALOG: readonly EmailProviderCatalogEntry[] = [
     nameKey: "admin.notify.emailProviders.mailgun.name",
     descriptionKey: "admin.notify.emailProviders.mailgun.description",
     secretLabelKey: "admin.notify.email.secretLabel.apiKey",
+    setupHintKey: "admin.notify.emailProviders.mailgun.setupHint",
+    consoleUrl: "https://app.mailgun.com/app/account/security/api_keys",
     send: null,
     apiBaseUrl: "https://api.mailgun.net",
     region: "us",
@@ -195,6 +212,8 @@ export const EMAIL_PROVIDER_CATALOG: readonly EmailProviderCatalogEntry[] = [
     nameKey: "admin.notify.emailProviders.postmark.name",
     descriptionKey: "admin.notify.emailProviders.postmark.description",
     secretLabelKey: "admin.notify.email.secretLabel.serverToken",
+    setupHintKey: "admin.notify.emailProviders.postmark.setupHint",
+    consoleUrl: "https://account.postmarkapp.com/servers",
     send: null,
     apiBaseUrl: "https://api.postmarkapp.com",
   },
@@ -204,6 +223,8 @@ export const EMAIL_PROVIDER_CATALOG: readonly EmailProviderCatalogEntry[] = [
     nameKey: "admin.notify.emailProviders.resend.name",
     descriptionKey: "admin.notify.emailProviders.resend.description",
     secretLabelKey: "admin.notify.email.secretLabel.apiKey",
+    setupHintKey: "admin.notify.emailProviders.resend.setupHint",
+    consoleUrl: "https://resend.com/api-keys",
     send: null,
     apiBaseUrl: "https://api.resend.com",
   },

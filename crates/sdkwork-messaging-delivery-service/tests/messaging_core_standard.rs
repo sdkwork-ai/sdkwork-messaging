@@ -30,8 +30,12 @@ fn exposes_app_notification_announcement_and_push_contracts() {
         idempotency_key: "sms-1".to_string(),
         subject: None,
         target: "+15550000000".to_string(),
+        template_code: Some("verification_code".to_string()),
+        provider: Some("tencent".to_string()),
+        provider_template_id: Some("1234567".to_string()),
     };
     assert_eq!(sms.channel, MessagingDirectChannel::Sms);
+    assert_eq!(sms.provider_template_id.as_deref(), Some("1234567"));
 
     let verification = MessagingVerificationCodeRequest {
         channel: MessagingDirectChannel::Email,

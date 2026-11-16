@@ -17,10 +17,10 @@ use crate::ports::{
     CreateEmailAccountCommand, CreateEmailSenderCommand, CreateNotificationCommand,
     CreateSmsAccountCommand, CreateSmsSignatureCommand, CreateTemplateCommand, MessagingAdminStore,
     MessagingAdminSubject, PublishAnnouncementCommand, SendOutboundMessageCommand,
-    SendPushMessageCommand, SendRecordFilter, StoreError, UpdateEmailAccountCommand,
-    UpdateEmailSendRuleCommand, UpdateEmailSenderCommand, UpdateSmsAccountCommand,
-    UpdateSmsSendRuleCommand, UpdateSmsSignatureCommand, UpdateTemplateCommand,
-    UpdateVerificationPolicyCommand,
+    SendPushMessageCommand, SendRecordFilter, StoreError, SyncTemplateProvidersCommand,
+    UpdateEmailAccountCommand, UpdateEmailSendRuleCommand, UpdateEmailSenderCommand,
+    UpdateSmsAccountCommand, UpdateSmsSendRuleCommand, UpdateSmsSignatureCommand,
+    UpdateTemplateCommand, UpdateTemplateProviderCommand, UpdateVerificationPolicyCommand,
 };
 
 #[derive(Clone)]
@@ -360,6 +360,18 @@ pub fn admin_messaging_router_with_store(
             get(retrieve_template)
                 .put(update_template)
                 .delete(delete_template),
+        )
+        .route(
+            "/backend/v3/api/messaging/templates/{templateId}/providers",
+            get(list_template_providers),
+        )
+        .route(
+            "/backend/v3/api/messaging/templates/{templateId}/providers/sync",
+            post(sync_template_providers),
+        )
+        .route(
+            "/backend/v3/api/messaging/templates/{templateId}/providers/{provider}",
+            put(update_template_provider),
         )
         .with_state(MessagingRouterState { store })
 }
@@ -1857,6 +1869,92 @@ async fn delete_template(
         .await
     {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn list_template_providers(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(template_id): Path<i64>,
+) -> Response {
+    match state
+        .store
+        .list_template_providers(&subject, template_id)
+        .await
+    {
+        Ok(items) => {
+            let total = items.len() as i64;
+            let values = items
+                .into_iter()
+                .map(|item| serde_json::to_value(item).unwrap_or(Value::Null))
+                .collect();
+            list_response(values, 1, if total == 0 { 20 } else { total }, total)
+        }
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn sync_template_providers(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path(template_id): Path<i64>,
+    headers: axum::http::HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let idempotency_key = match idempotency_key(&headers) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+    let command: SyncTemplateProvidersCommand = match parse_body(body).await {
+        Ok(command) => command,
+        Err(response) => return response,
+    };
+    match state
+        .store
+        .sync_template_providers(&subject, template_id, &command, &idempotency_key)
+        .await
+    {
+        Ok(result) => match serde_json::to_value(result) {
+            Ok(value) => resource_response(StatusCode::OK, value),
+            Err(_) => problem_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "failed to serialize template provider sync result",
+            ),
+        },
+        Err(error) => store_error_response(error),
+    }
+}
+
+async fn update_template_provider(
+    State(state): State<MessagingRouterState>,
+    subject: MessagingAdminSubject,
+    Path((template_id, provider)): Path<(i64, String)>,
+    headers: axum::http::HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let idempotency_key = match idempotency_key(&headers) {
+        Ok(key) => key,
+        Err(response) => return response,
+    };
+    let command: UpdateTemplateProviderCommand = match parse_body(body).await {
+        Ok(command) => command,
+        Err(response) => return response,
+    };
+    match state
+        .store
+        .update_template_provider(&subject, template_id, &provider, &command, &idempotency_key)
+        .await
+    {
+        Ok(item) => match serde_json::to_value(item) {
+            Ok(value) => resource_response(StatusCode::OK, value),
+            Err(_) => problem_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                "failed to serialize template provider binding",
+            ),
+        },
         Err(error) => store_error_response(error),
     }
 }

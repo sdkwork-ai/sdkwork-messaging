@@ -60,7 +60,7 @@
     },
     {
       "path": "src/api/messaging.ts",
-      "sha256": "59eb600f817ae3c3a6efd40e18839837fe19de1d13d3a27c862e6eb1b0b194a5"
+      "sha256": "a10a607cd5648cabd4589924f405c3181ec85a9b0c8acaa273194c121f5cd1cd"
     },
     {
       "path": "src/api/paths.ts",
@@ -160,7 +160,7 @@
     },
     {
       "path": "src/types/index.ts",
-      "sha256": "04372d82d8dd82a319773e87d9b18c54356eabe3497be2daddf87d5bfa4e20e2"
+      "sha256": "074dc60da90fd122717b63d78f0c7512acaa84c3fe065ee5fe62b3b91214e29a"
     },
     {
       "path": "src/types/messaging-announcement-list-response.ts",
@@ -300,7 +300,7 @@
     },
     {
       "path": "src/types/messaging-outbound-message-send-request.ts",
-      "sha256": "72326615ddad3faa1f8fd369a83e9912d4a66c28cce9f20fc6f408bde2cb3d6d"
+      "sha256": "5ec162e7d0add66f02c2ff6a0bf169fb33e50389633a1aa3a1b7249e667f0e58"
     },
     {
       "path": "src/types/messaging-outbound-message.ts",
@@ -409,6 +409,34 @@
     {
       "path": "src/types/messaging-template-list-response.ts",
       "sha256": "708779f3ed35bfe67be250e9dce4d82b05d4d55b4f15633d6d56ac330941e033"
+    },
+    {
+      "path": "src/types/messaging-template-provider-binding.ts",
+      "sha256": "93810be9fc00d0ba61eb0a7159a5f8f441d8bfe670f4e6252c631c2181887076"
+    },
+    {
+      "path": "src/types/messaging-template-provider-list-response.ts",
+      "sha256": "a4bb85f51ae1511927dd0cba8bae70f8cb758f5aef73803c7fe436e4e25f38e5"
+    },
+    {
+      "path": "src/types/messaging-template-provider-response.ts",
+      "sha256": "7d85d9f44fc6783335128cfc3856fb7805ea6fdf8503a64b4f2ab2cdc5d92d96"
+    },
+    {
+      "path": "src/types/messaging-template-provider-sync-request.ts",
+      "sha256": "7f240ac883ef14eed428584a544de91f3493f3f9953aedb80847b5ab4bfd5662"
+    },
+    {
+      "path": "src/types/messaging-template-provider-sync-response.ts",
+      "sha256": "2b76dcd8abcf7991092e0decaee51be1dba35e4b4059317fd201e1828eab7709"
+    },
+    {
+      "path": "src/types/messaging-template-provider-sync-result.ts",
+      "sha256": "6936728525f60f8a47b53c920e283bda68bd0541a3995239e390ad5a8a699f6b"
+    },
+    {
+      "path": "src/types/messaging-template-provider-update-request.ts",
+      "sha256": "976145316ea4a2d464b4a11df22095b67d2a2742593ab5012fc80ea749ba4075"
     },
     {
       "path": "src/types/messaging-template-response.ts",
@@ -553,6 +581,18 @@
     {
       "path": "src/types/sms-signatures-update-response.ts",
       "sha256": "050ceb92f9107d7607940864c648493181bcf7659e29f82ce0dcd49e72db3434"
+    },
+    {
+      "path": "src/types/template-providers-list-response.ts",
+      "sha256": "072587781e29a000d5c9f97d85c4e5675eb8a52e30cb2110e0058c07b3c8e937"
+    },
+    {
+      "path": "src/types/template-providers-sync-response.ts",
+      "sha256": "c49ab32dbc0381591c98082f8325237232376187defdc086550e940a339b89c6"
+    },
+    {
+      "path": "src/types/template-providers-update-response.ts",
+      "sha256": "506252335f4a3efef6f6f5254d00dbb45a236ecdee62f1270dfd8ac12b3bff1a"
     },
     {
       "path": "src/types/templates-create-response201.ts",

@@ -11,6 +11,7 @@ import type {
   MessagingEmailSender,
   MessagingEmailSenderCreateRequest,
   MessagingEmailSenderUpdateRequest,
+  MessagingProviderInitializeResponse,
   MessagingSendRecord,
   MessagingSmsAccount,
   MessagingSmsAccountCreateRequest,
@@ -22,10 +23,22 @@ import type {
   MessagingSmsSignatureUpdateRequest,
   MessagingTemplate,
   MessagingTemplateCreateRequest,
+  MessagingTemplateProviderBinding,
+  MessagingTemplateProviderSyncResult,
+  MessagingTemplateProviderUpdateRequest,
   MessagingTemplateUpdateRequest,
 } from "@sdkwork/messaging-pc-core";
 
 import { messagingBackendSdkClient } from "./sdk-client";
+
+/**
+ * The generated client declares resource responses as `{ item }` but its
+ * `sdkworkUnwrapKind: "item"` runtime already returns `data.item`. Keep the
+ * runtime contract (the item itself) and cast away the stale envelope type.
+ */
+function unwrapSdkItem<T>(response: unknown): T {
+  return response as T;
+}
 
 export type {
   MessagingDashboardSummary,
@@ -38,6 +51,7 @@ export type {
   MessagingEmailSender,
   MessagingEmailSenderCreateRequest,
   MessagingEmailSenderUpdateRequest,
+  MessagingProviderInitializeResponse,
   MessagingSendAttempt,
   MessagingSendRecord,
   MessagingSmsAccount,
@@ -49,6 +63,12 @@ export type {
   MessagingSmsSignature,
   MessagingSmsSignatureCreateRequest,
   MessagingSmsSignatureUpdateRequest,
+  MessagingTemplate,
+  MessagingTemplateCreateRequest,
+  MessagingTemplateProviderBinding,
+  MessagingTemplateProviderSyncResult,
+  MessagingTemplateProviderUpdateRequest,
+  MessagingTemplateUpdateRequest,
 } from "@sdkwork/messaging-pc-core";
 
 export type MessagingChannelType = "sms" | "email";
@@ -220,7 +240,7 @@ async function createEmailAccount(
     input,
     { idempotencyKey: nextIdempotencyKey() },
   );
-  return response.item;
+  return unwrapSdkItem(response);
 }
 
 async function updateEmailAccount(
@@ -232,7 +252,7 @@ async function updateEmailAccount(
     input,
     { idempotencyKey: nextIdempotencyKey() },
   );
-  return response.item;
+  return unwrapSdkItem(response);
 }
 
 async function deleteEmailAccount(accountId: string): Promise<void> {
@@ -246,8 +266,10 @@ async function deleteEmailAccount(accountId: string): Promise<void> {
  * account preset, sender identity, and scenario routing steps. Missing config
  * keys are merged; existing values and credentials are preserved.
  */
-async function initializeEmailProvider(provider: MessagingEmailProvider): Promise<void> {
-  await messagingBackendSdkClient().messaging.emailProviders.initialize(provider, {
+async function initializeEmailProvider(
+  provider: MessagingEmailProvider,
+): Promise<MessagingProviderInitializeResponse> {
+  return await messagingBackendSdkClient().messaging.emailProviders.initialize(provider, {
     idempotencyKey: nextIdempotencyKey(),
   });
 }
@@ -272,7 +294,7 @@ async function createEmailSender(
     input,
     { idempotencyKey: nextIdempotencyKey() },
   );
-  return response.item;
+  return unwrapSdkItem(response);
 }
 
 async function updateEmailSender(
@@ -284,7 +306,7 @@ async function updateEmailSender(
     input,
     { idempotencyKey: nextIdempotencyKey() },
   );
-  return response.item;
+  return unwrapSdkItem(response);
 }
 
 async function deleteEmailSender(senderId: string): Promise<void> {
@@ -307,7 +329,7 @@ async function updateEmailSendRule(
     input,
     { idempotencyKey: nextIdempotencyKey() },
   );
-  return response.item;
+  return unwrapSdkItem(response);
 }
 
 async function listSmsAccounts(params: {
@@ -328,7 +350,7 @@ async function createSmsAccount(
     input,
     { idempotencyKey: nextIdempotencyKey() },
   );
-  return response.item;
+  return unwrapSdkItem(response);
 }
 
 async function updateSmsAccount(
@@ -340,7 +362,7 @@ async function updateSmsAccount(
     input,
     { idempotencyKey: nextIdempotencyKey() },
   );
-  return response.item;
+  return unwrapSdkItem(response);
 }
 
 async function deleteSmsAccount(accountId: string): Promise<void> {
@@ -354,8 +376,10 @@ async function deleteSmsAccount(accountId: string): Promise<void> {
  * preset, signature identity, and scenario routing steps. Missing config keys
  * are merged; existing values and credentials are preserved.
  */
-async function initializeSmsProvider(provider: MessagingSmsProvider): Promise<void> {
-  await messagingBackendSdkClient().messaging.smsProviders.initialize(provider, {
+async function initializeSmsProvider(
+  provider: MessagingSmsProvider,
+): Promise<MessagingProviderInitializeResponse> {
+  return await messagingBackendSdkClient().messaging.smsProviders.initialize(provider, {
     idempotencyKey: nextIdempotencyKey(),
   });
 }
@@ -380,7 +404,7 @@ async function createSmsSignature(
     input,
     { idempotencyKey: nextIdempotencyKey() },
   );
-  return response.item;
+  return unwrapSdkItem(response);
 }
 
 async function updateSmsSignature(
@@ -392,7 +416,7 @@ async function updateSmsSignature(
     input,
     { idempotencyKey: nextIdempotencyKey() },
   );
-  return response.item;
+  return unwrapSdkItem(response);
 }
 
 async function deleteSmsSignature(signatureId: string): Promise<void> {
@@ -415,7 +439,7 @@ async function updateSmsSendRule(
     input,
     { idempotencyKey: nextIdempotencyKey() },
   );
-  return response.item;
+  return unwrapSdkItem(response);
 }
 
 // -------------------------------------------------------------- send records
@@ -484,12 +508,12 @@ async function createTemplate(input: MessagingTemplateCreateRequest): Promise<Me
     input,
     { idempotencyKey: nextIdempotencyKey() },
   );
-  return response.item;
+  return unwrapSdkItem(response);
 }
 
 async function retrieveTemplate(templateId: string): Promise<MessagingTemplate> {
   const response = await messagingBackendSdkClient().messaging.templates.retrieve(templateId);
-  return response.item;
+  return unwrapSdkItem(response);
 }
 
 async function updateTemplate(
@@ -501,13 +525,51 @@ async function updateTemplate(
     input,
     { idempotencyKey: nextIdempotencyKey() },
   );
-  return response.item;
+  return unwrapSdkItem(response);
 }
 
 async function deleteTemplate(templateId: string): Promise<void> {
   await messagingBackendSdkClient().messaging.templates.delete(templateId, {
     idempotencyKey: nextIdempotencyKey(),
   });
+}
+
+async function listTemplateProviders(
+  templateId: string,
+): Promise<MessagingTemplateProviderBinding[]> {
+  const response = await messagingBackendSdkClient().messaging.templateProviders.list(templateId);
+  return response.items;
+}
+
+async function syncTemplateProviders(
+  templateId: string,
+  options: { providers?: string[]; overwrite?: boolean } = {},
+): Promise<MessagingTemplateProviderSyncResult> {
+  const response = await messagingBackendSdkClient().messaging.templateProviders.sync(
+    templateId,
+    {
+      ...(options.providers ? { providers: options.providers } : {}),
+      ...(options.overwrite !== undefined ? { overwrite: options.overwrite } : {}),
+    },
+    { idempotencyKey: nextIdempotencyKey() },
+  );
+  // The generated declaration still names the resource envelope, while the
+  // SDK's `item` unwrap returns the sync result object at runtime.
+  return response as unknown as MessagingTemplateProviderSyncResult;
+}
+
+async function updateTemplateProvider(
+  templateId: string,
+  provider: string,
+  input: MessagingTemplateProviderUpdateRequest,
+): Promise<MessagingTemplateProviderBinding> {
+  const response = await messagingBackendSdkClient().messaging.templateProviders.update(
+    templateId,
+    provider,
+    input,
+    { idempotencyKey: nextIdempotencyKey() },
+  );
+  return response as unknown as MessagingTemplateProviderBinding;
 }
 
 export interface NotifyAdminService {
@@ -518,7 +580,9 @@ export interface NotifyAdminService {
     input: MessagingEmailAccountUpdateRequest,
   ): Promise<MessagingEmailAccount>;
   deleteEmailAccount(accountId: string): Promise<void>;
-  initializeEmailProvider(provider: MessagingEmailProvider): Promise<void>;
+  initializeEmailProvider(
+    provider: MessagingEmailProvider,
+  ): Promise<MessagingProviderInitializeResponse>;
   listEmailSenders(params: {
     accountId?: string;
     page?: number;
@@ -542,7 +606,9 @@ export interface NotifyAdminService {
     input: MessagingSmsAccountUpdateRequest,
   ): Promise<MessagingSmsAccount>;
   deleteSmsAccount(accountId: string): Promise<void>;
-  initializeSmsProvider(provider: MessagingSmsProvider): Promise<void>;
+  initializeSmsProvider(
+    provider: MessagingSmsProvider,
+  ): Promise<MessagingProviderInitializeResponse>;
   listSmsSignatures(params: {
     accountId?: string;
     page?: number;
@@ -582,6 +648,16 @@ export interface NotifyAdminService {
     input: MessagingTemplateUpdateRequest,
   ): Promise<MessagingTemplate>;
   deleteTemplate(templateId: string): Promise<void>;
+  listTemplateProviders(templateId: string): Promise<MessagingTemplateProviderBinding[]>;
+  syncTemplateProviders(
+    templateId: string,
+    options?: { providers?: string[]; overwrite?: boolean },
+  ): Promise<MessagingTemplateProviderSyncResult>;
+  updateTemplateProvider(
+    templateId: string,
+    provider: string,
+    input: MessagingTemplateProviderUpdateRequest,
+  ): Promise<MessagingTemplateProviderBinding>;
 }
 
 export function createNotifyAdminService(): NotifyAdminService {
@@ -618,6 +694,9 @@ export function createNotifyAdminService(): NotifyAdminService {
     retrieveTemplate,
     updateTemplate,
     deleteTemplate,
+    listTemplateProviders,
+    syncTemplateProviders,
+    updateTemplateProvider,
   };
 }
 

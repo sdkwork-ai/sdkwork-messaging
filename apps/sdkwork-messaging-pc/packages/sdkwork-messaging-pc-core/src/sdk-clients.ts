@@ -33,6 +33,7 @@ export type {
   MessagingEmailSender,
   MessagingEmailSenderCreateRequest,
   MessagingEmailSenderUpdateRequest,
+  MessagingProviderInitializeResponse,
   MessagingSendAttempt,
   MessagingSendRecord,
   MessagingSmsAccount,
@@ -46,5 +47,8 @@ export type {
   MessagingSmsSignatureUpdateRequest,
   MessagingTemplate,
   MessagingTemplateCreateRequest,
+  MessagingTemplateProviderBinding,
+  MessagingTemplateProviderSyncResult,
+  MessagingTemplateProviderUpdateRequest,
   MessagingTemplateUpdateRequest,
 } from "@sdkwork/messaging-backend-sdk";
