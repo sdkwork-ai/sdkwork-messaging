@@ -15,7 +15,10 @@
     "appId": "sdkwork-messaging",
     "serviceId": "sdkwork-messaging",
     "owner": "sdkwork-messaging",
-    "domain": "messaging"
+    "domain": "messaging",
+    "accessTokenPermissionScope": [
+      "iam:self"
+    ]
   },
   "runtime": {
     "family": "server",
