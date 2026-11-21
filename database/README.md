@@ -14,52 +14,12 @@ Canonical lifecycle assets for `sdkwork-messaging` per `DATABASE_FRAMEWORK_SPEC.
 
 ## Initialization state
 
-- **baselineStrategy**: `baseline-plus-migrations`.
-- **Consolidation level**: pre-GA consolidated baseline. The primary baseline
-  already expresses the end state of migrations `0002`–`0008`; this is a recorded
-  exception to §7.5 immutability because the contract materializer consumes one
-  baseline file. The ordered migrations are retained and applied on every fresh
-  install; new schema changes `MUST` be added as new migrations, not folded into
-  the baseline.
-- **Baseline anchor**: `database/ddl/baseline/postgres/0001_messaging_baseline.sql`
-  is the consolidated DDL snapshot (`messaging_notification` is the anchor table).
-- **Ordered migration range**: `0000_legacy_channel_compat` …
-  `0008_enterprise_mail_provider`. A fresh install applies the baseline followed
-  by every ordered migration. `0000` recreates the retired `messaging_channel`
-  shape because the historical `0002`/`0003` backfills still reference it;
-  `0004` retires the table and `0007` retires the compatibility copy on
-  databases that had already applied `0004`; `0008` accepts the
-  `enterprise_mail` provider.
-- **Seed profile** (`standard`, default locale `zh-CN`):
-  - `common/001_bootstrap.sql` — bootstrap marker.
-  - `common/002_email_provider_defaults.sql` — 13 provider accounts, one sender
-    identity per account on the `birdcoder.com` domain, four scenario send
-    rules. The `enterprise_mail` account
-    (`smtp.exmail.qq.com` / `imap.exmail.qq.com` / `pop.exmail.qq.com`,
-    login `no-reply@birdcoder.com`), its sender identity and the four email
-    rules are enabled by default; supplying the mailbox password or
-    authorization code makes email delivery operational. Every other provider
-    stays disabled until configured.
-  - `common/003_sms_provider_defaults.sql` — eight provider accounts, one
-    `BirdCoder` signature per account, four scenario send rules. Tencent Cloud
-    SMS is the default path: its account (`https://sms.tencentcloudapi.com`,
-    `ap-guangzhou`), its signature and the four SMS rules are enabled; the
-    operator supplies SecretId/SdkAppId/SecretKey and an approved signature.
-    Every other SMS provider stays disabled until configured.
-  - `locales/zh-CN/001_message_templates.sql` and
-    `locales/en-US/001_message_templates.sql` — ten email and ten SMS templates
-    per locale (verification, password reset, welcome, payment, subscription,
-    quota, security, invoice, marketing).
-- **Active seed locales**: `zh-CN`, `en-US`; template rows are locale-specific,
-  provider/channel initialization data is language-neutral and lives in
-  `seeds/common/`.
-- **Default delivery paths**: the `enterprise_mail` account/sender and the
-  Tencent Cloud SMS account/signature plus their scenario rules are enabled, so
-  deployment only needs the mailbox/SecretId credentials and an approved SMS
-  signature. Every other provider account and identity stays disabled until
-  configured. Email templates are active; SMS templates stay `draft`/`pending`
-  until the carrier approves them.
-- Run `pnpm db:drift:check` before a release.
+This module is in **initialization state** for greenfield deployments:
+
+1. **Baseline** — `database/ddl/baseline/{engine}/0001_messaging_baseline.sql` contains the full DDL snapshot.
+2. **Migrations** — `database/migrations/{engine}/` is reserved for post-GA incremental schema changes only. It is intentionally empty at initialization.
+3. **Drift** — run `pnpm db:drift:check` before release.
+
 
 ## Fresh-install commands
 
@@ -117,6 +77,19 @@ template rows deliberately if an installation has to change language later.
 pnpm run db:validate
 pnpm run db:materialize:contract
 pnpm run db:plan
+pnpm run db:status
+pnpm run db:drift:check
+```
+
+## Commands
+
+```bash
+pnpm run db:validate
+pnpm run db:materialize:contract
+pnpm run db:plan
+pnpm run db:init
+pnpm run db:migrate
+pnpm run db:seed
 pnpm run db:status
 pnpm run db:drift:check
 ```
