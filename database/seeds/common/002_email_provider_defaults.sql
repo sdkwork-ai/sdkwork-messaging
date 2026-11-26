@@ -28,9 +28,15 @@
 -- (enforced by `emailProviderCatalog.test.ts`).
 --
 -- Reserved id blocks:
---   950000000101..950000000113  provider accounts
---   950000000201..950000000213  sender identities (one per provider account)
+--   950000000101..950000000121  provider accounts
+--   950000000201..950000000221  sender identities (one per provider account)
 --   950000000301..950000000304  scenario send rules
+--
+-- Enterprise-mailbox vendors (`tencent_exmail`, `aliyun_mail`,
+-- `netease_qiye`, `mail_263`, `coremail`, `lark_mail`, `exchange_online`,
+-- `sohu_mail`) are seeded alongside the generic `enterprise_mail` bucket so a
+-- customer can pick their own provider instead of editing endpoints by hand.
+-- All of them start disabled; only `enterprise_mail` is enabled by default.
 
 -- 1. Provider accounts: presets for send and receive. The enterprise mailbox
 --    is the default delivery path for a new installation: its SMTP/IMAP/POP3
@@ -119,6 +125,78 @@ VALUES
         'Enterprise Mail', 'enterprise_mail',
         '{"transport":"smtp","host":"smtp.exmail.qq.com","port":"465","encryption":"ssl","receiveProtocol":"imap","imapHost":"imap.exmail.qq.com","imapPort":"993","imapEncryption":"ssl","pop3Host":"pop.exmail.qq.com","pop3Port":"995","pop3Encryption":"ssl","username":"no-reply@birdcoder.com"}'::jsonb,
         TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+         950000000114, 'seed-messaging-email-account-tencent-exmail', 100001, 0,
+        'Tencent Exmail', 'tencent_exmail',
+        '{"transport":"smtp","host":"smtp.exmail.qq.com","port":"465","encryption":"ssl","receiveProtocol":"imap","imapHost":"imap.exmail.qq.com","imapPort":"993","imapEncryption":"ssl","pop3Host":"pop.exmail.qq.com","pop3Port":"995","pop3Encryption":"ssl"}'::jsonb,
+        FALSE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+         950000000115, 'seed-messaging-email-account-aliyun-mail', 100001, 0,
+        'Alibaba Mail', 'aliyun_mail',
+        '{"transport":"smtp","host":"smtp.qiye.aliyun.com","port":"465","encryption":"ssl","receiveProtocol":"imap","imapHost":"imap.qiye.aliyun.com","imapPort":"993","imapEncryption":"ssl","pop3Host":"pop3.qiye.aliyun.com","pop3Port":"995","pop3Encryption":"ssl"}'::jsonb,
+        FALSE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+         950000000116, 'seed-messaging-email-account-netease-qiye', 100001, 0,
+        'NetEase Enterprise Mail', 'netease_qiye',
+        '{"transport":"smtp","host":"smtp.qiye.163.com","port":"465","encryption":"ssl","receiveProtocol":"imap","imapHost":"imap.qiye.163.com","imapPort":"993","imapEncryption":"ssl","pop3Host":"pop.qiye.163.com","pop3Port":"995","pop3Encryption":"ssl"}'::jsonb,
+        FALSE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+         950000000117, 'seed-messaging-email-account-mail-263', 100001, 0,
+        '263 Enterprise Mail', 'mail_263',
+        '{"transport":"smtp","host":"smtp.263.net","port":"465","encryption":"ssl","receiveProtocol":"imap","imapHost":"imap.263.net","imapPort":"993","imapEncryption":"ssl","pop3Host":"pop.263.net","pop3Port":"995","pop3Encryption":"ssl"}'::jsonb,
+        FALSE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+         950000000118, 'seed-messaging-email-account-coremail', 100001, 0,
+        'Coremail', 'coremail',
+        '{"transport":"smtp","host":"smtp.coremail.cn","port":"465","encryption":"ssl","receiveProtocol":"imap","imapHost":"imap.coremail.cn","imapPort":"993","imapEncryption":"ssl","pop3Host":"pop.coremail.cn","pop3Port":"995","pop3Encryption":"ssl"}'::jsonb,
+        FALSE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+         950000000119, 'seed-messaging-email-account-lark-mail', 100001, 0,
+        'Lark Mail', 'lark_mail',
+        '{"transport":"smtp","host":"smtp.larksuite.com","port":"465","encryption":"ssl","receiveProtocol":"imap","imapHost":"imap.larksuite.com","imapPort":"993","imapEncryption":"ssl"}'::jsonb,
+        FALSE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+         950000000120, 'seed-messaging-email-account-exchange-online', 100001, 0,
+        'Exchange Online', 'exchange_online',
+        '{"transport":"smtp","host":"smtp.office365.com","port":"587","encryption":"starttls","receiveProtocol":"imap","imapHost":"outlook.office365.com","imapPort":"993","imapEncryption":"ssl","pop3Host":"outlook.office365.com","pop3Port":"995","pop3Encryption":"ssl"}'::jsonb,
+        FALSE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+         950000000121, 'seed-messaging-email-account-sohu-mail', 100001, 0,
+        'Sohu Enterprise Mail', 'sohu_mail',
+        '{"transport":"smtp","host":"smtp.sohu.com","port":"465","encryption":"ssl","receiveProtocol":"imap","imapHost":"imap.sohu.com","imapPort":"993","imapEncryption":"ssl","pop3Host":"pop.sohu.com","pop3Port":"995","pop3Encryption":"ssl"}'::jsonb,
+        FALSE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+         950000000122, 'seed-messaging-email-account-huawei-mail', 100001, 0,
+        'Huawei Cloud Mail', 'huawei_mail',
+        '{"transport":"smtp","host":"smtp.sparkspace.huaweicloud.com","port":"465","encryption":"ssl","receiveProtocol":"imap","imapHost":"imap.sparkspace.huaweicloud.com","imapPort":"993","imapEncryption":"ssl","pop3Host":"pop3.sparkspace.huaweicloud.com","pop3Port":"995","pop3Encryption":"ssl"}'::jsonb,
+        FALSE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+         950000000123, 'seed-messaging-email-account-sina-mail', 100001, 0,
+        'Sina Enterprise Mail', 'sina_mail',
+        '{"transport":"smtp","host":"smtp.sina.net","port":"465","encryption":"ssl","receiveProtocol":"imap","imapHost":"imap.sina.net","imapPort":"993","imapEncryption":"ssl","pop3Host":"pop3.sina.net","pop3Port":"995","pop3Encryption":"ssl"}'::jsonb,
+        FALSE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+         950000000124, 'seed-messaging-email-account-exchange-cn', 100001, 0,
+        'Exchange Online (21Vianet)', 'exchange_cn',
+        '{"transport":"smtp","host":"smtp.partner.outlook.cn","port":"587","encryption":"starttls","receiveProtocol":"imap","imapHost":"partner.outlook.cn","imapPort":"993","imapEncryption":"ssl","pop3Host":"partner.outlook.cn","pop3Port":"995","pop3Encryption":"ssl"}'::jsonb,
+        FALSE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+         950000000125, 'seed-messaging-email-account-google-workspace', 100001, 0,
+        'Google Workspace', 'google_workspace',
+        '{"transport":"smtp","host":"smtp.gmail.com","port":"465","encryption":"ssl","receiveProtocol":"imap","imapHost":"imap.gmail.com","imapPort":"993","imapEncryption":"ssl","pop3Host":"pop.gmail.com","pop3Port":"995","pop3Encryption":"ssl"}'::jsonb,
+        FALSE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     )
 ON CONFLICT DO NOTHING;
 
@@ -144,7 +222,19 @@ VALUES
     (950000000210, 'seed-messaging-email-sender-postmark', 100001, 0, 950000000110, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     (950000000211, 'seed-messaging-email-sender-resend', 100001, 0, 950000000111, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     (950000000212, 'seed-messaging-email-sender-smtp', 100001, 0, 950000000112, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000213, 'seed-messaging-email-sender-enterprise-mail', 100001, 0, 950000000113, 'no-reply@birdcoder.com', 'BirdCoder Notifications', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    (950000000213, 'seed-messaging-email-sender-enterprise-mail', 100001, 0, 950000000113, 'no-reply@birdcoder.com', 'BirdCoder Notifications', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000214, 'seed-messaging-email-sender-tencent-exmail', 100001, 0, 950000000114, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000215, 'seed-messaging-email-sender-aliyun-mail', 100001, 0, 950000000115, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000216, 'seed-messaging-email-sender-netease-qiye', 100001, 0, 950000000116, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000217, 'seed-messaging-email-sender-mail-263', 100001, 0, 950000000117, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000218, 'seed-messaging-email-sender-coremail', 100001, 0, 950000000118, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000219, 'seed-messaging-email-sender-lark-mail', 100001, 0, 950000000119, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000220, 'seed-messaging-email-sender-exchange-online', 100001, 0, 950000000120, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000221, 'seed-messaging-email-sender-sohu-mail', 100001, 0, 950000000121, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000222, 'seed-messaging-email-sender-huawei-mail', 100001, 0, 950000000122, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000223, 'seed-messaging-email-sender-sina-mail', 100001, 0, 950000000123, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000224, 'seed-messaging-email-sender-exchange-cn', 100001, 0, 950000000124, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000225, 'seed-messaging-email-sender-google-workspace', 100001, 0, 950000000125, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
 
 -- 3. One ordered fallback chain per scenario, enterprise mailbox first. The
@@ -159,22 +249,22 @@ INSERT INTO messaging_email_send_rule (
 VALUES
     (
         950000000301, 'seed-messaging-email-rule-default', 100001, 0, 'default',
-        '["950000000213","950000000201","950000000202","950000000203","950000000204","950000000205","950000000206","950000000207","950000000208","950000000209","950000000210","950000000211","950000000212"]'::jsonb,
+        '["950000000213","950000000201","950000000202","950000000203","950000000204","950000000205","950000000206","950000000207","950000000208","950000000209","950000000210","950000000211","950000000212","950000000214","950000000215","950000000216","950000000217","950000000218","950000000219","950000000220","950000000221","950000000222","950000000223","950000000224","950000000225"]'::jsonb,
         TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
         950000000302, 'seed-messaging-email-rule-verification-code', 100001, 0, 'verification_code',
-        '["950000000213","950000000201","950000000202","950000000203","950000000204","950000000205","950000000206","950000000207","950000000208","950000000209","950000000210","950000000211","950000000212"]'::jsonb,
+        '["950000000213","950000000201","950000000202","950000000203","950000000204","950000000205","950000000206","950000000207","950000000208","950000000209","950000000210","950000000211","950000000212","950000000214","950000000215","950000000216","950000000217","950000000218","950000000219","950000000220","950000000221","950000000222","950000000223","950000000224","950000000225"]'::jsonb,
         TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
         950000000303, 'seed-messaging-email-rule-system-notification', 100001, 0, 'system_notification',
-        '["950000000213","950000000201","950000000202","950000000203","950000000204","950000000205","950000000206","950000000207","950000000208","950000000209","950000000210","950000000211","950000000212"]'::jsonb,
+        '["950000000213","950000000201","950000000202","950000000203","950000000204","950000000205","950000000206","950000000207","950000000208","950000000209","950000000210","950000000211","950000000212","950000000214","950000000215","950000000216","950000000217","950000000218","950000000219","950000000220","950000000221","950000000222","950000000223","950000000224","950000000225"]'::jsonb,
         TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
         950000000304, 'seed-messaging-email-rule-marketing', 100001, 0, 'marketing',
-        '["950000000213","950000000201","950000000202","950000000203","950000000204","950000000205","950000000206","950000000207","950000000208","950000000209","950000000210","950000000211","950000000212"]'::jsonb,
+        '["950000000213","950000000201","950000000202","950000000203","950000000204","950000000205","950000000206","950000000207","950000000208","950000000209","950000000210","950000000211","950000000212","950000000214","950000000215","950000000216","950000000217","950000000218","950000000219","950000000220","950000000221","950000000222","950000000223","950000000224","950000000225"]'::jsonb,
         TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     )
 ON CONFLICT DO NOTHING;

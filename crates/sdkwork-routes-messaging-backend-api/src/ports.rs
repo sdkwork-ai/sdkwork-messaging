@@ -1131,6 +1131,20 @@ pub fn parse_email_provider(value: &str) -> Result<&'static str, String> {
     match value {
         "smtp" => Ok("smtp"),
         "enterprise_mail" => Ok("enterprise_mail"),
+        // Enterprise-mailbox vendors. `enterprise_mail` remains the generic
+        // bucket for a vendor that is not listed here.
+        "tencent_exmail" => Ok("tencent_exmail"),
+        "aliyun_mail" => Ok("aliyun_mail"),
+        "netease_qiye" => Ok("netease_qiye"),
+        "mail_263" => Ok("mail_263"),
+        "coremail" => Ok("coremail"),
+        "lark_mail" => Ok("lark_mail"),
+        "exchange_online" => Ok("exchange_online"),
+        "exchange_cn" => Ok("exchange_cn"),
+        "sohu_mail" => Ok("sohu_mail"),
+        "huawei_mail" => Ok("huawei_mail"),
+        "sina_mail" => Ok("sina_mail"),
+        "google_workspace" => Ok("google_workspace"),
         "aliyun" => Ok("aliyun"),
         "tencent" => Ok("tencent"),
         "tencent_mail" => Ok("tencent_mail"),
@@ -1143,7 +1157,7 @@ pub fn parse_email_provider(value: &str) -> Result<&'static str, String> {
         "postmark" => Ok("postmark"),
         "resend" => Ok("resend"),
         other => Err(format!(
-            "email provider must be one of: smtp, enterprise_mail, aliyun, tencent, tencent_mail, mail_139, gmail, microsoft, sendgrid, mailgun, amazon_ses, postmark, resend (found `{other}`)"
+            "email provider must be one of: smtp, enterprise_mail, tencent_exmail, aliyun_mail, netease_qiye, mail_263, coremail, lark_mail, exchange_online, exchange_cn, sohu_mail, huawei_mail, sina_mail, google_workspace, aliyun, tencent, tencent_mail, mail_139, gmail, microsoft, sendgrid, mailgun, amazon_ses, postmark, resend (found `{other}`)"
         )),
     }
 }

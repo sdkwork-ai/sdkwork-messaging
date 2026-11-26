@@ -1555,3 +1555,106 @@ CREATE INDEX IF NOT EXISTS idx_messaging_sms_account_provider_account
     WHERE provider_account_id IS NOT NULL;
 
 COMMIT;
+
+-- folded migration: migrations/postgres/0013_enterprise_mail_providers.up.sql
+-- sdkwork:migration
+-- id: 0013_enterprise_mail_providers
+-- engine: postgres
+-- module: messaging
+-- purpose: Support the enterprise-mailbox vendors operators actually run
+--   instead of one generic `enterprise_mail` row. `enterprise_mail` stays as the
+--   compatibility bucket for unlisted vendors.
+-- reversible: true
+-- rollback: down-migration
+-- transactional: true
+-- lock: access-exclusive (constraint swap)
+-- lock_timeout: 2s
+-- statement_timeout: 30s
+
+BEGIN;
+
+ALTER TABLE messaging_email_account
+    DROP CONSTRAINT IF EXISTS ck_messaging_email_account_provider;
+
+ALTER TABLE messaging_email_account
+    ADD CONSTRAINT ck_messaging_email_account_provider CHECK (
+        provider IN (
+            'smtp',
+            'enterprise_mail',
+            'tencent_exmail',
+            'aliyun_mail',
+            'netease_qiye',
+            'mail_263',
+            'coremail',
+            'lark_mail',
+            'exchange_online',
+            'sohu_mail',
+            'aliyun',
+            'tencent',
+            'tencent_mail',
+            'mail_139',
+            'gmail',
+            'microsoft',
+            'sendgrid',
+            'mailgun',
+            'amazon_ses',
+            'postmark',
+            'resend'
+        )
+    );
+
+COMMIT;
+
+
+-- folded migration: migrations/postgres/0014_more_enterprise_mail_providers.up.sql
+-- sdkwork:migration
+-- id: 0014_more_enterprise_mail_providers
+-- engine: postgres
+-- module: messaging
+-- purpose: Extend the enterprise-mailbox vendor set with the other providers
+--   operators actually run (Huawei Cloud, Sina, 21Vianet Exchange, Google
+--   Workspace), so the customer can pick their own provider.
+-- reversible: true
+-- rollback: down-migration
+-- transactional: true
+-- lock: access-exclusive (constraint swap)
+-- lock_timeout: 2s
+-- statement_timeout: 30s
+
+BEGIN;
+
+ALTER TABLE messaging_email_account
+    DROP CONSTRAINT IF EXISTS ck_messaging_email_account_provider;
+
+ALTER TABLE messaging_email_account
+    ADD CONSTRAINT ck_messaging_email_account_provider CHECK (
+        provider IN (
+            'smtp',
+            'enterprise_mail',
+            'tencent_exmail',
+            'aliyun_mail',
+            'netease_qiye',
+            'mail_263',
+            'coremail',
+            'lark_mail',
+            'exchange_online',
+            'exchange_cn',
+            'sohu_mail',
+            'huawei_mail',
+            'sina_mail',
+            'google_workspace',
+            'tencent_mail',
+            'mail_139',
+            'gmail',
+            'microsoft',
+            'aliyun',
+            'tencent',
+            'sendgrid',
+            'mailgun',
+            'amazon_ses',
+            'postmark',
+            'resend'
+        )
+    );
+
+COMMIT;
