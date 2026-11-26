@@ -5,10 +5,20 @@
 -- Purpose: a fresh installation already lists every supported SMS provider in
 -- `/admin/notify/sms`, each with the provider's documented endpoint and region,
 -- a signature bound to its account, and the four scenario routing chains.
--- Tencent Cloud SMS is the default path: its account, its `BirdCoder` signature
--- and the four rules start enabled. After deployment the operator supplies
--- SecretId/SdkAppId/SecretKey and replaces the placeholder signature with the
--- one approved by Tencent Cloud; every other provider is one switch away.
+--
+-- All eight providers are seeded **enabled** with an enabled signature, so the
+-- installation is fully initialized out of the box: the operator only fills in
+-- the account identifiers and credential of whichever provider they use, and
+-- replaces the placeholder `BirdCoder` signature with the one that provider
+-- approved. Nothing has to be created or switched on by hand.
+--
+-- Routing safety: a provider whose account or signature is enabled but has no
+-- credential yet is still listed in every scenario chain, and the rules page
+-- marks it "待填凭据 / credentials missing" so the gap is visible. The first
+-- chain step that can actually authenticate is the one that delivers; the
+-- operator fixes that by entering one credential or disabling the unused
+-- providers. Tencent Cloud stays first in every chain, so it remains the
+-- default path.
 --
 -- Contract rules honored here:
 --   * DATABASE_SPEC §6.4 — reserved, deterministic ids in the dedicated
@@ -32,12 +42,9 @@
 --   950000000501..950000000508  signature identities (one per provider account)
 --   950000000601..950000000604  scenario send rules
 
--- 1. Provider accounts: documented endpoint/region presets. Tencent Cloud SMS
---    is the default provider for a new installation and is enabled; its
---    signature plus the scenario rules below are enabled too, so the operator
---    only supplies SecretId/SdkAppId/SecretKey and replaces the placeholder
---    signature with one approved by Tencent Cloud. Every other account stays
---    disabled until configured.
+-- 1. Provider accounts: documented endpoint/region presets, all enabled so a
+--    new installation is ready to configure rather than ready to build. The
+--    operator supplies the identifiers/credential for the provider they use.
 INSERT INTO messaging_sms_account (
     id, uuid, tenant_id, organization_id, name, provider, config_json,
     enabled, created_at, updated_at
@@ -47,7 +54,7 @@ VALUES
         950000000401, 'seed-messaging-sms-account-aliyun', 100001, 0,
         'Alibaba Cloud SMS', 'aliyun',
         '{"region":"cn-hangzhou","endpoint":"https://dysmsapi.aliyuncs.com"}'::jsonb,
-        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
         950000000402, 'seed-messaging-sms-account-tencent', 100001, 0,
@@ -59,72 +66,74 @@ VALUES
         950000000403, 'seed-messaging-sms-account-huawei', 100001, 0,
         'Huawei Cloud SMS', 'huawei',
         '{"region":"cn-north-4","endpoint":"https://smsapi.cn-north-4.myhuaweicloud.com"}'::jsonb,
-        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
         950000000404, 'seed-messaging-sms-account-yuntongxun', 100001, 0,
         'Ronglian Cloud', 'yuntongxun',
         '{"endpoint":"https://app.cloopen.com:8883"}'::jsonb,
-        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
         950000000405, 'seed-messaging-sms-account-submail', 100001, 0,
         'SUBMAIL', 'submail',
         '{"endpoint":"https://api-v4.mysubmail.com"}'::jsonb,
-        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
         950000000406, 'seed-messaging-sms-account-chuanglan', 100001, 0,
         'Chuanglan 253', 'chuanglan',
         '{"endpoint":"https://smssh1.253.com"}'::jsonb,
-        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
         950000000407, 'seed-messaging-sms-account-twilio', 100001, 0,
         'Twilio', 'twilio',
         '{"apiBaseUrl":"https://api.twilio.com"}'::jsonb,
-        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
         950000000408, 'seed-messaging-sms-account-generic-http', 100001, 0,
         'Generic HTTP SMS', 'generic_http',
         '{}'::jsonb,
-        FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     )
 ON CONFLICT DO NOTHING;
 
 -- 2. One signature identity per provider account on the BirdCoder brand — every
 --    supported provider gets exactly one row so the operator never has to
---    create the shape by hand. The Tencent Cloud signature is the enabled
---    default; every other signature starts disabled until its provider is
---    configured. `BirdCoder` is a placeholder that must be replaced with the
---    signature approved by the carrier.
+--    create the shape by hand. All of them are enabled, matching the accounts
+--    above: the installation ships fully initialized and the operator edits the
+--    `BirdCoder` placeholder into the signature their carrier approved.
 --
 --    `provider_account_id` (the IAM cloud-account binding, migration 0010) is
 --    deliberately left NULL: credentials must never be pre-seeded, and the IAM
---    account center owns those rows. The operator binds the Tencent Cloud
---    signature to the matching IAM cloud account in the console, which is the
---    only manual step before SMS can deliver. Without a binding the send path
---    falls back to the provider account's own stored credential.
+--    account center owns those rows. The operator either supplies the provider
+--    account credential in "编辑" or binds the signature to an IAM cloud account.
+--    Without a binding the send path uses the provider account's own stored
+--    credential.
 INSERT INTO messaging_sms_signature (
     id, uuid, tenant_id, organization_id, account_id, sign_name, enabled,
-    created_at, updated_at
+    is_default, created_at, updated_at
 )
 VALUES
-    (950000000501, 'seed-messaging-sms-signature-aliyun', 100001, 0, 950000000401, 'BirdCoder', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000502, 'seed-messaging-sms-signature-tencent', 100001, 0, 950000000402, 'BirdCoder', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000503, 'seed-messaging-sms-signature-huawei', 100001, 0, 950000000403, 'BirdCoder', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000504, 'seed-messaging-sms-signature-yuntongxun', 100001, 0, 950000000404, 'BirdCoder', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000505, 'seed-messaging-sms-signature-submail', 100001, 0, 950000000405, 'BirdCoder', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000506, 'seed-messaging-sms-signature-chuanglan', 100001, 0, 950000000406, 'BirdCoder', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000507, 'seed-messaging-sms-signature-twilio', 100001, 0, 950000000407, 'BirdCoder', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000508, 'seed-messaging-sms-signature-generic-http', 100001, 0, 950000000408, 'BirdCoder', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    (950000000501, 'seed-messaging-sms-signature-aliyun', 100001, 0, 950000000401, 'BirdCoder', TRUE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000502, 'seed-messaging-sms-signature-tencent', 100001, 0, 950000000402, 'BirdCoder', TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000503, 'seed-messaging-sms-signature-huawei', 100001, 0, 950000000403, 'BirdCoder', TRUE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000504, 'seed-messaging-sms-signature-yuntongxun', 100001, 0, 950000000404, 'BirdCoder', TRUE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000505, 'seed-messaging-sms-signature-submail', 100001, 0, 950000000405, 'BirdCoder', TRUE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000506, 'seed-messaging-sms-signature-chuanglan', 100001, 0, 950000000406, 'BirdCoder', TRUE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000507, 'seed-messaging-sms-signature-twilio', 100001, 0, 950000000407, 'BirdCoder', TRUE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (950000000508, 'seed-messaging-sms-signature-generic-http', 100001, 0, 950000000408, 'BirdCoder', TRUE, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
 
--- 3. One ordered fallback chain per scenario, Tencent Cloud first. The rules
---    are enabled so filling in the Tencent Cloud credentials is enough to make
---    SMS delivery operational; disabled providers/signatures are skipped, so
---    switching provider only needs enabling that signature and account.
+-- 3. One ordered fallback chain per scenario, Tencent Cloud first. Every chain
+--    lists all eight signatures because every provider is initialized; delivery
+--    uses the first step that has a usable credential, and the rules page marks
+--    a step "待填凭据 / credentials missing" while its provider is still
+--    unconfigured. Disabling an unused provider (account or signature) removes
+--    it from routing, so the operator can keep the chain to the providers they
+--    actually pay for.
 INSERT INTO messaging_sms_send_rule (
     id, uuid, tenant_id, organization_id, scenario, chain_json, enabled,
     created_at, updated_at

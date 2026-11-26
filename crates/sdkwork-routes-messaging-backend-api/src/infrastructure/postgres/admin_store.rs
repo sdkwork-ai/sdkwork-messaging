@@ -435,7 +435,7 @@ impl PostgresMessagingAdminStore {
     ) -> Result<SmsSignatureItem, StoreError> {
         let row = sqlx::query(
             "SELECT s.id, s.account_id, a.name AS account_name, s.sign_name, s.enabled, s.version, s.created_at, s.updated_at, \
-                    s.provider_account_id, \
+                    s.provider_account_id, s.is_default, \
                     CASE WHEN s.provider_account_id IS NULL THEN NULL \
                          ELSE messaging_provider_account_ready(s.provider_account_id) \
                     END AS provider_account_ready \
@@ -3425,7 +3425,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
 
         let rows = sqlx::query(
             "SELECT s.id, s.account_id, a.name AS account_name, s.sign_name, s.enabled, s.version, s.created_at, s.updated_at, \
-                    s.provider_account_id, \
+                    s.provider_account_id, s.is_default, \
                     CASE WHEN s.provider_account_id IS NULL THEN NULL \
                          ELSE messaging_provider_account_ready(s.provider_account_id) \
                     END AS provider_account_ready \
@@ -3433,7 +3433,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
              JOIN messaging_sms_account a ON a.id = s.account_id \
              WHERE s.tenant_id = $1 AND s.organization_id = $2 AND s.deleted_at IS NULL \
                AND ($3::bigint IS NULL OR s.account_id = $3) \
-             ORDER BY s.updated_at DESC, s.id DESC \
+             ORDER BY s.is_default DESC, s.updated_at DESC, s.id DESC \
              LIMIT $4 OFFSET $5",
         )
         .bind(subject.tenant_id)
@@ -4449,6 +4449,7 @@ fn sms_signature_item_from_row(
         provider_account_ready: row
             .get::<Option<bool>, _>("provider_account_ready")
             .unwrap_or(false),
+        is_default: row.get("is_default"),
         version: row.get::<i64, _>("version").to_string(),
         created_at: rfc3339(row.get("created_at")),
         updated_at: rfc3339(row.get("updated_at")),

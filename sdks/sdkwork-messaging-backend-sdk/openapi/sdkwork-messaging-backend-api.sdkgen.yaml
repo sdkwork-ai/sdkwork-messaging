@@ -9992,6 +9992,7 @@
           "enabled",
           "providerAccountId",
           "providerAccountReady",
+          "isDefault",
           "version"
         ],
         "properties": {
@@ -10028,6 +10029,9 @@
             ]
           },
           "providerAccountReady": {
+            "type": "boolean"
+          },
+          "isDefault": {
             "type": "boolean"
           },
           "createdAt": {

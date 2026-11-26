@@ -1026,7 +1026,14 @@ function SignaturesPanel({ admin }: { admin: NotifyAdminService }) {
                     className="border-b border-slate-100 last:border-0 hover:bg-slate-50 dark:border-white/5 dark:hover:bg-white/5"
                   >
                     <td className="px-4 py-3 text-slate-800 dark:text-slate-100">
-                      {signature.signName}
+                      <span className="inline-flex items-center gap-2">
+                        {signature.signName}
+                        {signature.isDefault ? (
+                          <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                            {t("admin.notify.signatures.defaultBadge")}
+                          </span>
+                        ) : null}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
                       {signature.accountName}

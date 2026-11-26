@@ -6,6 +6,7 @@ export interface MessagingSmsSignature {
   enabled: boolean;
   providerAccountId: string | null;
   providerAccountReady: boolean;
+  isDefault: boolean;
   createdAt?: string;
   updatedAt?: string;
   version: string;

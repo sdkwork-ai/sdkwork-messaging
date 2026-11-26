@@ -725,7 +725,7 @@ function schemas() {
       requestId,
     }),
     MessagingSmsAccountListResponse: envelope("MessagingSmsAccountListResponse", "MessagingSmsAccount"),
-    MessagingSmsSignature: object(["id", "accountId", "accountName", "signName", "enabled", "providerAccountId", "providerAccountReady", "version"], {
+    MessagingSmsSignature: object(["id", "accountId", "accountName", "signName", "enabled", "providerAccountId", "providerAccountReady", "isDefault", "version"], {
       id,
       accountId: id,
       accountName: { type: "string", minLength: 1 },
@@ -739,6 +739,8 @@ function schemas() {
         ],
       },
       providerAccountReady: { type: "boolean" },
+      // The installation default: the chain head an operator edits first.
+      isDefault: { type: "boolean" },
       createdAt: { type: "string", format: "date-time" },
       updatedAt: { type: "string", format: "date-time" },
       version: int64,

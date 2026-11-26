@@ -639,7 +639,7 @@ describe("initialization completeness", () => {
   // Every config table the flows depend on must be seeded, and every seeded
   // default must be the one the product ships. These assertions mirror the
   // end-to-end flow simulation run against real PostgreSQL.
-  it("seeds one default enabled provider per channel and nothing else enabled", () => {
+  it("initializes every provider on install and keeps Tencent as the default", () => {
     const emailSeed = seedFile("common/002_email_provider_defaults.sql");
     const smsSeed = seedFile("common/003_sms_provider_defaults.sql");
 
@@ -654,14 +654,15 @@ describe("initialization completeness", () => {
     const enterpriseTuple = emailSeed.slice(enterpriseAt, emailSeed.indexOf(")", enterpriseAt));
     expect(enterpriseTuple).toContain("TRUE, TRUE");
 
-    // SMS: exactly one account tuple is enabled, and it is Tencent Cloud.
+    // SMS: every provider ships enabled so the installation is fully
+    // initialized; Tencent Cloud still leads the chains as the default path.
     const smsAccountTuples = [...smsSeed.matchAll(/\(\s*9500000004\d\d,[\s\S]*?\)/gu)].map(
       (match) => match[0],
     );
     expect(smsAccountTuples).toHaveLength(8);
     const enabledTuples = smsAccountTuples.filter((tuple) => /\bTRUE,/.test(tuple));
-    expect(enabledTuples).toHaveLength(1);
-    expect(enabledTuples[0]).toContain("'tencent'");
+    expect(enabledTuples, "every sms provider ships enabled").toHaveLength(8);
+    expect(enabledTuples.some((tuple) => tuple.includes("'tencent'"))).toBe(true);
   });
 
   it("gives every provider exactly one account and one identity", () => {

@@ -552,6 +552,9 @@ pub struct SmsSignatureItem {
     /// Whether the bound cloud account currently has active credential
     /// material, so the console can flag "bound but not credentialed".
     pub provider_account_ready: bool,
+    /// The installation's default signature: the one the send chains start
+    /// from and the one an operator edits first. At most one per scope.
+    pub is_default: bool,
     pub created_at: String,
     pub updated_at: String,
     pub version: String,

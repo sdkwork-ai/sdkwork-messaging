@@ -70,6 +70,7 @@ interface SeedSignatureRow {
   readonly accountId: string;
   readonly signName: string;
   readonly enabled: string;
+  readonly isDefault: string;
 }
 
 interface SeedRuleRow {
@@ -84,7 +85,7 @@ interface SeedRuleRow {
 const ACCOUNT_ROW =
   /\(\s*(\d+),\s*'([^']+)',\s*(\d+),\s*(\d+),\s*'([^']*)',\s*'([a-z0-9_]+)',\s*'(\{[^']*\})'::jsonb,\s*(TRUE|FALSE),/gu;
 const SIGNATURE_ROW =
-  /\(\s*(\d+),\s*'([^']+)',\s*(\d+),\s*(\d+),\s*(\d+),\s*'([^']+)',\s*(TRUE|FALSE),/gu;
+  /\(\s*(\d+),\s*'([^']+)',\s*(\d+),\s*(\d+),\s*(\d+),\s*'([^']+)',\s*(TRUE|FALSE),\s*(TRUE|FALSE),/gu;
 const RULE_ROW =
   /\(\s*(\d+),\s*'([^']+)',\s*(\d+),\s*(\d+),\s*'([a-z_]+)',\s*'(\[[^']*\])'::jsonb,\s*(TRUE|FALSE),/gu;
 
@@ -110,6 +111,7 @@ function readSeedSignatures(): SeedSignatureRow[] {
     accountId: match[5],
     signName: match[6],
     enabled: match[7],
+    isDefault: match[8],
   }));
 }
 
@@ -179,7 +181,10 @@ describe("SMS channel initialization seed", () => {
     for (const row of accounts) {
       expect(row.tenantId).toBe(SEED_TENANT_ID);
       expect(row.organizationId).toBe(SEED_ORGANIZATION_ID);
-      expect(row.enabled).toBe(row.provider === "tencent" ? "TRUE" : "FALSE");
+      // Every provider ships initialized and enabled: the installation is ready
+      // to configure, so the operator only fills in the credential of the
+      // provider they actually use.
+      expect(row.enabled, `${row.provider} must ship enabled`).toBe("TRUE");
     }
   });
 
@@ -196,8 +201,6 @@ describe("SMS channel initialization seed", () => {
 
   it("seeds one signature per provider account and one chain per scenario", () => {
     const accounts = readSeedAccounts();
-    const tencentAccount = accounts.find((row) => row.provider === "tencent");
-    expect(tencentAccount, "tencent sms account").toBeDefined();
     const signatures = readSeedSignatures();
     expect(signatures).toHaveLength(accounts.length);
     const accountIds = accounts.map((row) => row.id);
@@ -206,9 +209,10 @@ describe("SMS channel initialization seed", () => {
       expect(signature.organizationId).toBe(SEED_ORGANIZATION_ID);
       expect(accountIds).toContain(signature.accountId);
       expect(signature.signName).toBe("BirdCoder");
-      expect(signature.enabled).toBe(
-        signature.accountId === tencentAccount!.id ? "TRUE" : "FALSE",
-      );
+      // Signatures ship enabled with their accounts so every provider is
+      // initialized on install; the operator renames the placeholder into the
+      // signature their carrier approved.
+      expect(signature.enabled, `${signature.uuid} must ship enabled`).toBe("TRUE");
     }
 
     const rules = readSeedRules();
@@ -218,10 +222,19 @@ describe("SMS channel initialization seed", () => {
       "system_notification",
       "verification_code",
     ]);
+    // Tencent Cloud still leads every chain so it stays the default path.
+    const tencentAccount = accounts.find((row) => row.provider === "tencent");
+    expect(tencentAccount, "tencent sms account").toBeDefined();
     const tencentSignature = signatures.find(
       (row) => row.accountId === tencentAccount!.id,
     );
     expect(tencentSignature).toBeDefined();
+    // The default marker must agree with the chain head, or the console would
+    // tell the operator to edit a signature that is not actually first.
+    const defaults = signatures.filter((row) => row.isDefault === "TRUE");
+    expect(defaults).toHaveLength(1);
+    expect(defaults[0].accountId).toBe(tencentAccount!.id);
+    expect(defaults[0].enabled).toBe("TRUE");
     const expectedChain = [
       tencentSignature!.id,
       ...signatures
@@ -232,7 +245,6 @@ describe("SMS channel initialization seed", () => {
       expect(rule.tenantId).toBe(SEED_TENANT_ID);
       expect(rule.organizationId).toBe(SEED_ORGANIZATION_ID);
       expect(rule.chain).toEqual(expectedChain);
-      // Tencent Cloud SMS is the enabled default path.
       expect(rule.enabled).toBe("TRUE");
     }
   });

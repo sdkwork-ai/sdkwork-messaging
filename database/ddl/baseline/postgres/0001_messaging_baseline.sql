@@ -1658,3 +1658,33 @@ ALTER TABLE messaging_email_account
     );
 
 COMMIT;
+
+
+-- folded migration: migrations/postgres/0015_sms_signature_default.up.sql
+-- sdkwork:migration
+-- id: 0015_sms_signature_default
+-- engine: postgres
+-- module: messaging
+-- purpose: Mark which SMS signature is the installation default, with at most
+--   one per (tenant, organization).
+-- reversible: true
+-- rollback: down-migration
+-- transactional: true
+-- lock: lightweight
+-- lock_timeout: 2s
+-- statement_timeout: 30s
+
+BEGIN;
+
+ALTER TABLE messaging_sms_signature
+    ADD COLUMN IF NOT EXISTS is_default BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_messaging_sms_signature_default
+    ON messaging_sms_signature (tenant_id, organization_id)
+    WHERE is_default AND deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_messaging_sms_signature_default_lookup
+    ON messaging_sms_signature (tenant_id, organization_id, is_default)
+    WHERE deleted_at IS NULL;
+
+COMMIT;

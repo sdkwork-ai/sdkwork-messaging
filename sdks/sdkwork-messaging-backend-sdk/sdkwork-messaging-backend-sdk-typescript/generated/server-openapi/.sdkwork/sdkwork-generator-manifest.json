@@ -400,7 +400,7 @@
     },
     {
       "path": "src/types/messaging-sms-signature.ts",
-      "sha256": "00a1578b093f60421ba0300f2552184565ac18e85eb193d2916422a443dc69d1"
+      "sha256": "6c2a8042e3585e2c88979ef9e42e5e260cfa183792fc66619aca02236c885f7d"
     },
     {
       "path": "src/types/messaging-template-create-request.ts",
