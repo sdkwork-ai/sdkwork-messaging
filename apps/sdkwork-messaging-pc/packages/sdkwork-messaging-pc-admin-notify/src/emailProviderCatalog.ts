@@ -28,7 +28,11 @@ export interface EmailProviderReceivePreset {
   /** Preferred inbound protocol shipped by the provider. */
   protocol: "imap" | "pop3";
   imap: EmailEndpoint;
-  pop3: EmailEndpoint;
+  /**
+   * POP3 endpoint. Optional because some providers document IMAP + SMTP only
+   * (Lark/Feishu has no POP3 service), so a missing profile is expected.
+   */
+  pop3?: EmailEndpoint;
 }
 
 export interface EmailProviderCatalogEntry {
@@ -70,6 +74,69 @@ const MAILBOX_PRESETS = {
     imap: { host: "imap.exmail.qq.com", port: "993", encryption: SSL },
     pop3: { host: "pop.exmail.qq.com", port: "995", encryption: SSL },
   },
+  // Enterprise-mailbox vendors. Each keeps the vendor's documented hosts so the
+  // operator only supplies the mailbox address and its authorization code.
+  tencent_exmail: {
+    protocol: "imap",
+    imap: { host: "imap.exmail.qq.com", port: "993", encryption: SSL },
+    pop3: { host: "pop.exmail.qq.com", port: "995", encryption: SSL },
+  },
+  aliyun_mail: {
+    protocol: "imap",
+    imap: { host: "imap.qiye.aliyun.com", port: "993", encryption: SSL },
+    pop3: { host: "pop3.qiye.aliyun.com", port: "995", encryption: SSL },
+  },
+  netease_qiye: {
+    protocol: "imap",
+    imap: { host: "imap.qiye.163.com", port: "993", encryption: SSL },
+    pop3: { host: "pop.qiye.163.com", port: "995", encryption: SSL },
+  },
+  mail_263: {
+    protocol: "imap",
+    imap: { host: "imap.263.net", port: "993", encryption: SSL },
+    pop3: { host: "pop.263.net", port: "995", encryption: SSL },
+  },
+  coremail: {
+    protocol: "imap",
+    imap: { host: "imap.coremail.cn", port: "993", encryption: SSL },
+    pop3: { host: "pop.coremail.cn", port: "995", encryption: SSL },
+  },
+  lark_mail: {
+    // Lark/Feishu documents IMAP + SMTP only; there is no POP3 endpoint.
+    protocol: "imap",
+    imap: { host: "imap.larksuite.com", port: "993", encryption: SSL },
+  },
+  exchange_online: {
+    protocol: "imap",
+    imap: { host: "outlook.office365.com", port: "993", encryption: SSL },
+    pop3: { host: "outlook.office365.com", port: "995", encryption: SSL },
+  },
+  exchange_cn: {
+    // Microsoft 365 operated by 21Vianet (China cloud).
+    protocol: "imap",
+    imap: { host: "partner.outlook.cn", port: "993", encryption: SSL },
+    pop3: { host: "partner.outlook.cn", port: "995", encryption: SSL },
+  },
+  huawei_mail: {
+    protocol: "imap",
+    imap: { host: "imap.sparkspace.huaweicloud.com", port: "993", encryption: SSL },
+    pop3: { host: "pop3.sparkspace.huaweicloud.com", port: "995", encryption: SSL },
+  },
+  sina_mail: {
+    protocol: "imap",
+    imap: { host: "imap.sina.net", port: "993", encryption: SSL },
+    pop3: { host: "pop3.sina.net", port: "995", encryption: SSL },
+  },
+  google_workspace: {
+    protocol: "imap",
+    imap: { host: "imap.gmail.com", port: "993", encryption: SSL },
+    pop3: { host: "pop.gmail.com", port: "995", encryption: SSL },
+  },
+  sohu_mail: {
+    protocol: "imap",
+    imap: { host: "imap.sohu.com", port: "993", encryption: SSL },
+    pop3: { host: "pop.sohu.com", port: "995", encryption: SSL },
+  },
   tencent_mail: {
     protocol: "imap",
     imap: { host: "imap.qq.com", port: "993", encryption: SSL },
@@ -107,6 +174,140 @@ export const EMAIL_PROVIDER_CATALOG: readonly EmailProviderCatalogEntry[] = [
     username: "no-reply@birdcoder.com",
     send: { host: "smtp.exmail.qq.com", port: "465", encryption: SSL },
     receive: MAILBOX_PRESETS.enterprise_mail,
+  },
+  // Enterprise-mailbox vendors, so the customer can pick their own provider
+  // instead of hand-editing the generic profile above.
+  {
+    provider: "tencent_exmail",
+    transport: "smtp",
+    nameKey: "admin.notify.emailProviders.tencent_exmail.name",
+    descriptionKey: "admin.notify.emailProviders.tencent_exmail.description",
+    secretLabelKey: "admin.notify.email.secretLabel.authCode",
+    setupHintKey: "admin.notify.emailProviders.tencent_exmail.setupHint",
+    consoleUrl: "https://exmail.qq.com/",
+    send: { host: "smtp.exmail.qq.com", port: "465", encryption: SSL },
+    receive: MAILBOX_PRESETS.tencent_exmail,
+  },
+  {
+    provider: "aliyun_mail",
+    transport: "smtp",
+    nameKey: "admin.notify.emailProviders.aliyun_mail.name",
+    descriptionKey: "admin.notify.emailProviders.aliyun_mail.description",
+    secretLabelKey: "admin.notify.email.secretLabel.authCode",
+    setupHintKey: "admin.notify.emailProviders.aliyun_mail.setupHint",
+    consoleUrl: "https://mail.aliyun.com/",
+    send: { host: "smtp.qiye.aliyun.com", port: "465", encryption: SSL },
+    receive: MAILBOX_PRESETS.aliyun_mail,
+  },
+  {
+    provider: "netease_qiye",
+    transport: "smtp",
+    nameKey: "admin.notify.emailProviders.netease_qiye.name",
+    descriptionKey: "admin.notify.emailProviders.netease_qiye.description",
+    secretLabelKey: "admin.notify.email.secretLabel.authCode",
+    setupHintKey: "admin.notify.emailProviders.netease_qiye.setupHint",
+    consoleUrl: "https://qiye.163.com/",
+    send: { host: "smtp.qiye.163.com", port: "465", encryption: SSL },
+    receive: MAILBOX_PRESETS.netease_qiye,
+  },
+  {
+    provider: "mail_263",
+    transport: "smtp",
+    nameKey: "admin.notify.emailProviders.mail_263.name",
+    descriptionKey: "admin.notify.emailProviders.mail_263.description",
+    secretLabelKey: "admin.notify.email.secretLabel.authCode",
+    setupHintKey: "admin.notify.emailProviders.mail_263.setupHint",
+    consoleUrl: "https://www.263.net/",
+    send: { host: "smtp.263.net", port: "465", encryption: SSL },
+    receive: MAILBOX_PRESETS.mail_263,
+  },
+  {
+    provider: "coremail",
+    transport: "smtp",
+    nameKey: "admin.notify.emailProviders.coremail.name",
+    descriptionKey: "admin.notify.emailProviders.coremail.description",
+    secretLabelKey: "admin.notify.email.secretLabel.authCode",
+    setupHintKey: "admin.notify.emailProviders.coremail.setupHint",
+    consoleUrl: "https://www.coremail.cn/",
+    send: { host: "smtp.coremail.cn", port: "465", encryption: SSL },
+    receive: MAILBOX_PRESETS.coremail,
+  },
+  {
+    provider: "lark_mail",
+    transport: "smtp",
+    nameKey: "admin.notify.emailProviders.lark_mail.name",
+    descriptionKey: "admin.notify.emailProviders.lark_mail.description",
+    secretLabelKey: "admin.notify.email.secretLabel.authCode",
+    setupHintKey: "admin.notify.emailProviders.lark_mail.setupHint",
+    consoleUrl: "https://www.larksuite.com/",
+    send: { host: "smtp.larksuite.com", port: "465", encryption: SSL },
+    receive: MAILBOX_PRESETS.lark_mail,
+  },
+  {
+    provider: "exchange_online",
+    transport: "smtp",
+    nameKey: "admin.notify.emailProviders.exchange_online.name",
+    descriptionKey: "admin.notify.emailProviders.exchange_online.description",
+    secretLabelKey: "admin.notify.email.secretLabel.authCode",
+    setupHintKey: "admin.notify.emailProviders.exchange_online.setupHint",
+    consoleUrl: "https://outlook.office.com/",
+    send: { host: "smtp.office365.com", port: "587", encryption: STARTTLS },
+    receive: MAILBOX_PRESETS.exchange_online,
+  },
+  {
+    provider: "sohu_mail",
+    transport: "smtp",
+    nameKey: "admin.notify.emailProviders.sohu_mail.name",
+    descriptionKey: "admin.notify.emailProviders.sohu_mail.description",
+    secretLabelKey: "admin.notify.email.secretLabel.authCode",
+    setupHintKey: "admin.notify.emailProviders.sohu_mail.setupHint",
+    consoleUrl: "https://mail.sohu.com/",
+    send: { host: "smtp.sohu.com", port: "465", encryption: SSL },
+    receive: MAILBOX_PRESETS.sohu_mail,
+  },
+  {
+    provider: "huawei_mail",
+    transport: "smtp",
+    nameKey: "admin.notify.emailProviders.huawei_mail.name",
+    descriptionKey: "admin.notify.emailProviders.huawei_mail.description",
+    secretLabelKey: "admin.notify.email.secretLabel.authCode",
+    setupHintKey: "admin.notify.emailProviders.huawei_mail.setupHint",
+    consoleUrl: "https://mail.sparkspace.huaweicloud.com/",
+    send: { host: "smtp.sparkspace.huaweicloud.com", port: "465", encryption: SSL },
+    receive: MAILBOX_PRESETS.huawei_mail,
+  },
+  {
+    provider: "sina_mail",
+    transport: "smtp",
+    nameKey: "admin.notify.emailProviders.sina_mail.name",
+    descriptionKey: "admin.notify.emailProviders.sina_mail.description",
+    secretLabelKey: "admin.notify.email.secretLabel.authCode",
+    setupHintKey: "admin.notify.emailProviders.sina_mail.setupHint",
+    consoleUrl: "https://www.sina.net/",
+    send: { host: "smtp.sina.net", port: "465", encryption: SSL },
+    receive: MAILBOX_PRESETS.sina_mail,
+  },
+  {
+    provider: "exchange_cn",
+    transport: "smtp",
+    nameKey: "admin.notify.emailProviders.exchange_cn.name",
+    descriptionKey: "admin.notify.emailProviders.exchange_cn.description",
+    secretLabelKey: "admin.notify.email.secretLabel.authCode",
+    setupHintKey: "admin.notify.emailProviders.exchange_cn.setupHint",
+    consoleUrl: "https://portal.partner.microsoftonline.cn/",
+    send: { host: "smtp.partner.outlook.cn", port: "587", encryption: STARTTLS },
+    receive: MAILBOX_PRESETS.exchange_cn,
+  },
+  {
+    provider: "google_workspace",
+    transport: "smtp",
+    nameKey: "admin.notify.emailProviders.google_workspace.name",
+    descriptionKey: "admin.notify.emailProviders.google_workspace.description",
+    secretLabelKey: "admin.notify.email.secretLabel.appPassword",
+    setupHintKey: "admin.notify.emailProviders.google_workspace.setupHint",
+    consoleUrl: "https://admin.google.com/",
+    send: { host: "smtp.gmail.com", port: "465", encryption: SSL },
+    receive: MAILBOX_PRESETS.google_workspace,
   },
   {
     provider: "tencent_mail",
@@ -274,9 +475,12 @@ export function providerConfigDefaults(
     config.imapHost = entry.receive.imap.host;
     config.imapPort = entry.receive.imap.port;
     config.imapEncryption = entry.receive.imap.encryption;
-    config.pop3Host = entry.receive.pop3.host;
-    config.pop3Port = entry.receive.pop3.port;
-    config.pop3Encryption = entry.receive.pop3.encryption;
+    // Only emit a POP3 profile when the provider documents one.
+    if (entry.receive.pop3) {
+      config.pop3Host = entry.receive.pop3.host;
+      config.pop3Port = entry.receive.pop3.port;
+      config.pop3Encryption = entry.receive.pop3.encryption;
+    }
   }
   return config;
 }

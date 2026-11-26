@@ -29,6 +29,20 @@ const SEED_ORGANIZATION_ID = 0;
 const WIRE_PROVIDERS = [
   "smtp",
   "enterprise_mail",
+  // Enterprise-mailbox vendors (migration 0013).
+  "tencent_exmail",
+  "aliyun_mail",
+  "netease_qiye",
+  "mail_263",
+  "coremail",
+  "lark_mail",
+  "exchange_online",
+  "sohu_mail",
+  // Additional vendors (migration 0014).
+  "exchange_cn",
+  "huawei_mail",
+  "sina_mail",
+  "google_workspace",
   "aliyun",
   "tencent",
   "tencent_mail",
@@ -42,8 +56,21 @@ const WIRE_PROVIDERS = [
   "resend",
 ] as const;
 
+/** Providers that document an IMAP/POP3 receive profile. */
 const MAILBOX_PROVIDERS = [
   "enterprise_mail",
+  "tencent_exmail",
+  "aliyun_mail",
+  "netease_qiye",
+  "mail_263",
+  "coremail",
+  "lark_mail",
+  "exchange_online",
+  "exchange_cn",
+  "sohu_mail",
+  "huawei_mail",
+  "sina_mail",
+  "google_workspace",
   "tencent_mail",
   "mail_139",
   "gmail",
@@ -139,8 +166,12 @@ describe("email provider catalog", () => {
       expect(entry?.send?.port, `${provider} send port`).toBeTruthy();
       expect(entry?.receive?.imap.host, `${provider} IMAP host`).toBeTruthy();
       expect(entry?.receive?.imap.port, `${provider} IMAP port`).toBe("993");
-      expect(entry?.receive?.pop3.host, `${provider} POP3 host`).toBeTruthy();
-      expect(entry?.receive?.pop3.port, `${provider} POP3 port`).toBe("995");
+      // POP3 is optional: Lark/Feishu documents IMAP + SMTP only, so a missing
+      // POP3 profile is valid as long as the IMAP one exists.
+      if (entry?.receive?.pop3) {
+        expect(entry.receive.pop3.host, `${provider} POP3 host`).toBeTruthy();
+        expect(entry.receive.pop3.port, `${provider} POP3 port`).toBe("995");
+      }
     }
   });
 
@@ -162,10 +193,22 @@ describe("email provider catalog", () => {
     }
     expect(labels.get("admin.notify.email.secretLabel.authCode")).toEqual([
       "enterprise_mail",
+      "tencent_exmail",
+      "aliyun_mail",
+      "netease_qiye",
+      "mail_263",
+      "coremail",
+      "lark_mail",
+      "exchange_online",
+      "sohu_mail",
+      "huawei_mail",
+      "sina_mail",
+      "exchange_cn",
       "tencent_mail",
       "mail_139",
     ]);
     expect(labels.get("admin.notify.email.secretLabel.appPassword")).toEqual([
+      "google_workspace",
       "gmail",
       "microsoft",
     ]);

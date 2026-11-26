@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import {
   ArrowDown,
   ArrowUp,
+  CircleDashed,
+  Cloud,
   ExternalLink,
   Inbox,
   KeyRound,
@@ -26,6 +28,7 @@ import {
   inputClass,
 } from "../components/form";
 import { ProviderDirectory } from "../components/ProviderDirectory";
+import { ProviderInitializeDialog } from "../components/provider-initialize-dialog";
 import { ProviderLogo } from "../providerLogos";
 import { SlideOver } from "../components/slide-over";
 import { ListPager } from "../components/list-pager";
@@ -249,6 +252,7 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
     null,
   );
   const [initializingAll, setInitializingAll] = useState(false);
+  const [initializeDialogOpen, setInitializeDialogOpen] = useState(false);
 
   const fetchPage = useCallback(
     async (targetPage: number) => {
@@ -608,13 +612,21 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
                     {t("admin.notify.email.table.receiveEnabled")}
                   </th>
                   <th scope="col" className="px-4 py-3 text-right font-medium normal-case">
-                    {/* The create entry lives in the list header by contract. */}
-                    <PrimaryButton onClick={beginCreate}>
-                      <span className="inline-flex items-center gap-2">
-                        <Plus className="h-4 w-4" />
-                        {t("admin.notify.email.addProvider")}
-                      </span>
-                    </PrimaryButton>
+                    {/* Create + initialize entries live in the list header. */}
+                    <span className="inline-flex items-center gap-2">
+                      <SecondaryButton onClick={() => setInitializeDialogOpen(true)}>
+                        <span className="inline-flex items-center gap-2">
+                          <CircleDashed className="h-4 w-4" />
+                          {t("admin.notify.providers.initializeButton")}
+                        </span>
+                      </SecondaryButton>
+                      <PrimaryButton onClick={beginCreate}>
+                        <span className="inline-flex items-center gap-2">
+                          <Plus className="h-4 w-4" />
+                          {t("admin.notify.email.addProvider")}
+                        </span>
+                      </PrimaryButton>
+                    </span>
                   </th>
                 </tr>
               </thead>
@@ -650,6 +662,21 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
                                 ? account.keyDisplayMasked
                                 : t("admin.notify.common.secretEmptyHint")}
                             </div>
+                            {/* A cloud-account binding means the key lives in the
+                                account center, so surface it next to the mask. */}
+                            {account.providerAccountId ? (
+                              <div
+                                className={
+                                  account.providerAccountReady
+                                    ? "mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-700 dark:bg-sky-500/10 dark:text-sky-300"
+                                    : "mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+                                }
+                                title={account.providerAccountId}
+                              >
+                                <Cloud className="h-3 w-3 shrink-0" />
+                                <span className="truncate font-mono">{account.providerAccountId}</span>
+                              </div>
+                            ) : null}
                           </div>
                         </div>
                       </td>
@@ -997,6 +1024,27 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
             </div>
           ) : null}
         </SlideOver>
+      ) : null}
+
+      {initializeDialogOpen ? (
+        <ProviderInitializeDialog
+          catalogKeyPrefix="admin.notify.emailProviders"
+          entries={directoryEntries}
+          initializingProvider={initializingProvider}
+          initializingAll={initializingAll}
+          onInitialize={(provider) =>
+            void initializeAndConfigure(provider as MessagingEmailProvider)
+          }
+          onConfigure={(provider) => {
+            const account = accounts.find((item) => item.provider === provider);
+            if (account) {
+              setInitializeDialogOpen(false);
+              beginEdit(account);
+            }
+          }}
+          onInitializeAll={() => void initializeMissingProviders()}
+          onClose={() => setInitializeDialogOpen(false)}
+        />
       ) : null}
     </section>
   );

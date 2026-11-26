@@ -12,11 +12,17 @@ const BASELINE = read("database/ddl/baseline/postgres/0001_messaging_baseline.sq
 const RUST_PORTS = read("crates/sdkwork-routes-messaging-backend-api/src/ports.rs");
 
 function constraintProviders(table: string): string[] {
-  const constraint = BASELINE.split("\n").find((line) =>
-    line.includes(`ck_${table}_provider`),
-  );
-  expect(constraint, `${table} provider constraint`).toBeDefined();
-  return [...constraint!.matchAll(/'([a-z0-9_]+)'/gu)].map((match) => match[1]);
+  // Two shapes exist: an inline `CONSTRAINT ... CHECK (...)` inside CREATE TABLE
+  // (SMS today) and a later `ADD CONSTRAINT ... CHECK (...)` from a folded
+  // migration (email, as the enum grows). Whichever appears, the LAST
+  // definition in the file is the effective one.
+  const marker = `ck_${table}_provider`;
+  const nameIndex = BASELINE.lastIndexOf(`CONSTRAINT ${marker} CHECK`);
+  const addIndex = BASELINE.lastIndexOf(`ADD CONSTRAINT ${marker} CHECK`);
+  const start = Math.max(nameIndex, addIndex);
+  expect(start, `${table} provider constraint`).toBeGreaterThanOrEqual(0);
+  const block = BASELINE.slice(start, BASELINE.indexOf(");", start));
+  return [...block.matchAll(/'([a-z0-9_]+)'/gu)].map((match) => match[1]);
 }
 
 function rustFunction(name: string): string {

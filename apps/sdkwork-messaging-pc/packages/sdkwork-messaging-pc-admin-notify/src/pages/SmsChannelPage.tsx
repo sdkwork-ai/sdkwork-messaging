@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import {
   ArrowDown,
   ArrowUp,
+  CircleDashed,
+  Cloud,
   ExternalLink,
   KeyRound,
   Plus,
@@ -24,6 +26,7 @@ import {
   inputClass,
 } from "../components/form";
 import { ProviderDirectory } from "../components/ProviderDirectory";
+import { ProviderInitializeDialog } from "../components/provider-initialize-dialog";
 import { ProviderLogo } from "../providerLogos";
 import { SlideOver } from "../components/slide-over";
 import { ListPager } from "../components/list-pager";
@@ -150,6 +153,7 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
     null,
   );
   const [initializingAll, setInitializingAll] = useState(false);
+  const [initializeDialogOpen, setInitializeDialogOpen] = useState(false);
 
   const fetchPage = useCallback(
     async (targetPage: number) => {
@@ -461,12 +465,20 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
         <p className="text-sm text-slate-500 dark:text-slate-400">
           {t("admin.notify.sms.accountsHint", { count: SMS_PROVIDER_CATALOG.length })}
         </p>
-        <PrimaryButton onClick={beginCreate}>
-          <span className="inline-flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            {t("admin.notify.sms.addProvider")}
-          </span>
-        </PrimaryButton>
+        <span className="inline-flex items-center gap-2">
+          <SecondaryButton onClick={() => setInitializeDialogOpen(true)}>
+            <span className="inline-flex items-center gap-2">
+              <CircleDashed className="h-4 w-4" />
+              {t("admin.notify.providers.initializeButton")}
+            </span>
+          </SecondaryButton>
+          <PrimaryButton onClick={beginCreate}>
+            <span className="inline-flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              {t("admin.notify.sms.addProvider")}
+            </span>
+          </PrimaryButton>
+        </span>
       </div>
       {/*
         Onboarding aid only: once any account exists the table below is the
@@ -497,6 +509,11 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
         <LoadingState label={t("admin.notify.common.loading")} />
       ) : (
         <>
+          {accounts.length === 0 ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+              {t("admin.notify.sms.accountsEmpty")}
+            </div>
+          ) : null}
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
             {accounts.map((account) => (
               <article
@@ -535,12 +552,41 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
                         .slice(0, 3)
                         .map(([key, value]) => (
                           <div key={key} className="col-span-2 flex min-w-0 gap-2">
-                            <dt className="shrink-0 font-medium">{key}</dt>
+                            {/* Localized label; unknown keys fall back to the raw key. */}
+                            <dt className="shrink-0 font-medium">
+                              {t(`admin.notify.sms.fields.${key}`, key)}
+                            </dt>
                             <dd className="truncate font-mono">{String(value)}</dd>
                           </div>
                         ))
                     : null}
                 </dl>
+                {/*
+                  Credential source at a glance: a cloud-account binding means
+                  the operator manages the key in the account center, otherwise
+                  the masked local credential (or "not set") applies.
+                */}
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                  {account.providerAccountId ? (
+                    <span
+                      className={
+                        account.providerAccountReady
+                          ? "inline-flex max-w-full items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 font-medium text-sky-700 dark:bg-sky-500/10 dark:text-sky-300"
+                          : "inline-flex max-w-full items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+                      }
+                      title={account.providerAccountId}
+                    >
+                      <Cloud className="h-3 w-3 shrink-0" />
+                      <span className="truncate font-mono">{account.providerAccountId}</span>
+                    </span>
+                  ) : null}
+                  {!account.hasSecret && !account.providerAccountReady ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+                      <KeyRound className="h-3 w-3" />
+                      {t("admin.notify.providers.credentialsMissing")}
+                    </span>
+                  ) : null}
+                </div>
                 <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-400 dark:border-white/5 dark:text-slate-500">
                   <span className="inline-flex items-center gap-1.5">
                     {account.hasSecret ? (
@@ -729,6 +775,27 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
             </div>
           ) : null}
         </SlideOver>
+      ) : null}
+
+      {initializeDialogOpen ? (
+        <ProviderInitializeDialog
+          catalogKeyPrefix="admin.notify.smsProviders"
+          entries={directoryEntries}
+          initializingProvider={initializingProvider}
+          initializingAll={initializingAll}
+          onInitialize={(provider) =>
+            void initializeAndConfigure(provider as MessagingSmsProvider)
+          }
+          onConfigure={(provider) => {
+            const account = accounts.find((item) => item.provider === provider);
+            if (account) {
+              setInitializeDialogOpen(false);
+              beginEdit(account);
+            }
+          }}
+          onInitializeAll={() => void initializeMissingProviders()}
+          onClose={() => setInitializeDialogOpen(false)}
+        />
       ) : null}
     </section>
   );
