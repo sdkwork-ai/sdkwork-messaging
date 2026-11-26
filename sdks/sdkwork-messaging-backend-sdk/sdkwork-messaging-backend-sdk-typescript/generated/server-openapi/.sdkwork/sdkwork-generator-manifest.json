@@ -212,7 +212,7 @@
     },
     {
       "path": "src/types/messaging-email-account-create-request.ts",
-      "sha256": "07edd9484d25713b09b93e71954a0ad9e1f957f4ad7fcfa320d12c0cbb1f60d5"
+      "sha256": "bd28dfd4656866ae19c20d3f1cf557ebcc14cee86b4a5e1fa3ac54dde82b1166"
     },
     {
       "path": "src/types/messaging-email-account-list-response.ts",
@@ -224,11 +224,11 @@
     },
     {
       "path": "src/types/messaging-email-account-update-request.ts",
-      "sha256": "61dce8425fb841c759c54d02560dcbce6f75534ebd0888b4d7341849113c0988"
+      "sha256": "c89cd0c13fe01b192ed58e7780f1927668b3f487bc42ba6a24dfb8ef1893a19e"
     },
     {
       "path": "src/types/messaging-email-account.ts",
-      "sha256": "63e03c1583dcb9e8517632661823a60ee8f6c166cfad3e7e540e51ce5177ec82"
+      "sha256": "7876eda748495d90932f22a07da71ddc0c9abf0d0e153e6e9c2828f8f94f4c46"
     },
     {
       "path": "src/types/messaging-email-send-rule-list-response.ts",
@@ -244,7 +244,7 @@
     },
     {
       "path": "src/types/messaging-email-send-rule-step.ts",
-      "sha256": "2abde5a51f1dd2bcf7c2614796ed868e1d8aa82076db071010f93e43ff828391"
+      "sha256": "a88bd29e8cc6824bfa665ba5c8b389297da2728a8f59ad8eb5b05c7c20eb361f"
     },
     {
       "path": "src/types/messaging-email-send-rule-update-request.ts",
@@ -340,7 +340,7 @@
     },
     {
       "path": "src/types/messaging-sms-account-create-request.ts",
-      "sha256": "a50fbe1c95a2a64f0a3f867859a1590b70cdaae4bdadc85dffc40f17738e3b1b"
+      "sha256": "dbf50cc4d854cab784a74c41601ef5b2323e024378f74111cf97771d520bc9a2"
     },
     {
       "path": "src/types/messaging-sms-account-list-response.ts",
@@ -352,11 +352,11 @@
     },
     {
       "path": "src/types/messaging-sms-account-update-request.ts",
-      "sha256": "81e1c25706446777747f02eb00001a23cc27316f6ff834f14e3d5affef088103"
+      "sha256": "b2006a6793871fee37042b0c7fec871c72344e9e472a90e3f693fdd320d3ad12"
     },
     {
       "path": "src/types/messaging-sms-account.ts",
-      "sha256": "53b66c35a7fdc2c9196bd2b30f5e9dffcfe86200aea40a3a664e479744f3c5d1"
+      "sha256": "02664a5ff5617351db02452e824c7e2caa3d471e861c3c4992805d6123faf8aa"
     },
     {
       "path": "src/types/messaging-sms-send-rule-list-response.ts",

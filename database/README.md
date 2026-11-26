@@ -57,6 +57,45 @@ unique per channel, so seeding a second locale over an already seeded scope is
 a safe no-op rather than a translation switch; edit the templates or reset the
 template rows deliberately if an installation has to change language later.
 
+## Verification-code policies
+
+`messaging_verification_policy` is the contract every OTP challenge is created
+against: `messaging_verification_challenge` holds a composite foreign key on
+`(tenant_id, organization_id, scene_code, channel)` referencing it, so an
+installation with **zero** policy rows cannot create a challenge at all —
+login / register / password-reset flows fail on the foreign key.
+
+The `standard` profile therefore seeds 14 policies per locale: seven scenes
+(`login`, `register`, `password_reset`, `bind_phone`, `payment`, `withdraw`,
+`login_mfa`) on both channels. Each row carries:
+
+- a tuned `ttl_seconds` / `max_attempts` pair — shorter windows and fewer
+  attempts for high-risk scenes (password reset, payment, withdraw), longer
+  windows for ordinary sign-in;
+- a `message_body_pattern` using the same `{{code}}` / `{{ttlMinutes}}` tokens as
+  the channel templates, plus a subject for email and `NULL` for SMS.
+
+Files: `locales/{zh-CN,en-US}/003_verification_policies.sql`. The operator only
+adjusts the numbers or copy, or simply points the flows at a configured
+provider, and the OTP journey works.
+
+## Template test send
+
+Both template pages offer **发送测试 / Send test**: it opens a dialog for one
+delivery target (email address or phone number), optional values for the
+template's variables, and a live preview of the rendered result, then enqueues
+one real outbound message through `messaging.outboundMessages.send`.
+
+Delivery notes:
+
+- variables left blank fall back to realistic sample values, so a test never
+  sends a raw `{{token}}`;
+- the request carries `templateCode` (traceability in send records) and routes
+  through the `system_notification` scenario, so a test never consumes marketing
+  quota or reputation;
+- the button only appears for a saved, clean template — unsaved edits are never
+  sent silently.
+
 ## Email channel initialization
 
 The `standard` profile pre-builds the whole email channel so a fresh install only
@@ -101,29 +140,32 @@ other provider starts disabled so it can be switched on deliberately.
 
 ### Binding a cloud account
 
-Signatures reference a reusable cloud account from the IAM platform account
-center through `messaging_sms_signature.provider_account_id` (migration `0010`),
-instead of every signature carrying its own private credential copy. The binding
-lives on the signature because that is the unit an operator provisions: one
-provider account may own several approved signatures backed by different cloud
-accounts.
+Every row that can own upstream credentials is bindable to a reusable cloud
+account from the IAM platform account center, instead of carrying its own
+private credential copy:
 
-The seeds leave `provider_account_id` empty on purpose — credentials must never
-be pre-seeded and the IAM account center owns those rows. Binding the Tencent
-Cloud signature to its IAM cloud account in the console is the only manual step
-before SMS can deliver.
+| Channel | Binding columns | Why |
+|---|---|---|
+| SMS | `messaging_sms_account.provider_account_id` (0012) | one provider account owns the key pair |
+| SMS | `messaging_sms_signature.provider_account_id` (0010) | one brand may live in a different cloud account |
+| Email | `messaging_email_account.provider_account_id` (0011) | one SMTP/API account owns many senders |
 
-Credential precedence is **cloud account first, local ciphertext fallback**:
+Resolution order is most-specific-first, with the local secret as the last
+fallback, so every layer is optional:
 
-- with a binding, the send path resolves the secret through
-  `messaging_provider_account_ready(...)`, which reports whether the bound
-  account holds an active credential;
-- without one, the existing `messaging_sms_account.secret_ciphertext` is used, so
-  existing installations keep working unchanged.
+```text
+SMS   : signature binding -> account binding -> secret_ciphertext
+Email : account binding              -> secret_ciphertext
+```
+
+The seeds leave every binding empty on purpose — credentials must never be
+pre-seeded and the IAM account center owns those rows. Binding the default
+Tencent Cloud signature/account and the Tencent Exmail account in the console is
+the only manual step before both channels can deliver.
 
 `messaging_provider_account_ready` resolves the IAM tables at run time
 (`EXECUTE`), so an installation without the IAM module reports "not ready"
-instead of failing every signature read.
+instead of failing every signature/account read.
 
 ## Seeded template catalog
 

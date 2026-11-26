@@ -11,6 +11,7 @@ import { PageErrorBoundary } from "../components/page-error-boundary";
 import { ConfirmDialog } from "../components/confirm-dialog";
 import { TemplateEditorPanel } from "../components/template-editor-panel";
 import { TemplateListPanel } from "../components/template-list-panel";
+import { TemplateTestSendDialog } from "../components/template-test-send-dialog";
 import {
   defaultNotifyAdminService,
   isConflictError,
@@ -73,6 +74,9 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
   const [showValidation, setShowValidation] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [testOpen, setTestOpen] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testError, setTestError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<PendingConfirmation | null>(null);
   const loadSequence = useRef(0);
 
@@ -328,6 +332,47 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
     }
   };
 
+  const openTestSend = () => {
+    setTestError(null);
+    setTestOpen(true);
+  };
+
+  /**
+   * Enqueues one real outbound message from the current template. Unsaved edits
+   * are never sent silently: the button is only offered for a saved template,
+   * and the body/subject here come from the persisted editor state.
+   */
+  const submitTestSend = async (payload: {
+    target: string;
+    body: string;
+    subject?: string;
+  }) => {
+    setTesting(true);
+    setTestError(null);
+    try {
+      await admin.sendOutboundMessage({
+        channel,
+        target: payload.target,
+        body: payload.body,
+        ...(payload.subject !== undefined ? { subject: payload.subject } : {}),
+        templateCode: form.templateCode.trim(),
+        // Route test sends through the operational chain rather than marketing,
+        // so a test never burns marketing quota or reputation.
+        scenario: "system_notification",
+      });
+      setTestOpen(false);
+      setNotice(
+        t("admin.notify.templates.test.sent", {
+          target: payload.target,
+        }),
+      );
+    } catch {
+      setTestError(t("admin.notify.templates.test.failed"));
+    } finally {
+      setTesting(false);
+    }
+  };
+
   const requestDelete = () => {
     const template = editingTemplate;
     if (!template) {
@@ -467,11 +512,31 @@ export function TemplateListPage({ channel, service }: SdkworkMessagingTemplateL
               onCancel={closeEditor}
               onDelete={mode === "edit" ? requestDelete : undefined}
               onDuplicate={mode === "edit" ? duplicateCurrent : undefined}
+              onTestSend={
+                mode === "edit" && editingTemplate && !dirty ? openTestSend : undefined
+              }
               templateId={editingTemplate?.id}
               service={admin}
             />
           )}
         </div>
+
+        {testOpen && editingTemplate ? (
+          <TemplateTestSendDialog
+            channel={channel}
+            templateCode={form.templateCode}
+            templateName={form.name || form.templateCode}
+            subject={form.subject}
+            content={form.content}
+            busy={testing}
+            error={testError}
+            onCancel={() => {
+              setTestOpen(false);
+              setTestError(null);
+            }}
+            onSubmit={(payload) => void submitTestSend(payload)}
+          />
+        ) : null}
 
         <ConfirmDialog
           open={confirmation !== null}

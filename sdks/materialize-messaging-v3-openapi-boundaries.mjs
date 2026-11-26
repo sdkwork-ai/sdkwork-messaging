@@ -659,7 +659,7 @@ function schemas() {
       requestId,
     }),
     MessagingVerificationPolicyListResponse: envelope("MessagingVerificationPolicyListResponse", "MessagingVerificationPolicy"),
-    MessagingSmsAccount: object(["id", "name", "provider", "hasSecret", "enabled", "version"], {
+    MessagingSmsAccount: object(["id", "name", "provider", "hasSecret", "enabled", "providerAccountId", "providerAccountReady", "version"], {
       id,
       name: { type: "string", minLength: 1, maxLength: 128 },
       provider: { type: "string", enum: ["aliyun", "tencent", "huawei", "yuntongxun", "submail", "chuanglan", "twilio", "generic_http"] },
@@ -667,6 +667,15 @@ function schemas() {
       hasSecret: { type: "boolean" },
       keyDisplayMasked: { type: "string", readOnly: true },
       enabled: { type: "boolean" },
+      // Null until the account is bound to an IAM cloud account. Signatures may
+      // override it with their own binding.
+      providerAccountId: {
+        anyOf: [
+          { type: "string", minLength: 1, maxLength: 128 },
+          { type: "null" },
+        ],
+      },
+      providerAccountReady: { type: "boolean" },
       createdAt: { type: "string", format: "date-time" },
       updatedAt: { type: "string", format: "date-time" },
       version: int64,
@@ -677,6 +686,12 @@ function schemas() {
       config: { type: "object", additionalProperties: true },
       secret: { type: "string", writeOnly: true, "x-sensitive": true },
       enabled: { type: "boolean" },
+      providerAccountId: {
+        anyOf: [
+          { type: "string", minLength: 1, maxLength: 128 },
+          { type: "null" },
+        ],
+      },
     }),
     MessagingSmsAccountUpdateRequest: object(["name", "provider", "config", "enabled", "expectedVersion"], {
       name: { type: "string", minLength: 1, maxLength: 128 },
@@ -684,6 +699,13 @@ function schemas() {
       config: { type: "object", additionalProperties: true },
       secret: { type: "string", writeOnly: true, "x-sensitive": true },
       enabled: { type: "boolean" },
+      // Omit to keep the binding; empty string clears it.
+      providerAccountId: {
+        anyOf: [
+          { type: "string", maxLength: 128 },
+          { type: "null" },
+        ],
+      },
       expectedVersion: int64,
     }),
     MessagingSmsAccountResponse: object(["item", "requestId"], {
@@ -783,7 +805,7 @@ function schemas() {
       requestId,
     }),
     MessagingSmsSendRuleListResponse: envelope("MessagingSmsSendRuleListResponse", "MessagingSmsSendRule"),
-    MessagingEmailAccount: object(["id", "name", "provider", "hasSecret", "enabled", "receiveEnabled", "version"], {
+    MessagingEmailAccount: object(["id", "name", "provider", "hasSecret", "enabled", "receiveEnabled", "providerAccountId", "providerAccountReady", "version"], {
       id,
       name: { type: "string", minLength: 1, maxLength: 128 },
       provider: emailProvider,
@@ -792,6 +814,14 @@ function schemas() {
       keyDisplayMasked: { type: "string", readOnly: true },
       enabled: { type: "boolean" },
       receiveEnabled: { type: "boolean" },
+      // Null until the account is bound to an IAM cloud account.
+      providerAccountId: {
+        anyOf: [
+          { type: "string", minLength: 1, maxLength: 128 },
+          { type: "null" },
+        ],
+      },
+      providerAccountReady: { type: "boolean" },
       createdAt: { type: "string", format: "date-time" },
       updatedAt: { type: "string", format: "date-time" },
       version: int64,
@@ -803,6 +833,12 @@ function schemas() {
       secret: { type: "string", writeOnly: true, "x-sensitive": true },
       enabled: { type: "boolean" },
       receiveEnabled: { type: "boolean" },
+      providerAccountId: {
+        anyOf: [
+          { type: "string", minLength: 1, maxLength: 128 },
+          { type: "null" },
+        ],
+      },
     }),
     MessagingEmailAccountUpdateRequest: object(["name", "provider", "config", "enabled", "expectedVersion"], {
       name: { type: "string", minLength: 1, maxLength: 128 },
@@ -811,6 +847,13 @@ function schemas() {
       secret: { type: "string", writeOnly: true, "x-sensitive": true },
       enabled: { type: "boolean" },
       receiveEnabled: { type: "boolean" },
+      // Omit to keep the binding; empty string clears it.
+      providerAccountId: {
+        anyOf: [
+          { type: "string", maxLength: 128 },
+          { type: "null" },
+        ],
+      },
       expectedVersion: int64,
     }),
     MessagingEmailAccountResponse: object(["item", "requestId"], {
@@ -853,7 +896,7 @@ function schemas() {
       requestId,
     }),
     MessagingEmailSenderListResponse: envelope("MessagingEmailSenderListResponse", "MessagingEmailSender"),
-    MessagingEmailSendRuleStep: object(["senderId", "accountId", "accountName", "fromAddress", "identityEnabled", "accountEnabled", "hasSecret", "stepEnabled"], {
+    MessagingEmailSendRuleStep: object(["senderId", "accountId", "accountName", "fromAddress", "identityEnabled", "accountEnabled", "hasSecret", "stepEnabled", "providerAccountId", "credentialsReady"], {
       senderId: id,
       accountId: id,
       accountName: { type: "string", minLength: 1 },
@@ -863,6 +906,13 @@ function schemas() {
       accountEnabled: { type: "boolean" },
       hasSecret: { type: "boolean" },
       stepEnabled: { type: "boolean" },
+      providerAccountId: {
+        anyOf: [
+          { type: "string", minLength: 1, maxLength: 128 },
+          { type: "null" },
+        ],
+      },
+      credentialsReady: { type: "boolean" },
     }),
     MessagingEmailSendRule: object(["scenario", "chain", "enabled", "version"], {
       scenario: { type: "string", enum: ["default", "verification_code", "system_notification", "marketing"] },

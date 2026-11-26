@@ -7,6 +7,8 @@ export interface MessagingEmailAccount {
   keyDisplayMasked?: string;
   enabled: boolean;
   receiveEnabled: boolean;
+  providerAccountId: string | null;
+  providerAccountReady: boolean;
   createdAt?: string;
   updatedAt?: string;
   version: string;

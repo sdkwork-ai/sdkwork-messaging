@@ -84,6 +84,11 @@ interface AccountFormState {
   fields: Record<string, string>;
   secret: string;
   enabled: boolean;
+  /**
+   * IAM cloud account bound to this provider account. Signatures may override
+   * it with their own binding. Empty means the account uses its own secret.
+   */
+  providerAccountId: string;
 }
 
 function emptyAccountForm(
@@ -95,7 +100,7 @@ function emptyAccountForm(
   for (const field of entry.fields) {
     fields[field.key] = defaults[field.key] ?? "";
   }
-  return { name, fields, secret: "", enabled: false };
+  return { name, fields, secret: "", enabled: false, providerAccountId: "" };
 }
 
 function accountFormFromItem(
@@ -106,7 +111,13 @@ function accountFormFromItem(
   for (const field of entry.fields) {
     fields[field.key] = readConfig(account.config, field.key) || field.preset || "";
   }
-  return { name: account.name, fields, secret: "", enabled: account.enabled };
+  return {
+    name: account.name,
+    fields,
+    secret: "",
+    enabled: account.enabled,
+    providerAccountId: account.providerAccountId ?? "",
+  };
 }
 
 function accountConfigFromForm(
@@ -457,19 +468,25 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
           </span>
         </PrimaryButton>
       </div>
-      <ProviderDirectory
-        entries={directoryEntries}
-        initializingProvider={initializingProvider}
-        initializingAll={initializingAll}
-        onInitialize={(provider) => void initializeAndConfigure(provider as MessagingSmsProvider)}
-        onEdit={(provider) => {
-          const account = accounts.find((item) => item.provider === provider);
-          if (account) {
-            beginEdit(account);
-          }
-        }}
-        onInitializeAll={() => void initializeMissingProviders()}
-      />
+      {/*
+        Onboarding aid only: once any account exists the table below is the
+        source of truth, and "添加服务商" already lists every provider.
+      */}
+      {accounts.length === 0 ? (
+        <ProviderDirectory
+          entries={directoryEntries}
+          initializingProvider={initializingProvider}
+          initializingAll={initializingAll}
+          onInitialize={(provider) => void initializeAndConfigure(provider as MessagingSmsProvider)}
+          onEdit={(provider) => {
+            const account = accounts.find((item) => item.provider === provider);
+            if (account) {
+              beginEdit(account);
+            }
+          }}
+          onInitializeAll={() => void initializeMissingProviders()}
+        />
+      ) : null}
       {error ? <ErrorState message={error} onRetry={() => void runLoad(page)} /> : null}
       {notice ? (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
@@ -670,6 +687,16 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
                     <KeyRound className="absolute right-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
                   ) : null}
                 </div>
+              </Field>
+              <Field
+                label={t("admin.notify.sms.providerAccount")}
+                hint={t("admin.notify.sms.providerAccountHint")}
+              >
+                <TextInput
+                  value={form.providerAccountId}
+                  onChange={(value) => setForm({ ...form, providerAccountId: value })}
+                  placeholder={t("admin.notify.sms.providerAccountPlaceholder")}
+                />
               </Field>
               {drawerEntry.consoleUrl ? (
                 <a

@@ -4,4 +4,5 @@ export interface MessagingSmsAccountCreateRequest {
   config: Record<string, unknown>;
   secret?: string;
   enabled: boolean;
+  providerAccountId?: string | null;
 }

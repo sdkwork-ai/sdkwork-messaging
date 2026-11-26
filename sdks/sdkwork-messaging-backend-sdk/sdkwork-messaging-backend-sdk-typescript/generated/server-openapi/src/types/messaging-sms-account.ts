@@ -6,6 +6,8 @@ export interface MessagingSmsAccount {
   hasSecret: boolean;
   keyDisplayMasked?: string;
   enabled: boolean;
+  providerAccountId: string | null;
+  providerAccountReady: boolean;
   createdAt?: string;
   updatedAt?: string;
   version: string;

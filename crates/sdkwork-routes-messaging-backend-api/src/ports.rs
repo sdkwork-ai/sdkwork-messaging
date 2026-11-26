@@ -342,6 +342,12 @@ pub struct EmailAccountItem {
     pub enabled: bool,
     /// Inbound switch: the account's IMAP/POP3 receive configuration is active.
     pub receive_enabled: bool,
+    /// IAM cloud account supplying this provider's credential. `None` means the
+    /// account uses its own stored `secret_ciphertext`.
+    pub provider_account_id: Option<String>,
+    /// Whether the bound cloud account currently holds active credential
+    /// material, so the console can flag "bound but not credentialed".
+    pub provider_account_ready: bool,
     pub created_at: String,
     pub updated_at: String,
     pub version: String,
@@ -358,6 +364,9 @@ pub struct CreateEmailAccountCommand {
     /// Inbound (IMAP/POP3) switch; omitted means disabled.
     #[serde(default)]
     pub receive_enabled: bool,
+    /// Optional IAM cloud account to bind while creating the account.
+    #[serde(default)]
+    pub provider_account_id: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -371,6 +380,10 @@ pub struct UpdateEmailAccountCommand {
     /// Inbound (IMAP/POP3) switch; omitted means disabled.
     #[serde(default)]
     pub receive_enabled: bool,
+    /// Omit to keep the current cloud-account binding; send an empty string to
+    /// clear it and fall back to the local secret.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider_account_id: Option<String>,
     /// Optimistic concurrency guard (DATABASE_SPEC §17): the version read by the
     /// client; the update applies only when it still matches.
     pub expected_version: String,
@@ -434,6 +447,11 @@ pub struct EmailSendRuleStep {
     /// Whether this step participates in the fallback chain. A disabled step
     /// stays in place for later re-activation instead of being removed.
     pub step_enabled: bool,
+    /// IAM cloud account bound to the owning provider account, when bound.
+    pub provider_account_id: Option<String>,
+    /// Whether this step can obtain credentials: either the bound cloud account
+    /// has active material, or the account carries its own secret.
+    pub credentials_ready: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -476,6 +494,12 @@ pub struct SmsAccountItem {
     pub has_secret: bool,
     pub key_display_masked: String,
     pub enabled: bool,
+    /// IAM cloud account supplying this provider's credential. Signatures may
+    /// override it with their own binding.
+    pub provider_account_id: Option<String>,
+    /// Whether the bound cloud account currently holds active credential
+    /// material.
+    pub provider_account_ready: bool,
     pub created_at: String,
     pub updated_at: String,
     pub version: String,
@@ -489,6 +513,9 @@ pub struct CreateSmsAccountCommand {
     pub config: Value,
     pub secret: Option<String>,
     pub enabled: bool,
+    /// Optional IAM cloud account to bind while creating the account.
+    #[serde(default)]
+    pub provider_account_id: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -499,6 +526,10 @@ pub struct UpdateSmsAccountCommand {
     pub config: Value,
     pub secret: Option<String>,
     pub enabled: bool,
+    /// Omit to keep the current cloud-account binding; send an empty string to
+    /// clear it and fall back to the local secret.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider_account_id: Option<String>,
     /// Optimistic concurrency guard (DATABASE_SPEC §17): the version read by the
     /// client; the update applies only when it still matches.
     pub expected_version: String,

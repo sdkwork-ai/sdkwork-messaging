@@ -142,6 +142,11 @@ interface AccountFormState {
   secret: string;
   enabled: boolean;
   receiveEnabled: boolean;
+  /**
+   * IAM cloud account bound to this provider account. Empty means the account
+   * authenticates with its own stored secret.
+   */
+  providerAccountId: string;
   sendHost: string;
   sendPort: string;
   sendEncryption: EmailEncryption;
@@ -167,6 +172,7 @@ function emptyAccountForm(entry: EmailProviderCatalogEntry, name: string): Accou
     secret: "",
     enabled: false,
     receiveEnabled: Boolean(entry.receive),
+    providerAccountId: "",
     sendHost: config.send?.host ?? "",
     sendPort: config.send?.port ?? "",
     sendEncryption: config.send?.encryption ?? "ssl",
@@ -189,6 +195,7 @@ function accountFormFromItem(
     secret: "",
     enabled: account.enabled,
     receiveEnabled: account.receiveEnabled,
+    providerAccountId: account.providerAccountId ?? "",
     sendHost: config.send?.host ?? entry?.send?.host ?? "",
     sendPort: config.send?.port ?? entry?.send?.port ?? "",
     sendEncryption: normalizeEncryption(
@@ -549,19 +556,28 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
       <p className="text-sm text-slate-500 dark:text-slate-400">
         {t("admin.notify.email.accountsHint", { count: EMAIL_PROVIDER_CATALOG.length })}
       </p>
-      <ProviderDirectory
-        entries={directoryEntries}
-        initializingProvider={initializingProvider}
-        initializingAll={initializingAll}
-        onInitialize={(provider) => void initializeAndConfigure(provider as MessagingEmailProvider)}
-        onEdit={(provider) => {
-          const account = accounts.find((item) => item.provider === provider);
-          if (account) {
-            beginEdit(account);
-          }
-        }}
-        onInitializeAll={() => void initializeMissingProviders()}
-      />
+      {/*
+        The directory is an onboarding aid, not a permanent fixture: it exists to
+        show which providers have no account yet and to offer a one-click fill.
+        Once any account exists the account table below becomes the source of
+        truth, and "新增服务商" already lists every provider, so keeping the
+        directory would duplicate that list and crowd the page.
+      */}
+      {accounts.length === 0 ? (
+        <ProviderDirectory
+          entries={directoryEntries}
+          initializingProvider={initializingProvider}
+          initializingAll={initializingAll}
+          onInitialize={(provider) => void initializeAndConfigure(provider as MessagingEmailProvider)}
+          onEdit={(provider) => {
+            const account = accounts.find((item) => item.provider === provider);
+            if (account) {
+              beginEdit(account);
+            }
+          }}
+          onInitializeAll={() => void initializeMissingProviders()}
+        />
+      ) : null}
       {error ? <ErrorState message={error} onRetry={() => void runLoad(page)} /> : null}
       {notice ? (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
@@ -815,6 +831,16 @@ function AccountsPanel({ admin }: { admin: NotifyAdminService }) {
                     <KeyRound className="absolute right-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
                   ) : null}
                 </div>
+              </Field>
+              <Field
+                label={t("admin.notify.email.providerAccount")}
+                hint={t("admin.notify.email.providerAccountHint")}
+              >
+                <TextInput
+                  value={form.providerAccountId}
+                  onChange={(value) => setForm({ ...form, providerAccountId: value })}
+                  placeholder={t("admin.notify.email.providerAccountPlaceholder")}
+                />
               </Field>
               {drawerEntry.consoleUrl ? (
                 <a

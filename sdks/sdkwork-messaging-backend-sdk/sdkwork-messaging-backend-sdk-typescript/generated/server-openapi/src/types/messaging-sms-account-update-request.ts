@@ -4,5 +4,6 @@ export interface MessagingSmsAccountUpdateRequest {
   config: Record<string, unknown>;
   secret?: string;
   enabled: boolean;
+  providerAccountId?: string | null;
   expectedVersion: string;
 }

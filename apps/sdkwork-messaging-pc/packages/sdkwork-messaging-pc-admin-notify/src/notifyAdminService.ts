@@ -11,6 +11,8 @@ import type {
   MessagingEmailSender,
   MessagingEmailSenderCreateRequest,
   MessagingEmailSenderUpdateRequest,
+  MessagingOutboundMessage,
+  MessagingOutboundMessageSendRequest,
   MessagingProviderInitializeResponse,
   MessagingSendRecord,
   MessagingSmsAccount,
@@ -425,6 +427,24 @@ async function deleteSmsSignature(signatureId: string): Promise<void> {
   });
 }
 
+/**
+ * Enqueues one outbound message.
+ *
+ * The caller supplies the already-rendered `body`/`subject` (`{{variable}}`
+ * tokens substituted) plus the `templateCode` they were rendered from; the
+ * backend records the code alongside the message so a test send stays
+ * traceable to its template in the send records.
+ */
+async function sendOutboundMessage(
+  input: MessagingOutboundMessageSendRequest,
+): Promise<MessagingOutboundMessage> {
+  const response = await messagingBackendSdkClient().messaging.outboundMessages.create(
+    input,
+    { idempotencyKey: nextIdempotencyKey() },
+  );
+  return unwrapSdkItem(response);
+}
+
 async function listSmsSendRules(): Promise<MessagingSmsSendRule[]> {
   const response = await messagingBackendSdkClient().messaging.smsSendRules.list();
   return response.items;
@@ -620,6 +640,8 @@ export interface NotifyAdminService {
     input: MessagingSmsSignatureUpdateRequest,
   ): Promise<MessagingSmsSignature>;
   deleteSmsSignature(signatureId: string): Promise<void>;
+  /** Enqueues one outbound message (used by the template test-send dialog). */
+  sendOutboundMessage(input: MessagingOutboundMessageSendRequest): Promise<MessagingOutboundMessage>;
   listSmsSendRules(): Promise<MessagingSmsSendRule[]>;
   updateSmsSendRule(
     scenario: MessagingEmailSendScenario,
@@ -682,6 +704,7 @@ export function createNotifyAdminService(): NotifyAdminService {
     createSmsSignature,
     updateSmsSignature,
     deleteSmsSignature,
+    sendOutboundMessage,
     listSmsSendRules,
     updateSmsSendRule,
     listEmailSendRecords,

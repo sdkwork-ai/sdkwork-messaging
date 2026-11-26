@@ -32,34 +32,38 @@
       "locales": {
         "zh-CN": [
           "001_message_templates.sql",
-          "002_template_provider_defaults.sql"
+          "002_template_provider_defaults.sql",
+          "003_verification_policies.sql"
         ],
         "en-US": [
           "001_message_templates.sql",
-          "002_template_provider_defaults.sql"
+          "002_template_provider_defaults.sql",
+          "003_verification_policies.sql"
         ]
       }
     }
   },
-  "i18nVersion": "1.2.0",
+  "i18nVersion": "1.3.0",
   "fallbackLocale": "zh-CN",
   "localeSets": {
     "zh-CN": {
-      "version": "1.2.0",
+      "version": "1.3.0",
       "required": true,
-      "checksum": "sha256:8d51f61e3303b81568d957121d38f45ebcfae5b9c30a1a5f9c94457c288a8015",
+      "checksum": "sha256:83e9396799eda25b6710552a60cbc653bce70ae2ab007c73d57013481232646a",
       "files": [
         "locales/zh-CN/001_message_templates.sql",
-        "locales/zh-CN/002_template_provider_defaults.sql"
+        "locales/zh-CN/002_template_provider_defaults.sql",
+        "locales/zh-CN/003_verification_policies.sql"
       ]
     },
     "en-US": {
-      "version": "1.2.0",
+      "version": "1.3.0",
       "required": false,
-      "checksum": "sha256:293764de88aa5b6f449c4354344beb26cbb1ff3f383c88b2314a8bcbee6c39ae",
+      "checksum": "sha256:6effcbe75516cc818b952ede02b3fbce0939b1b6b64ef994abba87cd30598842",
       "files": [
         "locales/en-US/001_message_templates.sql",
-        "locales/en-US/002_template_provider_defaults.sql"
+        "locales/en-US/002_template_provider_defaults.sql",
+        "locales/en-US/003_verification_policies.sql"
       ]
     }
   }

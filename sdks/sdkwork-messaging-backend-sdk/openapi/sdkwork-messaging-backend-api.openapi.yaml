@@ -8341,6 +8341,8 @@
           "hasSecret",
           "enabled",
           "receiveEnabled",
+          "providerAccountId",
+          "providerAccountReady",
           "version"
         ],
         "properties": {
@@ -8386,6 +8388,21 @@
             "type": "boolean"
           },
           "receiveEnabled": {
+            "type": "boolean"
+          },
+          "providerAccountId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "providerAccountReady": {
             "type": "boolean"
           },
           "createdAt": {
@@ -8452,6 +8469,18 @@
           },
           "receiveEnabled": {
             "type": "boolean"
+          },
+          "providerAccountId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -8535,6 +8564,17 @@
           },
           "receiveEnabled": {
             "type": "boolean"
+          },
+          "providerAccountId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "expectedVersion": {
             "type": "string",
@@ -8629,7 +8669,9 @@
           "identityEnabled",
           "accountEnabled",
           "hasSecret",
-          "stepEnabled"
+          "stepEnabled",
+          "providerAccountId",
+          "credentialsReady"
         ],
         "properties": {
           "senderId": {
@@ -8663,6 +8705,21 @@
             "type": "boolean"
           },
           "stepEnabled": {
+            "type": "boolean"
+          },
+          "providerAccountId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "credentialsReady": {
             "type": "boolean"
           }
         }
@@ -9488,6 +9545,8 @@
           "provider",
           "hasSecret",
           "enabled",
+          "providerAccountId",
+          "providerAccountReady",
           "version"
         ],
         "properties": {
@@ -9525,6 +9584,21 @@
             "readOnly": true
           },
           "enabled": {
+            "type": "boolean"
+          },
+          "providerAccountId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "providerAccountReady": {
             "type": "boolean"
           },
           "createdAt": {
@@ -9583,6 +9657,18 @@
           },
           "enabled": {
             "type": "boolean"
+          },
+          "providerAccountId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -9658,6 +9744,17 @@
           },
           "enabled": {
             "type": "boolean"
+          },
+          "providerAccountId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "expectedVersion": {
             "type": "string",

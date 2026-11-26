@@ -5,4 +5,5 @@ export interface MessagingEmailAccountCreateRequest {
   secret?: string;
   enabled: boolean;
   receiveEnabled?: boolean;
+  providerAccountId?: string | null;
 }

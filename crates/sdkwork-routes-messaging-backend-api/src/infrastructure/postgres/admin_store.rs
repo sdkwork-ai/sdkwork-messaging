@@ -123,11 +123,70 @@ impl PostgresMessagingAdminStore {
             key_display_masked,
             enabled: row.get("enabled"),
             receive_enabled: row.get("receive_enabled"),
+            provider_account_id: None,
+            provider_account_ready: false,
             version: row.get::<i64, _>("version").to_string(),
             created_at: rfc3339(row.get("created_at")),
             updated_at: rfc3339(row.get("updated_at")),
         })
     }
+
+    /// Fills the cloud-account binding columns for already-mapped email accounts.
+    ///
+    /// The binding is read separately so the account list/create/update queries
+    /// keep their existing projection and `RETURNING` shape; one extra query per
+    /// page is far cheaper than duplicating a 12-column list four times.
+    async fn hydrate_email_account_bindings(
+        &self,
+        subject: &MessagingAdminSubject,
+        items: &mut [EmailAccountItem],
+    ) -> Result<(), StoreError> {
+        if items.is_empty() {
+            return Ok(());
+        }
+        let ids: Vec<i64> = items
+            .iter()
+            .filter_map(|item| item.id.parse::<i64>().ok())
+            .collect();
+        if ids.is_empty() {
+            return Ok(());
+        }
+        let rows = sqlx::query(
+            "SELECT id, provider_account_id, \
+                    CASE WHEN provider_account_id IS NULL THEN NULL \
+                         ELSE messaging_provider_account_ready(provider_account_id) \
+                    END AS provider_account_ready \
+             FROM messaging_email_account \
+             WHERE tenant_id = $1 AND organization_id = $2 AND id = ANY($3)",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .bind(&ids)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        let mut by_id: HashMap<i64, (Option<String>, bool)> = HashMap::with_capacity(rows.len());
+        for row in rows {
+            by_id.insert(
+                row.get::<i64, _>("id"),
+                (
+                    row.get::<Option<String>, _>("provider_account_id"),
+                    row.get::<Option<bool>, _>("provider_account_ready")
+                        .unwrap_or(false),
+                ),
+            );
+        }
+        for item in items.iter_mut() {
+            if let Ok(id) = item.id.parse::<i64>() {
+                if let Some((account_id, ready)) = by_id.get(&id) {
+                    item.provider_account_id = account_id.clone();
+                    item.provider_account_ready = *ready;
+                }
+            }
+        }
+        Ok(())
+    }
+
     async fn sms_account_item(
         &self,
         subject: &MessagingAdminSubject,
@@ -153,10 +212,64 @@ impl PostgresMessagingAdminStore {
             has_secret: fingerprint.is_some(),
             key_display_masked,
             enabled: row.get("enabled"),
+            provider_account_id: None,
+            provider_account_ready: false,
             version: row.get::<i64, _>("version").to_string(),
             created_at: rfc3339(row.get("created_at")),
             updated_at: rfc3339(row.get("updated_at")),
         })
+    }
+
+    /// Fills cloud-account binding columns for already-mapped SMS accounts.
+    async fn hydrate_sms_account_bindings(
+        &self,
+        subject: &MessagingAdminSubject,
+        items: &mut [SmsAccountItem],
+    ) -> Result<(), StoreError> {
+        if items.is_empty() {
+            return Ok(());
+        }
+        let ids: Vec<i64> = items
+            .iter()
+            .filter_map(|item| item.id.parse::<i64>().ok())
+            .collect();
+        if ids.is_empty() {
+            return Ok(());
+        }
+        let rows = sqlx::query(
+            "SELECT id, provider_account_id, \
+                    CASE WHEN provider_account_id IS NULL THEN NULL \
+                         ELSE messaging_provider_account_ready(provider_account_id) \
+                    END AS provider_account_ready \
+             FROM messaging_sms_account \
+             WHERE tenant_id = $1 AND organization_id = $2 AND id = ANY($3)",
+        )
+        .bind(subject.tenant_id)
+        .bind(subject.organization_id)
+        .bind(&ids)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        let mut by_id: HashMap<i64, (Option<String>, bool)> = HashMap::with_capacity(rows.len());
+        for row in rows {
+            by_id.insert(
+                row.get::<i64, _>("id"),
+                (
+                    row.get::<Option<String>, _>("provider_account_id"),
+                    row.get::<Option<bool>, _>("provider_account_ready")
+                        .unwrap_or(false),
+                ),
+            );
+        }
+        for item in items.iter_mut() {
+            if let Ok(id) = item.id.parse::<i64>() {
+                if let Some((account_id, ready)) = by_id.get(&id) {
+                    item.provider_account_id = account_id.clone();
+                    item.provider_account_ready = *ready;
+                }
+            }
+        }
+        Ok(())
     }
 
     fn encode_channel_secret(
@@ -276,11 +389,13 @@ impl PostgresMessagingAdminStore {
         let ids: Vec<i64> = steps.iter().map(|step| step.id).collect();
         let rows = sqlx::query(
             "SELECT s.id, s.account_id, a.name AS account_name, s.from_address, s.from_name, s.enabled, \
-                    a.enabled AS account_enabled, (a.secret_ciphertext IS NOT NULL) AS has_secret \
+                    a.enabled AS account_enabled, (a.secret_ciphertext IS NOT NULL) AS has_secret, \
+                    a.provider_account_id, \
+                    (a.secret_ciphertext IS NOT NULL \
+                     OR messaging_provider_account_ready(a.provider_account_id)) AS credentials_ready \
              FROM messaging_email_sender s \
              JOIN messaging_email_account a ON a.id = s.account_id \
-             WHERE s.tenant_id = $1 AND s.organization_id = $2 AND s.id = ANY($3) AND s.deleted_at IS NULL",
-        )
+             WHERE s.tenant_id = $1 AND s.organization_id = $2 AND s.id = ANY($3) AND s.deleted_at IS NULL",        )
         .bind(subject.tenant_id)
         .bind(subject.organization_id)
         .bind(&ids)
@@ -304,6 +419,10 @@ impl PostgresMessagingAdminStore {
                     account_enabled: row.get("account_enabled"),
                     has_secret: row.get("has_secret"),
                     step_enabled: step.enabled,
+                    provider_account_id: row.get::<Option<String>, _>("provider_account_id"),
+                    credentials_ready: row
+                        .get::<Option<bool>, _>("credentials_ready")
+                        .unwrap_or(false),
                 });
             }
         }
@@ -347,8 +466,10 @@ impl PostgresMessagingAdminStore {
             "SELECT s.id, s.account_id, a.name AS account_name, s.sign_name, s.enabled, \
                     a.enabled AS account_enabled, (a.secret_ciphertext IS NOT NULL) AS has_secret, \
                     s.provider_account_id, \
+                    a.provider_account_id AS account_provider_account_id, \
                     (a.secret_ciphertext IS NOT NULL \
-                     OR messaging_provider_account_ready(s.provider_account_id)) AS credentials_ready \
+                     OR messaging_provider_account_ready(s.provider_account_id) \
+                     OR messaging_provider_account_ready(a.provider_account_id)) AS credentials_ready \
              FROM messaging_sms_signature s \
              JOIN messaging_sms_account a ON a.id = s.account_id \
              WHERE s.tenant_id = $1 AND s.organization_id = $2 AND s.id = ANY($3) AND s.deleted_at IS NULL",
@@ -1857,6 +1978,8 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         for row in rows {
             items.push(self.email_account_item(subject, row).await?);
         }
+        self.hydrate_email_account_bindings(subject, &mut items)
+            .await?;
         Ok(MessagingPage {
             items,
             page,
@@ -1883,11 +2006,14 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         let provider =
             crate::ports::parse_email_provider(&command.provider).map_err(StoreError::Invalid)?;
         let encoded = self.encode_channel_secret(subject, "email", command.secret.as_ref())?;
+        let provider_account_id =
+            crate::ports::parse_provider_account_id(command.provider_account_id.as_deref())
+                .map_err(StoreError::Invalid)?;
 
         let row = sqlx::query(
             "INSERT INTO messaging_email_account \
-             (id, uuid, tenant_id, organization_id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, receive_enabled, created_by) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) \
+             (id, uuid, tenant_id, organization_id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, receive_enabled, created_by, provider_account_id) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) \
              RETURNING id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, receive_enabled, created_at, updated_at, version",
         )
         .bind(self.next_id())
@@ -1903,6 +2029,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .bind(command.enabled)
         .bind(command.receive_enabled)
         .bind(subject.operator_id)
+        .bind(provider_account_id)
         .fetch_one(&self.pool)
         .await
         .map_err(|error| {
@@ -1914,6 +2041,8 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         })?;
 
         let mut item = self.email_account_item(subject, row).await?;
+        self.hydrate_email_account_bindings(subject, std::slice::from_mut(&mut item))
+            .await?;
         if encoded.is_some() {
             item.has_secret = true;
             item.key_display_masked = mask_secret(command.secret.as_deref().unwrap_or(""));
@@ -1938,7 +2067,10 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .await
         .map_err(|error| StoreError::Unavailable(error.to_string()))?
         .ok_or_else(|| StoreError::NotFound("email account not found".to_owned()))?;
-        self.email_account_item(subject, row).await
+        let mut item = self.email_account_item(subject, row).await?;
+        self.hydrate_email_account_bindings(subject, std::slice::from_mut(&mut item))
+            .await?;
+        Ok(item)
     }
 
     async fn update_email_account(
@@ -1960,6 +2092,12 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         let provider =
             crate::ports::parse_email_provider(&command.provider).map_err(StoreError::Invalid)?;
         let encoded = self.encode_channel_secret(subject, "email", command.secret.as_ref())?;
+        // `None` keeps the existing binding; `Some("")` clears it so the account
+        // falls back to its own stored credential.
+        let bind_provider_account = command.provider_account_id.is_some();
+        let provider_account_id =
+            crate::ports::parse_provider_account_id(command.provider_account_id.as_deref())
+                .map_err(StoreError::Invalid)?;
 
         let row = sqlx::query(
             "UPDATE messaging_email_account SET \
@@ -1972,6 +2110,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
                 secret_key_id = COALESCE($10, secret_key_id), \
                 secret_fingerprint = COALESCE($11, secret_fingerprint), \
                 updated_by = $12, \
+                provider_account_id = CASE WHEN $14 THEN $15 ELSE provider_account_id END, \
                 updated_at = CURRENT_TIMESTAMP, \
                 version = version + 1 \
              WHERE id = $1 AND tenant_id = $2 AND organization_id = $3 AND deleted_at IS NULL \
@@ -1991,6 +2130,8 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .bind(encoded.as_ref().map(|value| value.fingerprint.as_str()))
         .bind(subject.operator_id)
         .bind(parse_expected_version(&command.expected_version)?)
+        .bind(bind_provider_account)
+        .bind(provider_account_id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|error| {
@@ -2015,6 +2156,8 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         };
 
         let mut item = self.email_account_item(subject, row).await?;
+        self.hydrate_email_account_bindings(subject, std::slice::from_mut(&mut item))
+            .await?;
         if encoded.is_some() {
             item.has_secret = true;
             item.key_display_masked = mask_secret(command.secret.as_deref().unwrap_or(""));
@@ -2753,6 +2896,8 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         for row in rows {
             items.push(self.sms_account_item(subject, row).await?);
         }
+        self.hydrate_sms_account_bindings(subject, &mut items)
+            .await?;
         Ok(MessagingPage {
             items,
             page,
@@ -2779,11 +2924,14 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         let provider =
             crate::ports::parse_sms_provider(&command.provider).map_err(StoreError::Invalid)?;
         let encoded = self.encode_channel_secret(subject, "sms", command.secret.as_ref())?;
+        let provider_account_id =
+            crate::ports::parse_provider_account_id(command.provider_account_id.as_deref())
+                .map_err(StoreError::Invalid)?;
 
         let row = sqlx::query(
             "INSERT INTO messaging_sms_account \
-             (id, uuid, tenant_id, organization_id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_by) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) \
+             (id, uuid, tenant_id, organization_id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_by, provider_account_id) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) \
              RETURNING id, name, provider, config_json, secret_ciphertext, secret_key_id, secret_fingerprint, enabled, created_at, updated_at, version",
         )
         .bind(self.next_id())
@@ -2798,6 +2946,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .bind(encoded.as_ref().map(|value| value.fingerprint.as_str()))
         .bind(command.enabled)
         .bind(subject.operator_id)
+        .bind(provider_account_id)
         .fetch_one(&self.pool)
         .await
         .map_err(|error| {
@@ -2809,6 +2958,8 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         })?;
 
         let mut item = self.sms_account_item(subject, row).await?;
+        self.hydrate_sms_account_bindings(subject, std::slice::from_mut(&mut item))
+            .await?;
         if encoded.is_some() {
             item.has_secret = true;
             item.key_display_masked = mask_secret(command.secret.as_deref().unwrap_or(""));
@@ -2833,7 +2984,10 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .await
         .map_err(|error| StoreError::Unavailable(error.to_string()))?
         .ok_or_else(|| StoreError::NotFound("sms account not found".to_owned()))?;
-        self.sms_account_item(subject, row).await
+        let mut item = self.sms_account_item(subject, row).await?;
+        self.hydrate_sms_account_bindings(subject, std::slice::from_mut(&mut item))
+            .await?;
+        Ok(item)
     }
 
     async fn update_sms_account(
@@ -2855,6 +3009,11 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         let provider =
             crate::ports::parse_sms_provider(&command.provider).map_err(StoreError::Invalid)?;
         let encoded = self.encode_channel_secret(subject, "sms", command.secret.as_ref())?;
+        // `None` keeps the existing binding; `Some("")` clears it.
+        let bind_provider_account = command.provider_account_id.is_some();
+        let provider_account_id =
+            crate::ports::parse_provider_account_id(command.provider_account_id.as_deref())
+                .map_err(StoreError::Invalid)?;
 
         let row = sqlx::query(
             "UPDATE messaging_sms_account SET \
@@ -2866,6 +3025,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
                 secret_key_id = COALESCE($9, secret_key_id), \
                 secret_fingerprint = COALESCE($10, secret_fingerprint), \
                 updated_by = $11, \
+                provider_account_id = CASE WHEN $13 THEN $14 ELSE provider_account_id END, \
                 updated_at = CURRENT_TIMESTAMP, \
                 version = version + 1 \
              WHERE id = $1 AND tenant_id = $2 AND organization_id = $3 AND deleted_at IS NULL \
@@ -2884,6 +3044,8 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .bind(encoded.as_ref().map(|value| value.fingerprint.as_str()))
         .bind(subject.operator_id)
         .bind(parse_expected_version(&command.expected_version)?)
+        .bind(bind_provider_account)
+        .bind(provider_account_id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|error| {
@@ -2908,6 +3070,8 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         };
 
         let mut item = self.sms_account_item(subject, row).await?;
+        self.hydrate_sms_account_bindings(subject, std::slice::from_mut(&mut item))
+            .await?;
         if encoded.is_some() {
             item.has_secret = true;
             item.key_display_masked = mask_secret(command.secret.as_deref().unwrap_or(""));

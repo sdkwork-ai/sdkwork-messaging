@@ -8,4 +8,6 @@ export interface MessagingEmailSendRuleStep {
   accountEnabled: boolean;
   hasSecret: boolean;
   stepEnabled: boolean;
+  providerAccountId: string | null;
+  credentialsReady: boolean;
 }

@@ -12,6 +12,7 @@ import {
   CopyPlus,
   Plus,
   Save,
+  Send,
   Trash2,
   Type,
 } from "lucide-react";
@@ -59,6 +60,8 @@ export interface TemplateEditorPanelProps {
   onCancel: () => void;
   onDelete?: () => void;
   onDuplicate?: () => void;
+  /** Opens the test-send dialog; available once the template is saved. */
+  onTestSend?: () => void;
   /** Existing template id; enables the provider-binding panel in edit mode. */
   templateId?: string;
   service?: NotifyAdminService;
@@ -103,6 +106,7 @@ export function TemplateEditorPanel({
   onCancel,
   onDelete,
   onDuplicate,
+  onTestSend,
   templateId,
   service,
 }: TemplateEditorPanelProps) {
@@ -227,6 +231,18 @@ export function TemplateEditorPanel({
               >
                 <CopyPlus className="h-4 w-4" />
                 {t("admin.notify.templates.duplicate")}
+              </button>
+            ) : null}
+            {onTestSend ? (
+              <button
+                type="button"
+                onClick={onTestSend}
+                disabled={saving || deleting}
+                title={t("admin.notify.templates.test.title")}
+                className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+              >
+                <Send className="h-4 w-4" />
+                {t("admin.notify.templates.test.button")}
               </button>
             ) : null}
             {onDelete ? (

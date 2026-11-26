@@ -5,5 +5,6 @@ export interface MessagingEmailAccountUpdateRequest {
   secret?: string;
   enabled: boolean;
   receiveEnabled?: boolean;
+  providerAccountId?: string | null;
   expectedVersion: string;
 }

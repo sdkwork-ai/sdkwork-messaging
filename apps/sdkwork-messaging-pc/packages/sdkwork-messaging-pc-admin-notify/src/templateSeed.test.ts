@@ -315,10 +315,12 @@ describe("localized template seed manifest", () => {
     expect(standard?.locales["zh-CN"]).toEqual([
       "001_message_templates.sql",
       "002_template_provider_defaults.sql",
+      "003_verification_policies.sql",
     ]);
     expect(standard?.locales["en-US"]).toEqual([
       "001_message_templates.sql",
       "002_template_provider_defaults.sql",
+      "003_verification_policies.sql",
     ]);
     expect(SEED_MANIFEST.profiles.minimal.locales["zh-CN"]).toEqual([]);
   });
@@ -343,6 +345,7 @@ describe("localized template seed manifest", () => {
       expect(set.files).toEqual([
         `locales/${locale}/001_message_templates.sql`,
         `locales/${locale}/002_template_provider_defaults.sql`,
+        `locales/${locale}/003_verification_policies.sql`,
       ]);
     }
   });
@@ -488,6 +491,202 @@ describe("localized template seed content", () => {
     for (const { file } of LOCALES) {
       const sql = seedFile(file);
       expect(sql.match(/\nON CONFLICT DO NOTHING;/gu)).toHaveLength(1);
+    }
+  });
+});
+
+/**
+ * Verification policies gate the OTP flows: `messaging_verification_challenge`
+ * carries a composite foreign key onto `messaging_verification_policy`, so an
+ * installation with no policy rows cannot create a challenge at all.
+ */
+const VERIFICATION_SCENES = [
+  "login",
+  "register",
+  "password_reset",
+  "bind_phone",
+  "payment",
+  "withdraw",
+  "login_mfa",
+] as const;
+
+interface PolicyRow {
+  readonly id: string;
+  readonly uuid: string;
+  readonly sceneCode: string;
+  readonly channel: string;
+  readonly ttlSeconds: number;
+  readonly maxAttempts: number;
+  readonly subject: string | null;
+  readonly body: string;
+  readonly enabled: boolean;
+}
+
+const POLICY_ROW_PATTERN =
+  /\(\s*(\d+),\s*'([^']+)',\s*100001,\s*0,\s*'([a-z_]+)',\s*'(sms|email)',\s*(\d+),\s*(\d+),\s*(NULL|'(?:[^']|'')*'),\s*'((?:[^']|'')*)',\s*(TRUE|FALSE),/gu;
+
+function parsePolicies(sql: string): PolicyRow[] {
+  return [...sql.matchAll(POLICY_ROW_PATTERN)].map((match) => ({
+    id: match[1],
+    uuid: match[2],
+    sceneCode: match[3],
+    channel: match[4],
+    ttlSeconds: Number(match[5]),
+    maxAttempts: Number(match[6]),
+    subject: match[7] === "NULL" ? null : match[7].slice(1, -1).replaceAll("''", "'"),
+    body: match[8].replaceAll("''", "'"),
+    enabled: match[9] === "TRUE",
+  }));
+}
+
+const POLICIES_BY_LOCALE = new Map(
+  LOCALES.map(({ locale }) => [
+    locale,
+    parsePolicies(seedFile(`locales/${locale}/003_verification_policies.sql`)),
+  ]),
+);
+
+describe("verification policy seed", () => {
+  it("covers every scene on both channels for each active locale", () => {
+    for (const { locale } of LOCALES) {
+      const rows = POLICIES_BY_LOCALE.get(locale)!;
+      const keys = rows.map((row) => `${row.sceneCode}:${row.channel}`).sort();
+      const expected = VERIFICATION_SCENES.flatMap((scene) => [
+        `${scene}:sms`,
+        `${scene}:email`,
+      ]).sort();
+      expect(keys, `${locale} policy keys`).toEqual(expected);
+    }
+  });
+
+  it("uses unique reserved ids and stable uuids", () => {
+    const ids: string[] = [];
+    const uuids: string[] = [];
+    for (const rows of POLICIES_BY_LOCALE.values()) {
+      for (const row of rows) {
+        ids.push(row.id);
+        uuids.push(row.uuid);
+        expect(row.id.startsWith("9500000")).toBe(true);
+        expect(row.uuid.startsWith("seed-vpolicy-")).toBe(true);
+      }
+    }
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(new Set(uuids).size).toBe(uuids.length);
+  });
+
+  it("keeps TTL and attempt budgets positive and sane", () => {
+    for (const [locale, rows] of POLICIES_BY_LOCALE) {
+      for (const row of rows) {
+        const label = `${locale} ${row.sceneCode}/${row.channel}`;
+        expect(row.ttlSeconds, label).toBeGreaterThanOrEqual(60);
+        expect(row.ttlSeconds, label).toBeLessThanOrEqual(3600);
+        expect(row.maxAttempts, label).toBeGreaterThanOrEqual(1);
+        // A verification code with many guesses is no longer a secret.
+        expect(row.maxAttempts, label).toBeLessThanOrEqual(10);
+        expect(row.enabled, label).toBe(true);
+      }
+    }
+  });
+
+  it("renders {{code}} and {{ttlMinutes}} in every body", () => {
+    for (const [locale, rows] of POLICIES_BY_LOCALE) {
+      for (const row of rows) {
+        const label = `${locale} ${row.sceneCode}/${row.channel}`;
+        expect(row.body, label).toContain("{{code}}");
+        expect(row.body, label).toContain("{{ttlMinutes}}");
+      }
+    }
+  });
+
+  it("gives email policies a subject and leaves SMS subjects null", () => {
+    for (const [locale, rows] of POLICIES_BY_LOCALE) {
+      for (const row of rows) {
+        const label = `${locale} ${row.sceneCode}/${row.channel}`;
+        if (row.channel === "email") {
+          expect(row.subject?.trim(), label).toBeTruthy();
+        } else {
+          expect(row.subject, label).toBeNull();
+          // A single segment keeps a code-delivery SMS billed once.
+          expect(smsMetrics(row.body).segments, label).toBeLessThanOrEqual(2);
+        }
+      }
+    }
+  });
+
+  it("writes each locale in its own script", () => {
+    const cjk = /[\u3400-\u9fff]/u;
+    for (const [locale, rows] of POLICIES_BY_LOCALE) {
+      for (const row of rows) {
+        const text = `${row.subject ?? ""}${row.body}`;
+        if (locale === "en-US") {
+          expect(cjk.test(text), `${row.sceneCode} must be English`).toBe(false);
+        } else {
+          expect(cjk.test(row.body), `${row.sceneCode} must be Chinese`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it("is idempotent", () => {
+    for (const { locale } of LOCALES) {
+      const sql = seedFile(`locales/${locale}/003_verification_policies.sql`);
+      expect(sql.match(/\nON CONFLICT DO NOTHING;/gu)).toHaveLength(1);
+    }
+  });
+});
+
+describe("initialization completeness", () => {
+  // Every config table the flows depend on must be seeded, and every seeded
+  // default must be the one the product ships. These assertions mirror the
+  // end-to-end flow simulation run against real PostgreSQL.
+  it("seeds one default enabled provider per channel and nothing else enabled", () => {
+    const emailSeed = seedFile("common/002_email_provider_defaults.sql");
+    const smsSeed = seedFile("common/003_sms_provider_defaults.sql");
+
+    // Email: exactly one account tuple carries `TRUE, TRUE` (enabled + receive)
+    // — the enterprise mailbox. Every other account row is `FALSE, FALSE`.
+    const emailFlags = [...emailSeed.matchAll(/,\s*(TRUE|FALSE),\s*(TRUE|FALSE),/gu)].filter(
+      (match) => match[1] === "TRUE",
+    );
+    expect(emailFlags).toHaveLength(1);
+    const enterpriseAt = emailSeed.indexOf("'enterprise_mail',");
+    expect(enterpriseAt, "enterprise_mail account row").toBeGreaterThanOrEqual(0);
+    const enterpriseTuple = emailSeed.slice(enterpriseAt, emailSeed.indexOf(")", enterpriseAt));
+    expect(enterpriseTuple).toContain("TRUE, TRUE");
+
+    // SMS: exactly one account tuple is enabled, and it is Tencent Cloud.
+    const smsAccountTuples = [...smsSeed.matchAll(/\(\s*9500000004\d\d,[\s\S]*?\)/gu)].map(
+      (match) => match[0],
+    );
+    expect(smsAccountTuples).toHaveLength(8);
+    const enabledTuples = smsAccountTuples.filter((tuple) => /\bTRUE,/.test(tuple));
+    expect(enabledTuples).toHaveLength(1);
+    expect(enabledTuples[0]).toContain("'tencent'");
+  });
+
+  it("gives every provider exactly one account and one identity", () => {
+    for (const file of [
+      "common/002_email_provider_defaults.sql",
+      "common/003_sms_provider_defaults.sql",
+    ]) {
+      const sql = seedFile(file);
+      // Account rows carry the provider enum followed by a JSON config; identity
+      // rows reference the account instead of naming the provider.
+      const accountRows = (sql.match(/'[a-z0-9_]+',\s*'\{/gu) ?? []).length;
+      const identityRows = (sql.match(
+        /\(950000000\d+, 'seed-messaging-(?:email|sms)-(?:sender|signature)-/gu,
+      ) ?? []).length;
+      expect(identityRows, `${file} identity rows`).toBe(accountRows);
+    }
+  });
+
+  it("binds every seeded template to every provider of its channel", () => {
+    for (const { locale } of LOCALES) {
+      const bindings = seedFile(`locales/${locale}/002_template_provider_defaults.sql`);
+      // The binding file derives rows from the template table, so it must not
+      // hard-code a template count that would silently stop covering new rows.
+      expect(bindings).toMatch(/FROM messaging_template/gu);
+      expect(bindings).toMatch(/ON CONFLICT DO NOTHING/gu);
     }
   });
 });

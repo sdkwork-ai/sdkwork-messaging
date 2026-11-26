@@ -5,6 +5,8 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
 
+import { OverlayPortal } from "./overlay-portal";
+
 export interface ConfirmDialogProps {
   open: boolean;
   title: string;
@@ -59,13 +61,11 @@ export function ConfirmDialog({
       : "bg-sky-600 text-white hover:bg-sky-700 dark:bg-sky-500 dark:hover:bg-sky-400";
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onCancel();
-        }
-      }}
+    <OverlayPortal
+      onDismiss={onCancel}
+      onEscape={onCancel}
+      zIndexClass="z-[110]"
+      className="flex items-center justify-center bg-slate-900/40 p-4"
     >
       <div
         role="dialog"
@@ -115,6 +115,6 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </OverlayPortal>
   );
 }

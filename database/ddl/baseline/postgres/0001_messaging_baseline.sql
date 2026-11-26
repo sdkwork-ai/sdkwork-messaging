@@ -1470,3 +1470,88 @@ END;
 $$;
 
 COMMIT;
+
+-- folded migration: migrations/postgres/0011_email_account_provider_account.up.sql
+-- sdkwork:migration
+-- id: 0011_email_account_provider_account
+-- engine: postgres
+-- module: messaging
+-- purpose: Give email provider accounts the same reusable-cloud-account binding
+--   SMS signatures already have, so pointing email at an IAM-managed provider
+--   account no longer requires copying credentials into messaging.
+--   Precedence stays cloud-account first with a local-ciphertext fallback.
+-- reversible: true
+-- rollback: down-migration
+-- transactional: true
+-- lock: lightweight
+-- lock_timeout: 2s
+-- statement_timeout: 30s
+
+BEGIN;
+
+ALTER TABLE messaging_email_account
+    ADD COLUMN IF NOT EXISTS provider_account_id VARCHAR(128);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'ck_messaging_email_account_provider_account_id'
+    ) THEN
+        ALTER TABLE messaging_email_account
+            ADD CONSTRAINT ck_messaging_email_account_provider_account_id
+            CHECK (
+                provider_account_id IS NULL
+                OR provider_account_id ~ '^[A-Za-z0-9][A-Za-z0-9_.:-]{1,127}$'
+            );
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_messaging_email_account_provider_account
+    ON messaging_email_account (provider_account_id)
+    WHERE provider_account_id IS NOT NULL;
+
+COMMIT;
+
+-- folded migration: migrations/postgres/0012_sms_account_provider_account.up.sql
+-- sdkwork:migration
+-- id: 0012_sms_account_provider_account
+-- engine: postgres
+-- module: messaging
+-- purpose: Give SMS provider accounts the same cloud-account binding email
+--   accounts have. Resolution order for SMS credentials becomes
+--   signature binding -> account binding -> local secret ciphertext.
+-- reversible: true
+-- rollback: down-migration
+-- transactional: true
+-- lock: lightweight
+-- lock_timeout: 2s
+-- statement_timeout: 30s
+
+BEGIN;
+
+ALTER TABLE messaging_sms_account
+    ADD COLUMN IF NOT EXISTS provider_account_id VARCHAR(128);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'ck_messaging_sms_account_provider_account_id'
+    ) THEN
+        ALTER TABLE messaging_sms_account
+            ADD CONSTRAINT ck_messaging_sms_account_provider_account_id
+            CHECK (
+                provider_account_id IS NULL
+                OR provider_account_id ~ '^[A-Za-z0-9][A-Za-z0-9_.:-]{1,127}$'
+            );
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_messaging_sms_account_provider_account
+    ON messaging_sms_account (provider_account_id)
+    WHERE provider_account_id IS NOT NULL;
+
+COMMIT;
