@@ -9752,7 +9752,9 @@
           "identityEnabled",
           "accountEnabled",
           "hasSecret",
-          "stepEnabled"
+          "stepEnabled",
+          "providerAccountId",
+          "credentialsReady"
         ],
         "properties": {
           "signatureId": {
@@ -9782,6 +9784,21 @@
             "type": "boolean"
           },
           "stepEnabled": {
+            "type": "boolean"
+          },
+          "providerAccountId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "credentialsReady": {
             "type": "boolean"
           }
         }
@@ -9840,6 +9857,8 @@
           "accountName",
           "signName",
           "enabled",
+          "providerAccountId",
+          "providerAccountReady",
           "version"
         ],
         "properties": {
@@ -9861,6 +9880,21 @@
             "maxLength": 64
           },
           "enabled": {
+            "type": "boolean"
+          },
+          "providerAccountId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "providerAccountReady": {
             "type": "boolean"
           },
           "createdAt": {
@@ -9900,6 +9934,18 @@
           },
           "enabled": {
             "type": "boolean"
+          },
+          "providerAccountId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -9951,6 +9997,17 @@
           },
           "enabled": {
             "type": "boolean"
+          },
+          "providerAccountId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "expectedVersion": {
             "type": "string",

@@ -691,12 +691,20 @@ function schemas() {
       requestId,
     }),
     MessagingSmsAccountListResponse: envelope("MessagingSmsAccountListResponse", "MessagingSmsAccount"),
-    MessagingSmsSignature: object(["id", "accountId", "accountName", "signName", "enabled", "version"], {
+    MessagingSmsSignature: object(["id", "accountId", "accountName", "signName", "enabled", "providerAccountId", "providerAccountReady", "version"], {
       id,
       accountId: id,
       accountName: { type: "string", minLength: 1 },
       signName: { type: "string", minLength: 1, maxLength: 64 },
       enabled: { type: "boolean" },
+      // Null until the operator binds this signature to an IAM cloud account.
+      providerAccountId: {
+        anyOf: [
+          { type: "string", minLength: 1, maxLength: 128 },
+          { type: "null" },
+        ],
+      },
+      providerAccountReady: { type: "boolean" },
       createdAt: { type: "string", format: "date-time" },
       updatedAt: { type: "string", format: "date-time" },
       version: int64,
@@ -705,10 +713,23 @@ function schemas() {
       accountId: id,
       signName: { type: "string", minLength: 1, maxLength: 64 },
       enabled: { type: "boolean" },
+      providerAccountId: {
+        anyOf: [
+          { type: "string", minLength: 1, maxLength: 128 },
+          { type: "null" },
+        ],
+      },
     }),
     MessagingSmsSignatureUpdateRequest: object(["signName", "enabled", "expectedVersion"], {
       signName: { type: "string", minLength: 1, maxLength: 64 },
       enabled: { type: "boolean" },
+      // Omit to keep the binding; empty string clears it.
+      providerAccountId: {
+        anyOf: [
+          { type: "string", maxLength: 128 },
+          { type: "null" },
+        ],
+      },
       expectedVersion: int64,
     }),
     MessagingSmsSignatureResponse: object(["item", "requestId"], {
@@ -716,7 +737,7 @@ function schemas() {
       requestId,
     }),
     MessagingSmsSignatureListResponse: envelope("MessagingSmsSignatureListResponse", "MessagingSmsSignature"),
-    MessagingSmsSendRuleStep: object(["signatureId", "accountId", "accountName", "signName", "identityEnabled", "accountEnabled", "hasSecret", "stepEnabled"], {
+    MessagingSmsSendRuleStep: object(["signatureId", "accountId", "accountName", "signName", "identityEnabled", "accountEnabled", "hasSecret", "stepEnabled", "providerAccountId", "credentialsReady"], {
       signatureId: id,
       accountId: id,
       accountName: { type: "string", minLength: 1 },
@@ -725,6 +746,14 @@ function schemas() {
       accountEnabled: { type: "boolean" },
       hasSecret: { type: "boolean" },
       stepEnabled: { type: "boolean" },
+      providerAccountId: {
+        anyOf: [
+          { type: "string", minLength: 1, maxLength: 128 },
+          { type: "null" },
+        ],
+      },
+      // True when this step can obtain credentials (cloud account or local).
+      credentialsReady: { type: "boolean" },
     }),
     MessagingSmsSendRule: object(["scenario", "chain", "enabled", "version"], {
       scenario: { type: "string", enum: ["default", "verification_code", "system_notification", "marketing"] },

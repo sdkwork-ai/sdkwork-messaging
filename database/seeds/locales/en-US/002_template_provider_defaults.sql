@@ -7,7 +7,7 @@ INSERT INTO messaging_template_provider (
     last_synced_at, created_at, updated_at
 )
 SELECT
-    950000001000000 + (t.id - 950000000000) * 100 + p.ordinal,
+    950000001000000 + (t.id - 950000000000) * 1000 + p.ordinal,
     'stp-' || t.id::text || '-' || p.provider,
     t.tenant_id,
     t.organization_id,

@@ -93,11 +93,19 @@ VALUES
     )
 ON CONFLICT DO NOTHING;
 
--- 2. One signature identity per provider account on the BirdCoder brand. The
---    Tencent Cloud signature is the active default; every other signature
---    stays disabled until its provider is configured. `BirdCoder` is a
---    placeholder that must be replaced with the signature approved by the
---    carrier.
+-- 2. One signature identity per provider account on the BirdCoder brand — every
+--    supported provider gets exactly one row so the operator never has to
+--    create the shape by hand. The Tencent Cloud signature is the enabled
+--    default; every other signature starts disabled until its provider is
+--    configured. `BirdCoder` is a placeholder that must be replaced with the
+--    signature approved by the carrier.
+--
+--    `provider_account_id` (the IAM cloud-account binding, migration 0010) is
+--    deliberately left NULL: credentials must never be pre-seeded, and the IAM
+--    account center owns those rows. The operator binds the Tencent Cloud
+--    signature to the matching IAM cloud account in the console, which is the
+--    only manual step before SMS can deliver. Without a binding the send path
+--    falls back to the provider account's own stored credential.
 INSERT INTO messaging_sms_signature (
     id, uuid, tenant_id, organization_id, account_id, sign_name, enabled,
     created_at, updated_at

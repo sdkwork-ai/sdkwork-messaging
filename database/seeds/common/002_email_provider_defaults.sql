@@ -144,7 +144,7 @@ VALUES
     (950000000210, 'seed-messaging-email-sender-postmark', 100001, 0, 950000000110, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     (950000000211, 'seed-messaging-email-sender-resend', 100001, 0, 950000000111, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     (950000000212, 'seed-messaging-email-sender-smtp', 100001, 0, 950000000112, 'no-reply@birdcoder.com', 'BirdCoder Notifications', FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (950000000213, 'seed-messaging-email-sender-enterprise-mail', 100001, 0, 950000000113, 'no-reply@birdcoder.com', 'BirdCoder', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    (950000000213, 'seed-messaging-email-sender-enterprise-mail', 100001, 0, 950000000113, 'no-reply@birdcoder.com', 'BirdCoder Notifications', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
 
 -- 3. One ordered fallback chain per scenario, enterprise mailbox first. The

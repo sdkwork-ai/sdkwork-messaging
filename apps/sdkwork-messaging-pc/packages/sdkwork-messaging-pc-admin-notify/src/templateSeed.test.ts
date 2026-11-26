@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   defaultSampleValues,
   extractTemplateVariables,
+  looksLikeHtml,
   renderTemplatePreview,
   smsMetrics,
 } from "./templatePreview.ts";
@@ -43,27 +44,117 @@ interface TemplateSeedRow {
   readonly status: string;
 }
 
-const ROW_PATTERN =
-  /\(\s*(\d+),\s*'([^']+)',\s*(\d+),\s*(\d+),\s*'(email|sms)',\s*'([a-z0-9_]+)',\s*'([^']*)',\s*(NULL|'[^']*'),\s*'([^']*)',\s*'(\[[^']*\])'::jsonb,\s*'([a-z_]+)',\s*(NULL|'[^']*'),\s*'(draft|active|disabled)',/gu;
+// SQL string literals escape a quote by doubling it (`''`), which the email
+// HTML bodies rely on for inline style attributes. Parse each tuple by
+// splitting on top-level commas so quoted content is never mis-split.
+const unescapeSql = (value: string) => value.replaceAll("''", "'");
+
+interface SeedField {
+  readonly text: string;
+  readonly isNull: boolean;
+  readonly isQuoted: boolean;
+}
+
+/** Split one `VALUES` tuple body into its top-level comma-separated fields. */
+function splitTuple(body: string): SeedField[] {
+  const fields: SeedField[] = [];
+  let current = "";
+  let inString = false;
+  let quoted = false;
+  for (let i = 0; i < body.length; i += 1) {
+    const ch = body[i];
+    if (inString) {
+      if (ch === "'" && body[i + 1] === "'") {
+        current += "''";
+        i += 1;
+      } else if (ch === "'") {
+        inString = false;
+        current += ch;
+      } else {
+        current += ch;
+      }
+      continue;
+    }
+    if (ch === "'") {
+      inString = true;
+      quoted = true;
+      current += ch;
+    } else if (ch === ",") {
+      fields.push({ text: current.trim(), isNull: current.trim() === "NULL", isQuoted: quoted });
+      current = "";
+      quoted = false;
+    } else {
+      current += ch;
+    }
+  }
+  if (current.trim()) {
+    fields.push({ text: current.trim(), isNull: current.trim() === "NULL", isQuoted: quoted });
+  }
+  return fields;
+}
+
+function fieldText(field: SeedField): string {
+  if (field.isNull) return "";
+  // Strip a trailing cast such as `::jsonb`, then decode the literal.
+  const withoutCast = field.text.replace(/::[a-z][a-z0-9_]*$/u, "").trim();
+  if (withoutCast.startsWith("'") && withoutCast.endsWith("'")) {
+    return unescapeSql(withoutCast.slice(1, -1));
+  }
+  return withoutCast;
+}
+
+/** Extract the `VALUES` tuples of `messaging_template` inserts. */
+function tuples(sql: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let inString = false;
+  let start = -1;
+  for (let i = 0; i < sql.length; i += 1) {
+    const ch = sql[i];
+    if (inString) {
+      if (ch === "'" && sql[i + 1] === "'") i += 1;
+      else if (ch === "'") inString = false;
+      continue;
+    }
+    if (ch === "'") {
+      inString = true;
+    } else if (ch === "(") {
+      if (depth === 0) start = i + 1;
+      depth += 1;
+    } else if (ch === ")") {
+      depth -= 1;
+      if (depth === 0 && start >= 0) {
+        out.push(sql.slice(start, i));
+        start = -1;
+      }
+    }
+  }
+  return out;
+}
 
 function parseRows(sql: string): TemplateSeedRow[] {
-  return [...sql.matchAll(ROW_PATTERN)].map((match) => {
-    const rawSubject = match[8];
-    const rawNote = match[12];
+  // Only the statement body matters; the header names the columns.
+  const valuesIndex = sql.indexOf("VALUES");
+  const statement = valuesIndex >= 0 ? sql.slice(valuesIndex + "VALUES".length) : sql;
+  return tuples(statement).map((body) => {
+    const f = splitTuple(body);
     return {
-      id: match[1],
-      uuid: match[2],
-      tenantId: Number(match[3]),
-      organizationId: Number(match[4]),
-      channel: match[5] as "email" | "sms",
-      code: match[6],
-      name: match[7],
-      subject: rawSubject === "NULL" ? null : rawSubject.slice(1, -1),
-      content: match[9],
-      variables: JSON.parse(match[10]) as string[],
-      approvalStatus: match[11],
-      approvalNote: rawNote === "NULL" ? null : rawNote.slice(1, -1),
-      status: match[13],
+      id: f[0].text,
+      uuid: fieldText(f[1]),
+      tenantId: Number(f[2].text),
+      organizationId: Number(f[3].text),
+      channel: fieldText(f[4]) as "email" | "sms",
+      code: fieldText(f[5]),
+      name: fieldText(f[6]),
+      subject: f[7].isNull ? null : fieldText(f[7]),
+      content: fieldText(f[8]),
+      variables: JSON.parse(
+        // The literal carries a `::jsonb` cast suffix.
+        fieldText(f[9]).replace(/::[a-z]+$/u, ""),
+      ) as string[],
+      approvalStatus: fieldText(f[10]),
+      approvalNote: f[11].isNull ? null : fieldText(f[11]),
+      status: fieldText(f[12]),
     };
   });
 }
@@ -77,18 +168,146 @@ const ROWS_BY_LOCALE = new Map(
   LOCALES.map(({ locale, file }) => [locale, parseRows(seedFile(file))]),
 );
 
+/**
+ * Email is the system's transactional backbone, so its seed catalog covers the
+ * standard lifecycle plus the commercial journeys a live deployment needs.
+ * Ordered: `template_code` order is part of the seed contract (ids ascend).
+ */
 const EMAIL_CODES = [
+  // Account and security
   "verification_code",
+  "register_verification_code",
   "password_reset",
+  "password_reset_success",
+  "password_changed",
   "register_welcome",
+  "email_verify",
+  "phone_bound",
+  "security_alert",
+  "account_frozen",
+  "account_unfrozen",
+  // Orders, payments and billing
+  "order_created",
   "order_paid",
   "payment_failed",
-  "subscription_expiring",
-  "quota_warning",
-  "security_alert",
+  "order_shipped",
+  "order_completed",
+  "order_cancelled",
+  "order_refunded",
+  "recharge_success",
+  "balance_low",
+  "arrears_notice",
   "invoice_ready",
+  "invoice_overdue",
+  // Subscription and membership
+  "subscription_activated",
+  "subscription_expiring",
+  "subscription_expired",
+  "subscription_renewed",
+  "subscription_cancelled",
+  "membership_expiring",
+  // Usage and quota
+  "quota_warning",
+  "quota_exhausted",
+  // Platform, partner and marketing
+  "maintenance_notice",
+  "release_notice",
+  "ticket_replied",
+  "partner_approved",
+  "partner_commission_settled",
   "marketing_campaign",
+  "marketing_promotion",
 ];
+
+/** Marketing email bodies must offer an unsubscribe path. */
+const EMAIL_MARKETING_CODES = ["marketing_campaign", "marketing_promotion"];
+
+/**
+ * SMS is the channel customers are paged on, so its seed catalog spans every
+ * platform business area rather than the ten email codes. The list is ordered:
+ * `template_code` order is part of the seed contract (ids ascend in this order).
+ */
+const SMS_CODES = [
+  // Identity and verification
+  "verification_code",
+  "register_verification_code",
+  "password_reset",
+  "password_changed",
+  "register_welcome",
+  "account_frozen",
+  "security_alert",
+  "new_device_login",
+  "phone_bind_code",
+  "phone_rebind_code",
+  "login_mfa_code",
+  "withdraw_verification_code",
+  "payment_verification_code",
+  // Billing, orders and payments
+  "order_created",
+  "order_paid",
+  "payment_failed",
+  "order_shipped",
+  "order_completed",
+  "order_cancelled",
+  "order_refunded",
+  "recharge_success",
+  "balance_low",
+  "arrears_notice",
+  "service_suspended",
+  "invoice_ready",
+  "invoice_overdue",
+  // Subscription, membership and pricing
+  "subscription_activated",
+  "subscription_expiring",
+  "subscription_expired",
+  "subscription_renewed",
+  "subscription_cancelled",
+  "plan_changed",
+  "membership_expiring",
+  "coupon_expiring",
+  // Quota, usage and rate limiting
+  "quota_warning",
+  "quota_exhausted",
+  "rate_limit_triggered",
+  "api_key_exhausted",
+  "usage_spike_alert",
+  // Platform operations
+  "upstream_failure",
+  "node_offline",
+  "service_degraded",
+  "release_published",
+  "maintenance_notice",
+  "data_export_ready",
+  "ticket_created",
+  "ticket_replied",
+  "ticket_closed",
+  // Partner and distribution
+  "partner_approved",
+  "partner_rejected",
+  "partner_commission_settled",
+  "partner_withdraw_success",
+  "partner_withdraw_failed",
+  // Marketing and campaigns
+  "marketing_campaign",
+  "marketing_promotion",
+  "marketing_recall",
+  "marketing_new_feature",
+  "marketing_unsubscribed",
+  // Content and risk
+  "content_rejected",
+  "account_risk_alert",
+  "realname_verified",
+];
+
+/** Marketing bodies must carry a carrier-required opt-out instruction. */
+const SMS_OPT_OUT_CODES = [
+  "marketing_campaign",
+  "marketing_promotion",
+  "marketing_recall",
+  "marketing_new_feature",
+];
+
+const TOTAL_TEMPLATE_ROWS = EMAIL_CODES.length + SMS_CODES.length;
 
 describe("localized template seed manifest", () => {
   it("registers one locale file per active locale in the standard profile", () => {
@@ -109,8 +328,16 @@ describe("localized template seed manifest", () => {
       const set = SEED_MANIFEST.localeSets[locale];
       expect(set, `${locale} locale set`).toBeDefined();
       expect(set.version).toBe(SEED_MANIFEST.i18nVersion);
+      // DATABASE_FRAMEWORK_SPEC §8.1: the recorded checksum must change whenever
+      // locale seed content changes, so it covers the file list AND the bytes of
+      // every file it names.
+      const content = set.files
+        .map((file) => seedFile(`locales/${locale}/${file.split("/").at(-1)}`))
+        .join("\n");
       const expected = createHash("sha256")
         .update(JSON.stringify(set.files))
+        .update("\0")
+        .update(content)
         .digest("hex");
       expect(set.checksum).toBe(`sha256:${expected}`);
       expect(set.files).toEqual([
@@ -125,7 +352,7 @@ describe("localized template seed manifest", () => {
       const email = rowLocale.filter((row) => row.channel === "email");
       const sms = rowLocale.filter((row) => row.channel === "sms");
       expect(email.map((row) => row.code)).toEqual(EMAIL_CODES);
-      expect(sms.map((row) => row.code)).toEqual(EMAIL_CODES);
+      expect(sms.map((row) => row.code)).toEqual(SMS_CODES);
     }
   });
 });
@@ -136,9 +363,9 @@ describe("localized template seed content", () => {
       const rows = ROWS_BY_LOCALE.get(locale)!;
 
       it("targets the canonical installation scope with deterministic reserved ids", () => {
-        expect(rows).toHaveLength(20);
-        expect(new Set(rows.map((row) => row.id)).size).toBe(20);
-        expect(new Set(rows.map((row) => row.uuid)).size).toBe(20);
+        expect(rows).toHaveLength(TOTAL_TEMPLATE_ROWS);
+        expect(new Set(rows.map((row) => row.id)).size).toBe(TOTAL_TEMPLATE_ROWS);
+        expect(new Set(rows.map((row) => row.uuid)).size).toBe(TOTAL_TEMPLATE_ROWS);
         for (const row of rows) {
           expect(row.tenantId).toBe(100001);
           expect(row.organizationId).toBe(0);
@@ -175,12 +402,61 @@ describe("localized template seed content", () => {
         }
       });
 
+      it("ships the standard system emails every installation must have", () => {
+        // Forgot-password, registration success and the other baseline
+        // transactional mails are non-negotiable: a fresh install must be able
+        // to run these journeys with a copy edit, not by authoring templates.
+        const required = [
+          "verification_code",
+          "password_reset",
+          "password_reset_success",
+          "password_changed",
+          "register_verification_code",
+          "register_welcome",
+          "email_verify",
+          "security_alert",
+        ];
+        const emailCodes = rows
+          .filter((row) => row.channel === "email")
+          .map((row) => row.code);
+        for (const code of required) {
+          expect(emailCodes, `missing system email ${code}`).toContain(code);
+        }
+      });
+
+      it("ships self-contained HTML email bodies", () => {
+        for (const row of rows.filter((candidate) => candidate.channel === "email")) {
+          expect(looksLikeHtml(row.content), `${row.code} must be HTML`).toBe(true);
+          // Inline styles keep the mail renderable in clients that strip <style>.
+          expect(row.content, `${row.code} needs inline styles`).toMatch(/style="/u);
+          expect(row.content, `${row.code} must not embed scripts`).not.toMatch(/<script/iu);
+        }
+      });
+
+      it("offers an unsubscribe path on marketing email only", () => {
+        for (const row of rows.filter((candidate) => candidate.channel === "email")) {
+          const expectsUnsubscribe = EMAIL_MARKETING_CODES.includes(row.code);
+          expect(
+            /\{\{unsubscribeUrl\}\}/u.test(row.content),
+            `${row.code} unsubscribe`,
+          ).toBe(expectsUnsubscribe);
+        }
+      });
+
       it("keeps every SMS template within a single billed segment", () => {
         for (const row of rows.filter((candidate) => candidate.channel === "sms")) {
           const samples = defaultSampleValues(row.variables);
           const rendered = renderTemplatePreview(row.content, samples);
           const metrics = smsMetrics(rendered);
           expect(metrics.segments, `${row.code} (${metrics.characters} chars)`).toBe(1);
+        }
+      });
+
+      it("carries the opt-out tail on marketing SMS only", () => {
+        const optOut = locale === "en-US" ? /reply stop/iu : /回\s*T\s*退订/iu;
+        for (const row of rows.filter((candidate) => candidate.channel === "sms")) {
+          const expectsOptOut = SMS_OPT_OUT_CODES.includes(row.code);
+          expect(optOut.test(row.content), `${row.code} opt-out`).toBe(expectsOptOut);
         }
       });
 

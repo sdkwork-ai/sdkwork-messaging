@@ -713,6 +713,11 @@ interface SignatureFormState {
   accountId: string;
   signName: string;
   enabled: boolean;
+  /**
+   * IAM cloud account bound to this signature. Empty string means no binding,
+   * so the signature falls back to the provider account's own credential.
+   */
+  providerAccountId: string;
 }
 
 function SignaturesPanel({ admin }: { admin: NotifyAdminService }) {
@@ -727,6 +732,7 @@ function SignaturesPanel({ admin }: { admin: NotifyAdminService }) {
     accountId: "",
     signName: "",
     enabled: true,
+    providerAccountId: "",
   });
 
   const fetchPage = useCallback(
@@ -786,6 +792,7 @@ function SignaturesPanel({ admin }: { admin: NotifyAdminService }) {
       accountId: accounts[0]?.id ?? "",
       signName: "",
       enabled: true,
+      providerAccountId: "",
     });
     setDrawerOpen(true);
   };
@@ -796,6 +803,7 @@ function SignaturesPanel({ admin }: { admin: NotifyAdminService }) {
       accountId: signature.accountId,
       signName: signature.signName,
       enabled: signature.enabled,
+      providerAccountId: signature.providerAccountId ?? "",
     });
     setDrawerOpen(true);
   };
@@ -804,11 +812,14 @@ function SignaturesPanel({ admin }: { admin: NotifyAdminService }) {
     setSaving(true);
     setError(null);
     setNotice(null);
+    // Empty string clears an existing binding on update.
+    const providerAccountId = form.providerAccountId.trim();
     try {
       if (editing) {
         await admin.updateSmsSignature(editing.id, {
           signName: form.signName.trim(),
           enabled: form.enabled,
+          providerAccountId,
           expectedVersion: editing.version,
         });
       } else {
@@ -816,6 +827,7 @@ function SignaturesPanel({ admin }: { admin: NotifyAdminService }) {
           accountId: form.accountId,
           signName: form.signName.trim(),
           enabled: form.enabled,
+          providerAccountId: providerAccountId || null,
         });
       }
       closeDrawer();
@@ -1012,6 +1024,16 @@ function SignaturesPanel({ admin }: { admin: NotifyAdminService }) {
                 value={form.signName}
                 onChange={(value) => setForm({ ...form, signName: value })}
                 placeholder="XX科技"
+              />
+            </Field>
+            <Field
+              label={t("admin.notify.signatures.providerAccount")}
+              hint={t("admin.notify.signatures.providerAccountHint")}
+            >
+              <TextInput
+                value={form.providerAccountId}
+                onChange={(value) => setForm({ ...form, providerAccountId: value })}
+                placeholder={t("admin.notify.signatures.providerAccountPlaceholder")}
               />
             </Field>
             <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3 dark:bg-white/5">

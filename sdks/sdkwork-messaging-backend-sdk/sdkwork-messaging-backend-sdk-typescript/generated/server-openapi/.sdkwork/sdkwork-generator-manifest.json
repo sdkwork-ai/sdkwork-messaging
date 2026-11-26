@@ -12,7 +12,7 @@
   "generatedFiles": [
     {
       "path": "bin/publish-core.mjs",
-      "sha256": "a47e95119bf3eafcbcb2102f7024c147f967924e4e3f343d1a29effb4b6765df"
+      "sha256": "6c2553df857f332f1a19e552f24b3320632d898eea5bd7a75fa5dc13a84b141b"
     },
     {
       "path": "bin/publish.ps1",
@@ -372,7 +372,7 @@
     },
     {
       "path": "src/types/messaging-sms-send-rule-step.ts",
-      "sha256": "3d4d1e4207518d3c38e8c06ba023599eb366b309975ca1d7dcd567b2753366be"
+      "sha256": "cfd239f6dbc32f46062001dd585c414d6c7da4c94a0f83c312677334f272ff1e"
     },
     {
       "path": "src/types/messaging-sms-send-rule-update-request.ts",
@@ -384,7 +384,7 @@
     },
     {
       "path": "src/types/messaging-sms-signature-create-request.ts",
-      "sha256": "477dc731407a2c91652db8432451c9619a1b975fc1a3f85042bff3b5894bf5f1"
+      "sha256": "edd219cdeac770d55072dc00db6102cf4c483e26382fb244c347f9525ba0ae67"
     },
     {
       "path": "src/types/messaging-sms-signature-list-response.ts",
@@ -396,11 +396,11 @@
     },
     {
       "path": "src/types/messaging-sms-signature-update-request.ts",
-      "sha256": "4b40e6ecc8691d64f405c69b6fd2c243ad43b05edc289da73d60dd579e760ba5"
+      "sha256": "13dea68777b4ea6cc3f994f6f78b7b067405d340ec8762bece602d26bd95cc4f"
     },
     {
       "path": "src/types/messaging-sms-signature.ts",
-      "sha256": "e790788b8fdb478ae6aae3bcd1cc707203e93651cd89450e58361338f7d2b13d"
+      "sha256": "00a1578b093f60421ba0300f2552184565ac18e85eb193d2916422a443dc69d1"
     },
     {
       "path": "src/types/messaging-template-create-request.ts",

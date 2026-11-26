@@ -315,7 +315,11 @@ impl PostgresMessagingAdminStore {
         signature_id: i64,
     ) -> Result<SmsSignatureItem, StoreError> {
         let row = sqlx::query(
-            "SELECT s.id, s.account_id, a.name AS account_name, s.sign_name, s.enabled, s.version, s.created_at, s.updated_at \
+            "SELECT s.id, s.account_id, a.name AS account_name, s.sign_name, s.enabled, s.version, s.created_at, s.updated_at, \
+                    s.provider_account_id, \
+                    CASE WHEN s.provider_account_id IS NULL THEN NULL \
+                         ELSE messaging_provider_account_ready(s.provider_account_id) \
+                    END AS provider_account_ready \
              FROM messaging_sms_signature s \
              JOIN messaging_sms_account a ON a.id = s.account_id \
              WHERE s.id = $1 AND s.tenant_id = $2 AND s.organization_id = $3 AND s.deleted_at IS NULL",
@@ -341,7 +345,10 @@ impl PostgresMessagingAdminStore {
         let ids: Vec<i64> = steps.iter().map(|step| step.id).collect();
         let rows = sqlx::query(
             "SELECT s.id, s.account_id, a.name AS account_name, s.sign_name, s.enabled, \
-                    a.enabled AS account_enabled, (a.secret_ciphertext IS NOT NULL) AS has_secret \
+                    a.enabled AS account_enabled, (a.secret_ciphertext IS NOT NULL) AS has_secret, \
+                    s.provider_account_id, \
+                    (a.secret_ciphertext IS NOT NULL \
+                     OR messaging_provider_account_ready(s.provider_account_id)) AS credentials_ready \
              FROM messaging_sms_signature s \
              JOIN messaging_sms_account a ON a.id = s.account_id \
              WHERE s.tenant_id = $1 AND s.organization_id = $2 AND s.id = ANY($3) AND s.deleted_at IS NULL",
@@ -368,6 +375,10 @@ impl PostgresMessagingAdminStore {
                     account_enabled: row.get("account_enabled"),
                     has_secret: row.get("has_secret"),
                     step_enabled: step.enabled,
+                    provider_account_id: row.get::<Option<String>, _>("provider_account_id"),
+                    credentials_ready: row
+                        .get::<Option<bool>, _>("credentials_ready")
+                        .unwrap_or(false),
                 });
             }
         }
@@ -3249,7 +3260,11 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .map_err(|error| StoreError::Unavailable(error.to_string()))?;
 
         let rows = sqlx::query(
-            "SELECT s.id, s.account_id, a.name AS account_name, s.sign_name, s.enabled, s.version, s.created_at, s.updated_at \
+            "SELECT s.id, s.account_id, a.name AS account_name, s.sign_name, s.enabled, s.version, s.created_at, s.updated_at, \
+                    s.provider_account_id, \
+                    CASE WHEN s.provider_account_id IS NULL THEN NULL \
+                         ELSE messaging_provider_account_ready(s.provider_account_id) \
+                    END AS provider_account_ready \
              FROM messaging_sms_signature s \
              JOIN messaging_sms_account a ON a.id = s.account_id \
              WHERE s.tenant_id = $1 AND s.organization_id = $2 AND s.deleted_at IS NULL \
@@ -3290,6 +3305,10 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         if let Err(error) = crate::ports::parse_sms_sign_name(sign_name) {
             return Err(StoreError::Invalid(error));
         }
+        let provider_account_id = crate::ports::parse_provider_account_id(
+            command.provider_account_id.as_deref(),
+        )
+        .map_err(StoreError::Invalid)?;
         sqlx::query(
             "SELECT id FROM messaging_sms_account \
              WHERE id = $1 AND tenant_id = $2 AND organization_id = $3 AND deleted_at IS NULL",
@@ -3304,8 +3323,9 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
 
         let row = sqlx::query(
             "INSERT INTO messaging_sms_signature \
-             (id, uuid, tenant_id, organization_id, account_id, sign_name, enabled, created_by) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) \
+             (id, uuid, tenant_id, organization_id, account_id, sign_name, enabled, created_by, \
+              provider_account_id) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) \
              RETURNING id",
         )
         .bind(self.next_id())
@@ -3316,6 +3336,7 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .bind(sign_name)
         .bind(command.enabled)
         .bind(subject.operator_id)
+        .bind(provider_account_id)
         .fetch_one(&self.pool)
         .await
         .map_err(|error| {
@@ -3348,11 +3369,18 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         if let Err(error) = crate::ports::parse_sms_sign_name(sign_name) {
             return Err(StoreError::Invalid(error));
         }
+        // `None` leaves the existing binding untouched; `Some("")` clears it and
+        // falls the signature back to the account's own stored credential.
+        let bind_provider_account = command.provider_account_id.is_some();
+        let provider_account_id =
+            crate::ports::parse_provider_account_id(command.provider_account_id.as_deref())
+                .map_err(StoreError::Invalid)?;
         let updated = sqlx::query(
             "UPDATE messaging_sms_signature SET \
                 sign_name = $4, \
                 enabled = $5, \
                 updated_by = $6, \
+                provider_account_id = CASE WHEN $8 THEN $9 ELSE provider_account_id END, \
                 updated_at = CURRENT_TIMESTAMP, \
                 version = version + 1 \
              WHERE id = $1 AND tenant_id = $2 AND organization_id = $3 AND deleted_at IS NULL \
@@ -3366,6 +3394,8 @@ impl MessagingAdminStore for PostgresMessagingAdminStore {
         .bind(command.enabled)
         .bind(subject.operator_id)
         .bind(parse_expected_version(&command.expected_version)?)
+        .bind(bind_provider_account)
+        .bind(provider_account_id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|error| {
@@ -4251,6 +4281,10 @@ fn sms_signature_item_from_row(
         account_name: row.get("account_name"),
         sign_name: row.get("sign_name"),
         enabled: row.get("enabled"),
+        provider_account_id: row.get::<Option<String>, _>("provider_account_id"),
+        provider_account_ready: row
+            .get::<Option<bool>, _>("provider_account_ready")
+            .unwrap_or(false),
         version: row.get::<i64, _>("version").to_string(),
         created_at: rfc3339(row.get("created_at")),
         updated_at: rfc3339(row.get("updated_at")),

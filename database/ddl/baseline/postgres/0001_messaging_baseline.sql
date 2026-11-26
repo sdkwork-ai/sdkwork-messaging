@@ -1401,3 +1401,72 @@ CREATE INDEX IF NOT EXISTS idx_messaging_template_provider_template
     ON messaging_template_provider (tenant_id, organization_id, template_id);
 
 COMMIT;
+
+-- folded migration: migrations/postgres/0010_sms_signature_provider_account.up.sql
+-- sdkwork:migration
+-- id: 0010_sms_signature_provider_account
+-- engine: postgres
+-- module: messaging
+-- purpose: Let an SMS signature reference a reusable cloud account held by the
+--   IAM platform account center (iam_provider_account) instead of carrying its
+--   own private credential copy. Credential precedence is cloud-account first
+--   with a local-ciphertext fallback, so existing installations keep working.
+-- reversible: true
+-- rollback: down-migration
+-- transactional: true
+-- lock: lightweight
+-- lock_timeout: 2s
+-- statement_timeout: 30s
+
+BEGIN;
+
+ALTER TABLE messaging_sms_signature
+    ADD COLUMN IF NOT EXISTS provider_account_id VARCHAR(128);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'ck_messaging_sms_signature_provider_account_id'
+    ) THEN
+        ALTER TABLE messaging_sms_signature
+            ADD CONSTRAINT ck_messaging_sms_signature_provider_account_id
+            CHECK (
+                provider_account_id IS NULL
+                OR provider_account_id ~ '^[A-Za-z0-9][A-Za-z0-9_.:-]{1,127}$'
+            );
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_messaging_sms_signature_provider_account
+    ON messaging_sms_signature (provider_account_id)
+    WHERE provider_account_id IS NOT NULL;
+
+-- Credential-readiness probe (EXECUTE defers IAM relation resolution to run
+-- time so messaging stays independently deployable).
+CREATE OR REPLACE FUNCTION messaging_provider_account_ready(p_account_id TEXT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+    ready BOOLEAN := FALSE;
+BEGIN
+    IF p_account_id IS NULL OR btrim(p_account_id) = '' THEN
+        RETURN FALSE;
+    END IF;
+    IF to_regclass('iam_provider_credential') IS NULL THEN
+        RETURN FALSE;
+    END IF;
+    EXECUTE
+        'SELECT EXISTS (SELECT 1 FROM iam_provider_credential c '
+        'WHERE c.provider_account_id = $1 AND c.status = ''active'' '
+        'AND c.deleted_at IS NULL)'
+    INTO ready
+    USING p_account_id;
+    RETURN COALESCE(ready, FALSE);
+END;
+$$;
+
+COMMIT;

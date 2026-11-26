@@ -514,6 +514,13 @@ pub struct SmsSignatureItem {
     pub account_name: String,
     pub sign_name: String,
     pub enabled: bool,
+    /// Reusable cloud account (IAM `iam_provider_account`) backing this
+    /// signature. `None` means the signature uses the provider account's own
+    /// stored credential, which is the pre-existing behaviour.
+    pub provider_account_id: Option<String>,
+    /// Whether the bound cloud account currently has active credential
+    /// material, so the console can flag "bound but not credentialed".
+    pub provider_account_ready: bool,
     pub created_at: String,
     pub updated_at: String,
     pub version: String,
@@ -525,12 +532,19 @@ pub struct CreateSmsSignatureCommand {
     pub account_id: String,
     pub sign_name: String,
     pub enabled: bool,
+    /// Optional IAM cloud account to bind while creating the signature.
+    #[serde(default)]
+    pub provider_account_id: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateSmsSignatureCommand {
     pub sign_name: String,
+    /// Omit to keep the current cloud-account binding; send an empty string to
+    /// clear it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider_account_id: Option<String>,
     pub enabled: bool,
     /// Optimistic concurrency guard (DATABASE_SPEC §17): the version read by the
     /// client; the update applies only when it still matches.
@@ -557,6 +571,12 @@ pub struct SmsSendRuleStep {
     pub has_secret: bool,
     /// Whether this step participates in the fallback chain.
     pub step_enabled: bool,
+    /// IAM cloud account bound to this signature, when one is bound.
+    pub provider_account_id: Option<String>,
+    /// Whether this step can actually obtain credentials: either the bound
+    /// cloud account has active material, or the account carries its own
+    /// secret. Steps that cannot are skipped by the send path.
+    pub credentials_ready: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -1173,8 +1193,40 @@ pub fn parse_sms_sign_name(value: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub fn parse_notification_priority(value: Option<&str>) -> Result<&'static str, String> {
-    match value.unwrap_or("normal") {
+/// Validates an optional IAM cloud account binding.
+///
+/// The value identifies a row in the platform account center
+/// (`iam_provider_account.id`), which is owned and deployed by the IAM module, so
+/// only a syntactic check happens here. An empty/whitespace value means "no
+/// binding" and normalizes to `None`, letting an update clear a stale binding.
+pub fn parse_provider_account_id(value: Option<&str>) -> Result<Option<String>, String> {
+    let Some(raw) = value else {
+        return Ok(None);
+    };
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Ok(None);
+    }
+    let mut chars = trimmed.chars();
+    let first = chars.next().unwrap_or_default();
+    if !first.is_ascii_alphanumeric() {
+        return Err("providerAccountId must start with a letter or digit".to_owned());
+    }
+    if trimmed.chars().count() > 128 {
+        return Err("providerAccountId must be at most 128 characters".to_owned());
+    }
+    if !trimmed
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | ':' | '-'))
+    {
+        return Err(
+            "providerAccountId may only contain letters, digits, `_`, `.`, `:` and `-`".to_owned(),
+        );
+    }
+    Ok(Some(trimmed.to_owned()))
+}
+
+pub fn parse_notification_priority(value: Option<&str>) -> Result<&'static str, String> {    match value.unwrap_or("normal") {
         "low" => Ok("low"),
         "normal" => Ok("normal"),
         "high" => Ok("high"),
