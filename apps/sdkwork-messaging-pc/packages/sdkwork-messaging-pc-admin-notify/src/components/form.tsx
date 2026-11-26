@@ -2,6 +2,7 @@
 
 import type { ReactNode, Ref } from "react";
 import { useTranslation } from "react-i18next";
+import { ChevronDown } from "lucide-react";
 
 export function PageHeader({
   title,
@@ -50,6 +51,17 @@ export function ErrorState({
   );
 }
 
+/**
+ * Label + control + hint group.
+ *
+ * Rendered as a `<div>`, not a `<label>`, on purpose. An implicit `<label>`
+ * wrapping a `<select>` makes the browser treat a click on the label text as
+ * "focus the control" rather than "open the control": the first click only
+ * focuses the select and no option list appears, which reads as an
+ * unresponsive dropdown. Keeping the association explicit (`<label htmlFor>`
+ * is not possible here because the child renders its own id) and letting the
+ * control receive the click directly removes that whole class of bug.
+ */
 export function Field({
   label,
   hint,
@@ -60,16 +72,23 @@ export function Field({
   children: ReactNode;
 }) {
   return (
-    <label className="block">
+    <div className="block min-w-0">
       <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{label}</span>
       {children}
       {hint ? <span className="mt-1 block text-xs text-slate-400 dark:text-slate-500">{hint}</span> : null}
-    </label>
+    </div>
   );
 }
 
 export const inputClass =
   "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500 dark:focus:ring-sky-500/20 dark:disabled:bg-white/5";
+
+/**
+ * Shared `<select>` styling: the native arrow is replaced with a padded slot so
+ * `SelectInput`'s own chevron lines up, and disabling keeps a not-allowed
+ * cursor instead of looking like static text.
+ */
+export const selectClass = `${inputClass} cursor-pointer appearance-none pr-9 disabled:cursor-not-allowed`;
 
 export function TextInput(props: {
   value: string;
@@ -95,20 +114,34 @@ export function SelectInput(props: {
   onChange: (value: string) => void;
   options: readonly { value: string; label: string }[];
   disabled?: boolean;
+  /** Shown in place of the value when `disabled` explains why it is locked. */
+  disabledHint?: string;
+  ariaLabel?: string;
 }) {
   return (
-    <select
-      value={props.value}
-      disabled={props.disabled}
-      onChange={(event) => props.onChange(event.target.value)}
-      className={inputClass}
-    >
-      {props.options.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
+    <div className="relative">
+      <select
+        value={props.value}
+        disabled={props.disabled}
+        aria-label={props.ariaLabel}
+        onChange={(event) => props.onChange(event.target.value)}
+        className={selectClass}
+      >
+        {props.options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {/* Explicit chevron: a disabled select loses the native arrow, so the
+          control otherwise looks like dead text with no affordance. */}
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+      {props.disabled && props.disabledHint ? (
+        <span className="mt-1 block text-xs text-slate-400 dark:text-slate-500">
+          {props.disabledHint}
+        </span>
+      ) : null}
+    </div>
   );
 }
 

@@ -24,6 +24,7 @@ import {
   TextInput,
   ToggleInput,
   inputClass,
+  selectClass,
 } from "../components/form";
 import { ProviderDirectory } from "../components/ProviderDirectory";
 import { ProviderInitializeDialog } from "../components/provider-initialize-dialog";
@@ -1111,6 +1112,10 @@ function SignaturesPanel({ admin }: { admin: NotifyAdminService }) {
                 value={form.accountId}
                 onChange={(value) => setForm({ ...form, accountId: value })}
                 disabled={Boolean(editing)}
+                disabledHint={
+                  editing ? t("admin.notify.signatures.accountLockedHint") : undefined
+                }
+                ariaLabel={t("admin.notify.signatures.account")}
                 options={accounts.map((account) => ({
                   value: account.id,
                   label: `${account.name} · ${t(`admin.notify.smsProviders.${account.provider}.name`, account.provider)}`,
@@ -1483,7 +1488,7 @@ function RulesPanel({ admin }: { admin: NotifyAdminService }) {
                       );
                     }
                   }}
-                  className={`${inputClass} max-w-xs flex-1`}
+                  className={`${selectClass} max-w-xs flex-1`}
                 >
                   <option value="">{t("admin.notify.sms.rules.addStep")}</option>
                   {available.map((signature) => (

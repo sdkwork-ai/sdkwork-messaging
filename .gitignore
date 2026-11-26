@@ -113,3 +113,9 @@ temp/
 !.env.cloud.staging
 !.env.cloud.demo
 !.env.cloud.production
+
+# Local scratch scripts, intermediate SQL, and Python caches used while
+# authoring message-template seeds (never commit)
+.tmp_*
+**/__pycache__/
+*.py[cod]

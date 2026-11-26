@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertTriangle, Filter, RefreshCcw } from "lucide-react";
 
-import { ErrorState, LoadingState, PageHeader, PrimaryButton, SecondaryButton, TextInput, inputClass } from "../components/form";
+import { ErrorState, LoadingState, PageHeader, PrimaryButton, SecondaryButton, TextInput, selectClass } from "../components/form";
 import { ListPager } from "../components/list-pager";
 import { PageErrorBoundary } from "../components/page-error-boundary";
 import { SlideOver } from "../components/slide-over";
@@ -177,14 +177,17 @@ export function SendRecordsPage({ channel, service }: SdkworkMessagingSendRecord
           description={t("admin.notify.records.description")}
         />
         <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-[#1a1a1a]">
-          <label className="flex min-w-[9rem] flex-col gap-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+          {/* `<div>`, not `<label>`: a wrapping label makes the first click on a
+              select only focus it instead of opening the option list. */}
+          <div className="flex min-w-[9rem] flex-col gap-1 text-xs font-medium text-slate-500 dark:text-slate-400">
             {t("admin.notify.records.filter.status")}
             <select
               value={statusFilter}
+              aria-label={t("admin.notify.records.filter.status")}
               onChange={(event) =>
                 setStatusFilter(event.target.value as MessagingSendRecordStatus | "")
               }
-              className={inputClass}
+              className={selectClass}
             >
               <option value="">{t("admin.notify.records.filter.allStatuses")}</option>
               {STATUS_OPTIONS.map((status) => (
@@ -193,15 +196,15 @@ export function SendRecordsPage({ channel, service }: SdkworkMessagingSendRecord
                 </option>
               ))}
             </select>
-          </label>
-          <label className="flex min-w-[14rem] flex-1 flex-col gap-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+          </div>
+          <div className="flex min-w-[14rem] flex-1 flex-col gap-1 text-xs font-medium text-slate-500 dark:text-slate-400">
             {t("admin.notify.records.filter.keyword")}
             <TextInput
               value={keyword}
               onChange={setKeyword}
               placeholder={t("admin.notify.records.filter.keywordPlaceholder")}
             />
-          </label>
+          </div>
           <label className="flex min-w-[9rem] flex-col gap-1 text-xs font-medium text-slate-500 dark:text-slate-400">
             {t("admin.notify.records.filter.from")}
             <TextInput value={from} onChange={setFrom} placeholder="YYYY-MM-DD" />

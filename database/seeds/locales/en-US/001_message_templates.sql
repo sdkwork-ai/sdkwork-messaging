@@ -923,5 +923,554 @@ VALUES
         '[]'::jsonb,
         'pending', 'Awaiting provider approval', 'draft',
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001050, 'seed-tpl-en-email-api-key-created', 100001, 0,
+        'email', 'api_key_created', 'API key created',
+        '[{{appName}}] A new API key was created',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">API key created</h2><p>Hi {{userName}},</p><p>A new API key <strong>{{keyName}}</strong> (prefix {{keyPrefix}}) was created for your account on {{createdAt}}.</p><p>Keep it secret and never embed it in client code or a public repository. If this was not you, revoke it now and contact support.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Manage keys</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "userName", "keyName", "keyPrefix", "createdAt", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001051, 'seed-tpl-en-email-api-key-revoked', 100001, 0,
+        'email', 'api_key_revoked', 'API key revoked',
+        '[{{appName}}] API key {{keyName}} was revoked',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">API key revoked</h2><p>Hi {{userName}},</p><p>API key <strong>{{keyName}}</strong> was revoked on {{revokedAt}}. Calls using it will fail immediately.</p><p>If this was a mistake, create a new key in the console and update your application.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Open console</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "keyName", "userName", "revokedAt", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001052, 'seed-tpl-en-email-api-deprecation', 100001, 0,
+        'email', 'api_deprecation', 'API endpoint deprecation',
+        '[{{appName}}] Endpoint {{endpoint}} is being retired',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Endpoint deprecation</h2><p>Hi {{userName}},</p><p>Endpoint <code>{{endpoint}}</code> will be retired on {{deprecateDate}}.</p><p>Please migrate to {{replacementEndpoint}} before then; calls will error afterwards. See the migration guide for the changes.</p><p style="margin:24px 0"><a href="{{migrationUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Read migration guide</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "endpoint", "userName", "deprecateDate", "replacementEndpoint", "migrationUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001053, 'seed-tpl-en-email-api-rate-limited', 100001, 0,
+        'email', 'api_rate_limited', 'Rate limit alert',
+        '[{{appName}}] App {{appNameShort}} hit its rate limit',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Rate limit alert</h2><p>Hi {{userName}},</p><p>Your app triggered rate limiting between {{windowStart}} and {{windowEnd}}, peaking at {{peakRpm}} RPM.</p><p>Upgrade your plan for a higher quota, or request a temporary unblock in the console.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">View usage</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "appNameShort", "userName", "windowStart", "windowEnd", "peakRpm", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001054, 'seed-tpl-en-email-team-member-invited', 100001, 0,
+        'email', 'team_member_invited', 'Team invitation',
+        '{{inviterName}} invited you to {{appName}}',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Team invitation</h2><p>Hi,</p><p>{{inviterName}} invited you to join <strong>{{tenantName}}</strong> on {{appName}} as "{{roleName}}".</p><p style="margin:24px 0"><a href="{{inviteUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Accept invitation</a></p><p>The link is valid for {{ttlDays}} days. If this was not meant for you, please ignore it.</p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["inviterName", "appName", "tenantName", "roleName", "inviteUrl", "ttlDays"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001055, 'seed-tpl-en-email-team-member-joined', 100001, 0,
+        'email', 'team_member_joined', 'Member joined',
+        '[{{appName}}] {{memberName}} joined your team',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">New member joined</h2><p>Hi {{userName}},</p><p>{{memberName}} ({{memberEmail}}) accepted the invitation and joined <strong>{{tenantName}}</strong> as "{{roleName}}".</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">View members</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "memberName", "userName", "memberEmail", "tenantName", "roleName", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001056, 'seed-tpl-en-email-role-changed', 100001, 0,
+        'email', 'role_changed', 'Role changed',
+        '[{{appName}}] Your role is now {{roleName}}',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Role changed</h2><p>Hi {{userName}},</p><p>Your role in <strong>{{tenantName}}</strong> was changed to "{{roleName}}". The new permissions apply immediately.</p><p>Contact your team administrator if this looks wrong.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">View permissions</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "roleName", "userName", "tenantName", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001057, 'seed-tpl-en-email-subuser-created', 100001, 0,
+        'email', 'subuser_created', 'Sub-account created',
+        '[{{appName}}] Sub-account {{subUserName}} created',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Sub-account created</h2><p>Hi {{userName}},</p><p>You created the sub-account <strong>{{subUserName}}</strong>, ready to assign to team members.</p><p>Sub-accounts have their own credentials; follow least privilege when granting policies.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Manage sub-accounts</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "subUserName", "userName", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001058, 'seed-tpl-en-email-seat-limit-reached', 100001, 0,
+        'email', 'seat_limit_reached', 'Seat limit reached',
+        '[{{appName}}] Your team has reached its seat limit',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Seat limit reached</h2><p>Hi {{userName}},</p><p><strong>{{tenantName}}</strong> has reached its plan limit of {{seatLimit}} seats; no further members can join.</p><p>Upgrade the plan or remove unused seats to add more.</p><p style="margin:24px 0"><a href="{{upgradeUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Upgrade plan</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "userName", "tenantName", "seatLimit", "upgradeUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001059, 'seed-tpl-en-email-domain-verified', 100001, 0,
+        'email', 'domain_verified', 'Domain verified',
+        '[{{appName}}] Domain {{domainName}} verified',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Domain verified</h2><p>Hi {{userName}},</p><p>Domain <strong>{{domainName}}</strong> is now verified and can be used to serve traffic and bind applications.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">View domains</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "domainName", "userName", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001060, 'seed-tpl-en-email-domain-expiring', 100001, 0,
+        'email', 'domain_expiring', 'Domain expiring',
+        '[{{appName}}] Domain {{domainName}} expires on {{expireDate}}',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Domain expiring</h2><p>Hi {{userName}},</p><p>Domain <strong>{{domainName}}</strong> expires on {{expireDate}}. DNS resolution stops and dependent services go down if it lapses.</p><p style="margin:24px 0"><a href="{{renewUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Renew now</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "domainName", "expireDate", "userName", "renewUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001061, 'seed-tpl-en-email-ssl-cert-expiring', 100001, 0,
+        'email', 'ssl_cert_expiring', 'Certificate expiring',
+        '[{{appName}}] Certificate {{certName}} expires on {{expireDate}}',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Certificate expiring</h2><p>Hi {{userName}},</p><p>Certificate <strong>{{certName}}</strong> (bound to {{domainName}}) expires on {{expireDate}}.</p><p>Renew or replace it to avoid browser security warnings.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Manage certificates</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "certName", "expireDate", "userName", "domainName", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001062, 'seed-tpl-en-email-storage-quota-warning', 100001, 0,
+        'email', 'storage_quota_warning', 'Storage warning',
+        '[{{appName}}] Storage usage reached {{usagePercent}}%',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Storage warning</h2><p>Hi {{userName}},</p><p>Your storage is {{usagePercent}}% full with {{remaining}} remaining.</p><p>New writes fail once it is full; clean up or expand the quota.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Manage storage</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "usagePercent", "userName", "remaining", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001063, 'seed-tpl-en-email-payment-method-added', 100001, 0,
+        'email', 'payment_method_added', 'Payment method added',
+        '[{{appName}}] A new payment method was added',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Payment method added</h2><p>Hi {{userName}},</p><p>A new payment method was added on {{addedAt}}: {{methodLabel}} ending in {{methodTail}}.</p><p>If this was not you, remove it immediately and contact support.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Manage payment methods</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "userName", "addedAt", "methodLabel", "methodTail", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001064, 'seed-tpl-en-email-recharge-failed', 100001, 0,
+        'email', 'recharge_failed', 'Top-up failed',
+        '[{{appName}}] Top-up of {{amount}} did not complete',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Top-up failed</h2><p>Hi {{userName}},</p><p>Your top-up of {{amount}} did not complete, likely due to a channel timeout or a bank decline.</p><p>Please retry; contact support if it keeps failing.</p><p style="margin:24px 0"><a href="{{rechargeUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Retry top-up</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "amount", "userName", "rechargeUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001065, 'seed-tpl-en-email-refund-created', 100001, 0,
+        'email', 'refund_created', 'Refund request received',
+        '[{{appName}}] Your refund request was received',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Refund request received</h2><p>Hi {{userName}},</p><p>We received your refund request for order {{orderId}}, amount {{amount}}.</p><p>Once approved the funds return to the original payment method, usually within 1-7 business days.</p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "userName", "orderId", "amount"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001066, 'seed-tpl-en-email-invoice-issued', 100001, 0,
+        'email', 'invoice_issued', 'Invoice issued',
+        '[{{appName}}] Your invoice has been issued',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Invoice issued</h2><p>Hi {{userName}},</p><p>Your invoice has been issued. Invoice number {{invoiceNo}}, amount {{amount}}.</p><p>Download the electronic invoice from the billing center.</p><p style="margin:24px 0"><a href="{{invoiceUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Download invoice</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "userName", "invoiceNo", "amount", "invoiceUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001067, 'seed-tpl-en-email-tax-info-required', 100001, 0,
+        'email', 'tax_info_required', 'Tax details required',
+        '[{{appName}}] Please complete your tax details',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Tax details required</h2><p>Hi {{userName}},</p><p>Your account is missing the tax details needed to issue an invoice.</p><p>Add your legal entity name, tax id and registered address, then resubmit the request.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Complete details</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "userName", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001068, 'seed-tpl-en-email-contract-signed', 100001, 0,
+        'email', 'contract_signed', 'Contract signed',
+        '[{{appName}}] Contract {{contractNo}} is fully signed',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Contract signed</h2><p>Hi {{userName}},</p><p>Contract <strong>{{contractNo}}</strong> was signed by both parties and takes effect on {{effectiveDate}}.</p><p>You can download the signed copy from the console.</p><p style="margin:24px 0"><a href="{{contractUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">View contract</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "contractNo", "userName", "effectiveDate", "contractUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001069, 'seed-tpl-en-email-trial-ending', 100001, 0,
+        'email', 'trial_ending', 'Trial ending',
+        '[{{appName}}] Your trial ends on {{expireDate}}',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Trial ending</h2><p>Hi {{userName}},</p><p>Your trial ends on {{expireDate}}. Afterwards, features above the free allowance are limited.</p><p>Purchase now to keep your current configuration and data.</p><p style="margin:24px 0"><a href="{{upgradeUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Choose a plan</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "expireDate", "userName", "upgradeUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001070, 'seed-tpl-en-email-plan-upgraded', 100001, 0,
+        'email', 'plan_upgraded', 'Plan upgraded',
+        '[{{appName}}] Upgraded to {{planName}}',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Plan upgraded</h2><p>Hi {{userName}},</p><p>Your plan was upgraded to <strong>{{planName}}</strong>; the new quotas are effective immediately.</p><p>Amount due for this change: {{amount}}. See the invoice in the console.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">View plan</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "planName", "userName", "amount", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001071, 'seed-tpl-en-email-downgrade-scheduled', 100001, 0,
+        'email', 'downgrade_scheduled', 'Downgrade scheduled',
+        '[{{appName}}] Your plan changes on {{effectiveDate}}',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Downgrade scheduled</h2><p>Hi {{userName}},</p><p>Your plan will downgrade to {{planName}} on {{effectiveDate}}. Resources above the new plan''s quota will be limited afterwards.</p><p>You can cancel the downgrade before it takes effect.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Manage plan</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "effectiveDate", "userName", "planName", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001072, 'seed-tpl-en-email-subscription-paused', 100001, 0,
+        'email', 'subscription_paused', 'Subscription paused',
+        '[{{appName}}] Your subscription is paused',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Subscription paused</h2><p>Hi {{userName}},</p><p>Your {{planName}} subscription is paused. Service resumes after {{pauseUntil}}.</p><p>You can resume it immediately from the console.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Resume now</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "userName", "planName", "pauseUntil", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001073, 'seed-tpl-en-email-cost-alert', 100001, 0,
+        'email', 'cost_alert', 'Budget alert',
+        '[{{appName}}] Monthly spend reached {{usagePercent}}% of budget',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Budget alert</h2><p>Hi {{userName}},</p><p>Your monthly budget of {{budget}} is {{usagePercent}}% used; current spend is {{currentCost}}.</p><p>Adjust the budget or alert threshold to avoid overspending.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">View billing</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "usagePercent", "userName", "budget", "currentCost", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001074, 'seed-tpl-en-email-membership-upgraded', 100001, 0,
+        'email', 'membership_upgraded', 'Membership upgraded',
+        '[{{appName}}] You are now a {{levelName}} member',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Membership upgraded</h2><p>Hi {{userName}},</p><p>Congratulations, you are now a <strong>{{levelName}}</strong> member, valid until {{expireDate}}.</p><p>All benefits of that tier are available immediately.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">View benefits</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "levelName", "userName", "expireDate", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001075, 'seed-tpl-en-email-coupon-granted', 100001, 0,
+        'email', 'coupon_granted', 'Coupon received',
+        '[{{appName}}] You received a coupon',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Coupon received</h2><p>Hi {{userName}},</p><p>You received coupon <strong>{{couponName}}</strong>, worth {{discountAmount}} off eligible purchases.</p><p>Valid until {{expireDate}}.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Use it now</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "userName", "couponName", "discountAmount", "expireDate", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001076, 'seed-tpl-en-email-points-changed', 100001, 0,
+        'email', 'points_changed', 'Points updated',
+        '[{{appName}}] Your points balance changed',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Points updated</h2><p>Hi {{userName}},</p><p>Your account {{direction}} {{points}} points; your balance is now {{balance}}.</p><p>Redeem points for benefits in the rewards store.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">View points</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "userName", "direction", "points", "balance", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001077, 'seed-tpl-en-email-referral-reward', 100001, 0,
+        'email', 'referral_reward', 'Referral reward',
+        '[{{appName}}] Your referral reward was paid',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Referral reward</h2><p>Hi {{userName}},</p><p>The friend you referred signed up and completed a first order, so {{amount}} was credited to your account.</p><p>Keep inviting to earn more.</p><p style="margin:24px 0"><a href="{{partnerUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Invite more</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "userName", "amount", "partnerUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001078, 'seed-tpl-en-email-account-deletion-scheduled', 100001, 0,
+        'email', 'account_deletion_scheduled', 'Account deletion scheduled',
+        '[{{appName}}] Account deletion scheduled',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Account deletion scheduled</h2><p>Hi {{userName}},</p><p>Your account deletion request was received. The account will be permanently deleted on {{deleteDate}} and the data cannot be recovered.</p><p>To cancel, sign in and revert the request before then.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Cancel deletion</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "userName", "deleteDate", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001079, 'seed-tpl-en-email-data-export-ready', 100001, 0,
+        'email', 'data_export_ready', 'Data export ready',
+        '[{{appName}}] Your data export is ready',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Data export ready</h2><p>Hi {{userName}},</p><p>Your requested data export is ready. Download it from the console.</p><p>The link is valid for {{ttlHours}} hours; request a new export after that.</p><p style="margin:24px 0"><a href="{{exportUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Download data</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "userName", "ttlHours", "exportUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001080, 'seed-tpl-en-email-privacy-request-received', 100001, 0,
+        'email', 'privacy_request_received', 'Privacy request received',
+        '[{{appName}}] Your privacy request was received',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Privacy request received</h2><p>Hi {{userName}},</p><p>We received your {{requestType}} request and will complete it within {{slaDays}} business days.</p><p>We will email you the outcome.</p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "userName", "requestType", "slaDays"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001081, 'seed-tpl-en-email-mfa-enabled', 100001, 0,
+        'email', 'mfa_enabled', 'Two-factor enabled',
+        '[{{appName}}] Two-factor authentication enabled',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Two-factor enabled</h2><p>Hi {{userName}},</p><p>Two-factor authentication ({{factorName}}) is now enabled; future sign-ins require a second step.</p><p>If this was not you, contact support immediately.</p><p style="margin:24px 0"><a href="{{securityUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Security settings</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "userName", "factorName", "securityUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001082, 'seed-tpl-en-email-mfa-disabled', 100001, 0,
+        'email', 'mfa_disabled', 'Two-factor disabled',
+        '[{{appName}}] Two-factor authentication disabled',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Two-factor disabled</h2><p>Hi {{userName}},</p><p>Two-factor authentication was disabled on your account, which lowers its security.</p><p>If this was not you, re-enable it and change your password now.</p><p style="margin:24px 0"><a href="{{securityUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Re-enable</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "userName", "securityUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001083, 'seed-tpl-en-email-security-audit-log', 100001, 0,
+        'email', 'security_audit_log', 'Security audit summary',
+        '[{{appName}}] Your weekly security audit',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Security audit summary</h2><p>Hi {{userName}},</p><p>During {{period}} your account recorded {{eventCount}} security events, {{highRiskCount}} of them high risk.</p><p>Review the log and act on anything you do not recognise.</p><p style="margin:24px 0"><a href="{{auditUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">View audit log</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "userName", "period", "eventCount", "highRiskCount", "auditUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001084, 'seed-tpl-en-email-login-new-region', 100001, 0,
+        'email', 'login_new_region', 'Sign-in from a new region',
+        '[{{appName}}] Sign-in from a new region detected',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">New region sign-in</h2><p>Hi {{userName}},</p><p>Your account signed in from {{location}} for the first time at {{loginAt}}, IP {{ipAddress}}.</p><p>If this was not you, change your password and enable two-factor authentication.</p><p style="margin:24px 0"><a href="{{securityUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Protect account</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "userName", "location", "loginAt", "ipAddress", "securityUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001085, 'seed-tpl-en-email-service-outage', 100001, 0,
+        'email', 'service_outage', 'Service outage',
+        '[{{appName}}] {{serviceName}} is experiencing an outage',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Service outage</h2><p>Hi {{userName}},</p><p>{{serviceName}} suffered an outage starting {{startTime}} ({{severity}}), affecting {{impactScope}}.</p><p>Our engineers are on it; updates follow on the status page.</p><p style="margin:24px 0"><a href="{{statusUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">View status</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "serviceName", "userName", "startTime", "severity", "impactScope", "statusUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001086, 'seed-tpl-en-email-service-recovered', 100001, 0,
+        'email', 'service_recovered', 'Service recovered',
+        '[{{appName}}] {{serviceName}} has recovered',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Service recovered</h2><p>Hi {{userName}},</p><p>{{serviceName}} recovered at {{recoveredAt}}. The incident lasted {{duration}}.</p><p>We will publish a postmortem with the root cause and follow-up work.</p><p style="margin:24px 0"><a href="{{statusUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Read postmortem</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "serviceName", "userName", "recoveredAt", "duration", "statusUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001087, 'seed-tpl-en-email-sla-breach', 100001, 0,
+        'email', 'sla_breach', 'SLA not met',
+        '[{{appName}}] Service level miss for {{period}}',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Service level miss</h2><p>Hi {{userName}},</p><p>{{serviceName}} availability for {{period}} was {{availability}}, below the committed {{slaTarget}}.</p><p>Per our service agreement, the corresponding credit is applied to your account automatically.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">View credit</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "period", "userName", "serviceName", "availability", "slaTarget", "consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001088, 'seed-tpl-en-email-maintenance-completed', 100001, 0,
+        'email', 'maintenance_completed', 'Maintenance completed',
+        '[{{appName}}] Maintenance finished early',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Maintenance completed</h2><p>Hi {{userName}},</p><p>Maintenance on {{appName}} finished early at {{completedAt}} and all services are restored.</p><p>Thanks for your patience.</p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName", "userName", "completedAt"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001100, 'seed-tpl-en-sms-login-new-region', 100001, 0,
+        'sms', 'login_new_region', 'New region sign-in SMS',
+        NULL,
+        'Your account signed in from {{location}} at {{loginTime}}. If this was not you, reset your password now.',
+        '["location","loginTime"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001101, 'seed-tpl-en-sms-mfa-enabled', 100001, 0,
+        'sms', 'mfa_enabled', 'Two-factor enabled SMS',
+        NULL,
+        'Two-factor authentication is now on. Future sign-ins need a second step.',
+        '[]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001102, 'seed-tpl-en-sms-mfa-disabled', 100001, 0,
+        'sms', 'mfa_disabled', 'Two-factor disabled SMS',
+        NULL,
+        'Two-factor authentication was turned off on your account. Secure it now if this was not you.',
+        '[]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001103, 'seed-tpl-en-sms-api-key-created', 100001, 0,
+        'sms', 'api_key_created', 'API key created SMS',
+        NULL,
+        'A new API key {{keyName}} was created. Revoke it now if this was not you.',
+        '["keyName"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001104, 'seed-tpl-en-sms-api-key-revoked', 100001, 0,
+        'sms', 'api_key_revoked', 'API key revoked SMS',
+        NULL,
+        'API key {{keyName}} was revoked. Calls using it will fail.',
+        '["keyName"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001105, 'seed-tpl-en-sms-team-member-invited', 100001, 0,
+        'sms', 'team_member_invited', 'Team invitation SMS',
+        NULL,
+        '{{inviterName}} invited you to the {{tenantName}} team. Sign in to review it.',
+        '["inviterName","tenantName"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001106, 'seed-tpl-en-sms-seat-limit-reached', 100001, 0,
+        'sms', 'seat_limit_reached', 'Seat limit SMS',
+        NULL,
+        'Your team has used all its seats. Upgrade the plan to add members.',
+        '[]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001107, 'seed-tpl-en-sms-domain-verified', 100001, 0,
+        'sms', 'domain_verified', 'Domain verified SMS',
+        NULL,
+        'Domain {{domainName}} is verified and ready to use.',
+        '["domainName"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001108, 'seed-tpl-en-sms-domain-expiring', 100001, 0,
+        'sms', 'domain_expiring', 'Domain expiring SMS',
+        NULL,
+        'Domain {{domainName}} expires on {{expireDate}}. Renew it to keep services online.',
+        '["domainName","expireDate"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001109, 'seed-tpl-en-sms-ssl-cert-expiring', 100001, 0,
+        'sms', 'ssl_cert_expiring', 'Certificate expiring SMS',
+        NULL,
+        'Certificate {{certName}} expires on {{expireDate}}. Renew it to avoid warnings.',
+        '["certName","expireDate"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001110, 'seed-tpl-en-sms-storage-quota-warning', 100001, 0,
+        'sms', 'storage_quota_warning', 'Storage warning SMS',
+        NULL,
+        'Storage usage has reached {{usagePercent}}. Clean up or expand the quota.',
+        '["usagePercent"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001111, 'seed-tpl-en-sms-payment-method-added', 100001, 0,
+        'sms', 'payment_method_added', 'Payment method added SMS',
+        NULL,
+        'A new payment method was added to your account. Contact support if this was not you.',
+        '[]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001112, 'seed-tpl-en-sms-recharge-failed', 100001, 0,
+        'sms', 'recharge_failed', 'Top-up failed SMS',
+        NULL,
+        'Your top-up of {{amount}} did not complete. Please retry or contact support.',
+        '["amount"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001113, 'seed-tpl-en-sms-invoice-issued', 100001, 0,
+        'sms', 'invoice_issued', 'Invoice issued SMS',
+        NULL,
+        'Invoice {{invoiceNo}} has been issued. Download it from the billing center.',
+        '["invoiceNo"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001114, 'seed-tpl-en-sms-trial-ending', 100001, 0,
+        'sms', 'trial_ending', 'Trial ending SMS',
+        NULL,
+        'Your trial ends on {{expireDate}}. Choose a plan to keep your current setup.',
+        '["expireDate"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001115, 'seed-tpl-en-sms-plan-changed-success', 100001, 0,
+        'sms', 'plan_changed_success', 'Plan changed SMS',
+        NULL,
+        'Your plan is now {{planName}}. The new quotas apply immediately.',
+        '["planName"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001116, 'seed-tpl-en-sms-subscription-paused', 100001, 0,
+        'sms', 'subscription_paused', 'Subscription paused SMS',
+        NULL,
+        'Your {{planName}} subscription is paused. Resume it from the console.',
+        '["planName"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001117, 'seed-tpl-en-sms-cost-alert', 100001, 0,
+        'sms', 'cost_alert', 'Budget alert SMS',
+        NULL,
+        'Monthly spend reached {{usagePercent}} of your budget, currently {{currentCost}}.',
+        '["usagePercent","currentCost"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001118, 'seed-tpl-en-sms-coupon-granted', 100001, 0,
+        'sms', 'coupon_granted', 'Coupon received SMS',
+        NULL,
+        'You received coupon {{couponName}}, valid until {{expireDate}}.',
+        '["couponName","expireDate"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001119, 'seed-tpl-en-sms-account-deletion-scheduled', 100001, 0,
+        'sms', 'account_deletion_scheduled', 'Deletion scheduled SMS',
+        NULL,
+        'Your account will be deleted on {{deleteDate}}. Sign in now to cancel it.',
+        '["deleteDate"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001120, 'seed-tpl-en-sms-service-outage', 100001, 0,
+        'sms', 'service_outage', 'Service outage SMS',
+        NULL,
+        '{{serviceName}} is experiencing an outage. Our engineers are working on it.',
+        '["serviceName"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001121, 'seed-tpl-en-sms-service-recovered', 100001, 0,
+        'sms', 'service_recovered', 'Service recovered SMS',
+        NULL,
+        '{{serviceName}} has recovered. Thanks for your patience.',
+        '["serviceName"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     )
 ON CONFLICT DO NOTHING;
