@@ -43,13 +43,13 @@
       }
     }
   },
-  "i18nVersion": "1.3.0",
+  "i18nVersion": "1.4.0",
   "fallbackLocale": "zh-CN",
   "localeSets": {
     "zh-CN": {
-      "version": "1.3.0",
+      "version": "1.4.0",
       "required": true,
-      "checksum": "sha256:83e9396799eda25b6710552a60cbc653bce70ae2ab007c73d57013481232646a",
+      "checksum": "sha256:a23f09ce7f83f14be8d9d6be7a123f6853969a0ec4863c80e6e8d887006cdc8e",
       "files": [
         "locales/zh-CN/001_message_templates.sql",
         "locales/zh-CN/002_template_provider_defaults.sql",
@@ -57,9 +57,9 @@
       ]
     },
     "en-US": {
-      "version": "1.3.0",
+      "version": "1.4.0",
       "required": false,
-      "checksum": "sha256:6effcbe75516cc818b952ede02b3fbce0939b1b6b64ef994abba87cd30598842",
+      "checksum": "sha256:31a95c89da84e91eabc0ec751d266b89296e709f9ceb1419d8463d2f987e9688",
       "files": [
         "locales/en-US/001_message_templates.sql",
         "locales/en-US/002_template_provider_defaults.sql",

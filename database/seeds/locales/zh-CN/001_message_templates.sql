@@ -1493,5 +1493,176 @@ VALUES
         '["serviceName"]'::jsonb,
         'pending', '待服务商审核通过后启用', 'draft',
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001200, 'seed-tpl-zh-email-ticket-created', 100001, 0,
+        'email', 'ticket_created', '工单已创建',
+        '【{{appName}}】工单 {{ticketNo}} 已创建',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">工单已创建</h2><p>你好 {{userName}}，</p><p>你的工单 <strong>{{ticketNo}}</strong>（{{ticketSubject}}）已创建，我们会在 {{slaHours}} 小时内响应。</p><p style="margin:24px 0"><a href="{{ticketUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">查看工单</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">本邮件由系统自动发送，请勿直接回复；如需帮助请联系客服。</p></div>',
+        '["appName","ticketNo","userName","ticketSubject","slaHours","ticketUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001201, 'seed-tpl-zh-email-ticket-closed', 100001, 0,
+        'email', 'ticket_closed', '工单已关闭',
+        '【{{appName}}】工单 {{ticketNo}} 已关闭',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">工单已关闭</h2><p>你好 {{userName}}，</p><p>工单 <strong>{{ticketNo}}</strong> 已关闭。如问题仍未解决，可重新提交工单。</p><p style="margin:24px 0"><a href="{{ticketUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">评价服务</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">本邮件由系统自动发送，请勿直接回复；如需帮助请联系客服。</p></div>',
+        '["appName","ticketNo","userName","ticketUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001202, 'seed-tpl-zh-email-marketing-recall', 100001, 0,
+        'email', 'marketing_recall', '召回优惠',
+        '【{{appName}}】为你准备了专属回归礼',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">专属回归礼</h2><p>你好 {{userName}}，</p><p>很久没看到你了。我们为你准备了 {{discountAmount}} 的回归优惠，有效期至 {{expireDate}}。</p><p style="margin:24px 0"><a href="{{campaignUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">立即使用</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">本邮件由系统自动发送，请勿直接回复；如需帮助请联系客服。</p></div>',
+        '["appName","userName","discountAmount","expireDate","campaignUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001203, 'seed-tpl-zh-email-marketing-new-feature', 100001, 0,
+        'email', 'marketing_new_feature', '新功能上线',
+        '【{{appName}}】新功能 {{featureName}} 已上线',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">新功能上线</h2><p>你好 {{userName}}，</p><p>新功能 <strong>{{featureName}}</strong> 已上线：{{featureSummary}}</p><p style="margin:24px 0"><a href="{{releaseUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">了解详情</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">本邮件由系统自动发送，请勿直接回复；如需帮助请联系客服。</p></div>',
+        '["appName","featureName","userName","featureSummary","releaseUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001204, 'seed-tpl-zh-email-marketing-unsubscribed', 100001, 0,
+        'email', 'marketing_unsubscribed', '退订确认',
+        '【{{appName}}】已为你退订推广邮件',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">退订确认</h2><p>你好 {{userName}}，</p><p>我们已停止向你发送推广邮件。账号与交易类通知不受影响。</p><p>如需重新订阅，可在通知设置中开启。</p><p style="margin:24px 0"><a href="{{preferencesUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">通知设置</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">本邮件由系统自动发送，请勿直接回复；如需帮助请联系客服。</p></div>',
+        '["appName","userName","preferencesUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001205, 'seed-tpl-zh-email-order-invoice', 100001, 0,
+        'email', 'order_invoice', '订单发票申请',
+        '【{{appName}}】订单 {{orderId}} 可开具发票',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">订单可开发票</h2><p>你好 {{userName}}，</p><p>订单 <strong>{{orderId}}</strong>（{{amount}}）已完成，现在可以申请开具发票。</p><p style="margin:24px 0"><a href="{{invoiceUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">申请开票</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">本邮件由系统自动发送，请勿直接回复；如需帮助请联系客服。</p></div>',
+        '["appName","orderId","userName","amount","invoiceUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001206, 'seed-tpl-zh-email-order-delivered', 100001, 0,
+        'email', 'order_delivered', '服务已交付',
+        '【{{appName}}】订单 {{orderId}} 服务已交付',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">服务已交付</h2><p>你好 {{userName}}，</p><p>订单 <strong>{{orderId}}</strong> 的资源已完成交付并生效，可前往控制台查看。</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">查看资源</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">本邮件由系统自动发送，请勿直接回复；如需帮助请联系客服。</p></div>',
+        '["appName","orderId","userName","consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001207, 'seed-tpl-zh-email-password-expiring', 100001, 0,
+        'email', 'password_expiring', '密码即将过期',
+        '【{{appName}}】你的密码将于 {{expireDate}} 过期',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">密码即将过期</h2><p>你好 {{userName}}，</p><p>按安全策略，你的密码将于 {{expireDate}} 过期，届时需要重新设置。</p><p style="margin:24px 0"><a href="{{securityUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">修改密码</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">本邮件由系统自动发送，请勿直接回复；如需帮助请联系客服。</p></div>',
+        '["appName","expireDate","userName","securityUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001208, 'seed-tpl-zh-email-device-removed', 100001, 0,
+        'email', 'device_removed', '设备已被移除',
+        '【{{appName}}】设备 {{deviceName}} 已被移除',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">设备已移除</h2><p>你好 {{userName}}，</p><p>设备 <strong>{{deviceName}}</strong> 已于 {{removedAt}} 从你的账户移除，该设备将无法继续登录。</p><p>如非本人操作，请立即修改密码。</p><p style="margin:24px 0"><a href="{{securityUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">设备管理</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">本邮件由系统自动发送，请勿直接回复；如需帮助请联系客服。</p></div>',
+        '["appName","deviceName","userName","removedAt","securityUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001209, 'seed-tpl-zh-email-profile-updated', 100001, 0,
+        'email', 'profile_updated', '资料变更通知',
+        '【{{appName}}】账户资料已更新',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">账户资料已更新</h2><p>你好 {{userName}}，</p><p>你的账户资料（{{changedFields}}）已于 {{changedAt}} 更新。</p><p>如非本人操作，请立即联系客服。</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">查看资料</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">本邮件由系统自动发送，请勿直接回复；如需帮助请联系客服。</p></div>',
+        '["appName","userName","changedFields","changedAt","consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001160, 'seed-tpl-zh-sms-team-member-joined', 100001, 0,
+        'sms', 'team_member_joined', '成员加入短信',
+        NULL,
+        '{{memberName}} 已加入您的团队 {{tenantName}}。',
+        '["memberName","tenantName"]'::jsonb,
+        'pending', '待服务商审核通过后启用', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001161, 'seed-tpl-zh-sms-role-changed', 100001, 0,
+        'sms', 'role_changed', '角色变更短信',
+        NULL,
+        '您在 {{tenantName}} 的角色已调整为 {{roleName}}。',
+        '["tenantName","roleName"]'::jsonb,
+        'pending', '待服务商审核通过后启用', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001162, 'seed-tpl-zh-sms-subuser-created', 100001, 0,
+        'sms', 'subuser_created', '子账号创建短信',
+        NULL,
+        '您的账户已创建子账号 {{subUserName}}，如非本人请立即处理。',
+        '["subUserName"]'::jsonb,
+        'pending', '待服务商审核通过后启用', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001163, 'seed-tpl-zh-sms-password-expiring', 100001, 0,
+        'sms', 'password_expiring', '密码过期短信',
+        NULL,
+        '您的密码将于 {{expireDate}} 过期，请及时修改。',
+        '["expireDate"]'::jsonb,
+        'pending', '待服务商审核通过后启用', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001164, 'seed-tpl-zh-sms-profile-updated', 100001, 0,
+        'sms', 'profile_updated', '资料变更短信',
+        NULL,
+        '您的账户资料已更新，如非本人操作请立即联系客服。',
+        '[]'::jsonb,
+        'pending', '待服务商审核通过后启用', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001165, 'seed-tpl-zh-sms-device-removed', 100001, 0,
+        'sms', 'device_removed', '设备移除短信',
+        NULL,
+        '设备 {{deviceName}} 已从您的账户移除，如非本人请立即改密。',
+        '["deviceName"]'::jsonb,
+        'pending', '待服务商审核通过后启用', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001167, 'seed-tpl-zh-sms-contract-signed', 100001, 0,
+        'sms', 'contract_signed', '合同签署短信',
+        NULL,
+        '合同 {{contractNo}} 已签署完成，可在控制台查看。',
+        '["contractNo"]'::jsonb,
+        'pending', '待服务商审核通过后启用', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001168, 'seed-tpl-zh-sms-referral-reward', 100001, 0,
+        'sms', 'referral_reward', '推荐奖励短信',
+        NULL,
+        '您邀请的好友已完成首单，奖励 {{amount}} 已到账。',
+        '["amount"]'::jsonb,
+        'pending', '待服务商审核通过后启用', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001169, 'seed-tpl-zh-sms-privacy-request-received', 100001, 0,
+        'sms', 'privacy_request_received', '隐私请求短信',
+        NULL,
+        '我们已收到您的 {{requestType}} 请求，将在 {{slaDays}} 个工作日内处理。',
+        '["requestType","slaDays"]'::jsonb,
+        'pending', '待服务商审核通过后启用', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     )
 ON CONFLICT DO NOTHING;

@@ -1276,7 +1276,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001100, 'seed-tpl-en-sms-login-new-region', 100001, 0,
+        950000001130, 'seed-tpl-en-sms-login-new-region', 100001, 0,
         'sms', 'login_new_region', 'New region sign-in SMS',
         NULL,
         'Your account signed in from {{location}} at {{loginTime}}. If this was not you, reset your password now.',
@@ -1285,7 +1285,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001101, 'seed-tpl-en-sms-mfa-enabled', 100001, 0,
+        950000001131, 'seed-tpl-en-sms-mfa-enabled', 100001, 0,
         'sms', 'mfa_enabled', 'Two-factor enabled SMS',
         NULL,
         'Two-factor authentication is now on. Future sign-ins need a second step.',
@@ -1294,7 +1294,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001102, 'seed-tpl-en-sms-mfa-disabled', 100001, 0,
+        950000001132, 'seed-tpl-en-sms-mfa-disabled', 100001, 0,
         'sms', 'mfa_disabled', 'Two-factor disabled SMS',
         NULL,
         'Two-factor authentication was turned off on your account. Secure it now if this was not you.',
@@ -1303,7 +1303,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001103, 'seed-tpl-en-sms-api-key-created', 100001, 0,
+        950000001133, 'seed-tpl-en-sms-api-key-created', 100001, 0,
         'sms', 'api_key_created', 'API key created SMS',
         NULL,
         'A new API key {{keyName}} was created. Revoke it now if this was not you.',
@@ -1312,7 +1312,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001104, 'seed-tpl-en-sms-api-key-revoked', 100001, 0,
+        950000001134, 'seed-tpl-en-sms-api-key-revoked', 100001, 0,
         'sms', 'api_key_revoked', 'API key revoked SMS',
         NULL,
         'API key {{keyName}} was revoked. Calls using it will fail.',
@@ -1321,7 +1321,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001105, 'seed-tpl-en-sms-team-member-invited', 100001, 0,
+        950000001135, 'seed-tpl-en-sms-team-member-invited', 100001, 0,
         'sms', 'team_member_invited', 'Team invitation SMS',
         NULL,
         '{{inviterName}} invited you to the {{tenantName}} team. Sign in to review it.',
@@ -1330,7 +1330,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001106, 'seed-tpl-en-sms-seat-limit-reached', 100001, 0,
+        950000001136, 'seed-tpl-en-sms-seat-limit-reached', 100001, 0,
         'sms', 'seat_limit_reached', 'Seat limit SMS',
         NULL,
         'Your team has used all its seats. Upgrade the plan to add members.',
@@ -1339,7 +1339,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001107, 'seed-tpl-en-sms-domain-verified', 100001, 0,
+        950000001137, 'seed-tpl-en-sms-domain-verified', 100001, 0,
         'sms', 'domain_verified', 'Domain verified SMS',
         NULL,
         'Domain {{domainName}} is verified and ready to use.',
@@ -1348,7 +1348,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001108, 'seed-tpl-en-sms-domain-expiring', 100001, 0,
+        950000001138, 'seed-tpl-en-sms-domain-expiring', 100001, 0,
         'sms', 'domain_expiring', 'Domain expiring SMS',
         NULL,
         'Domain {{domainName}} expires on {{expireDate}}. Renew it to keep services online.',
@@ -1357,7 +1357,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001109, 'seed-tpl-en-sms-ssl-cert-expiring', 100001, 0,
+        950000001139, 'seed-tpl-en-sms-ssl-cert-expiring', 100001, 0,
         'sms', 'ssl_cert_expiring', 'Certificate expiring SMS',
         NULL,
         'Certificate {{certName}} expires on {{expireDate}}. Renew it to avoid warnings.',
@@ -1366,7 +1366,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001110, 'seed-tpl-en-sms-storage-quota-warning', 100001, 0,
+        950000001140, 'seed-tpl-en-sms-storage-quota-warning', 100001, 0,
         'sms', 'storage_quota_warning', 'Storage warning SMS',
         NULL,
         'Storage usage has reached {{usagePercent}}. Clean up or expand the quota.',
@@ -1375,7 +1375,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001111, 'seed-tpl-en-sms-payment-method-added', 100001, 0,
+        950000001141, 'seed-tpl-en-sms-payment-method-added', 100001, 0,
         'sms', 'payment_method_added', 'Payment method added SMS',
         NULL,
         'A new payment method was added to your account. Contact support if this was not you.',
@@ -1384,7 +1384,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001112, 'seed-tpl-en-sms-recharge-failed', 100001, 0,
+        950000001142, 'seed-tpl-en-sms-recharge-failed', 100001, 0,
         'sms', 'recharge_failed', 'Top-up failed SMS',
         NULL,
         'Your top-up of {{amount}} did not complete. Please retry or contact support.',
@@ -1393,7 +1393,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001113, 'seed-tpl-en-sms-invoice-issued', 100001, 0,
+        950000001143, 'seed-tpl-en-sms-invoice-issued', 100001, 0,
         'sms', 'invoice_issued', 'Invoice issued SMS',
         NULL,
         'Invoice {{invoiceNo}} has been issued. Download it from the billing center.',
@@ -1402,7 +1402,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001114, 'seed-tpl-en-sms-trial-ending', 100001, 0,
+        950000001144, 'seed-tpl-en-sms-trial-ending', 100001, 0,
         'sms', 'trial_ending', 'Trial ending SMS',
         NULL,
         'Your trial ends on {{expireDate}}. Choose a plan to keep your current setup.',
@@ -1411,7 +1411,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001115, 'seed-tpl-en-sms-plan-changed-success', 100001, 0,
+        950000001145, 'seed-tpl-en-sms-plan-changed-success', 100001, 0,
         'sms', 'plan_changed_success', 'Plan changed SMS',
         NULL,
         'Your plan is now {{planName}}. The new quotas apply immediately.',
@@ -1420,7 +1420,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001116, 'seed-tpl-en-sms-subscription-paused', 100001, 0,
+        950000001146, 'seed-tpl-en-sms-subscription-paused', 100001, 0,
         'sms', 'subscription_paused', 'Subscription paused SMS',
         NULL,
         'Your {{planName}} subscription is paused. Resume it from the console.',
@@ -1429,7 +1429,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001117, 'seed-tpl-en-sms-cost-alert', 100001, 0,
+        950000001147, 'seed-tpl-en-sms-cost-alert', 100001, 0,
         'sms', 'cost_alert', 'Budget alert SMS',
         NULL,
         'Monthly spend reached {{usagePercent}} of your budget, currently {{currentCost}}.',
@@ -1438,7 +1438,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001118, 'seed-tpl-en-sms-coupon-granted', 100001, 0,
+        950000001148, 'seed-tpl-en-sms-coupon-granted', 100001, 0,
         'sms', 'coupon_granted', 'Coupon received SMS',
         NULL,
         'You received coupon {{couponName}}, valid until {{expireDate}}.',
@@ -1447,7 +1447,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001119, 'seed-tpl-en-sms-account-deletion-scheduled', 100001, 0,
+        950000001149, 'seed-tpl-en-sms-account-deletion-scheduled', 100001, 0,
         'sms', 'account_deletion_scheduled', 'Deletion scheduled SMS',
         NULL,
         'Your account will be deleted on {{deleteDate}}. Sign in now to cancel it.',
@@ -1456,7 +1456,7 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001120, 'seed-tpl-en-sms-service-outage', 100001, 0,
+        950000001150, 'seed-tpl-en-sms-service-outage', 100001, 0,
         'sms', 'service_outage', 'Service outage SMS',
         NULL,
         '{{serviceName}} is experiencing an outage. Our engineers are working on it.',
@@ -1465,11 +1465,182 @@ VALUES
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     ),
     (
-        950000001121, 'seed-tpl-en-sms-service-recovered', 100001, 0,
+        950000001151, 'seed-tpl-en-sms-service-recovered', 100001, 0,
         'sms', 'service_recovered', 'Service recovered SMS',
         NULL,
         '{{serviceName}} has recovered. Thanks for your patience.',
         '["serviceName"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001240, 'seed-tpl-en-email-ticket-created', 100001, 0,
+        'email', 'ticket_created', 'Ticket created',
+        '[{{appName}}] Ticket {{ticketNo}} created',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Ticket created</h2><p>Hi {{userName}},</p><p>Your ticket <strong>{{ticketNo}}</strong> ({{ticketSubject}}) was created. We respond within {{slaHours}} hours.</p><p style="margin:24px 0"><a href="{{ticketUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">View ticket</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName","ticketNo","userName","ticketSubject","slaHours","ticketUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001241, 'seed-tpl-en-email-ticket-closed', 100001, 0,
+        'email', 'ticket_closed', 'Ticket closed',
+        '[{{appName}}] Ticket {{ticketNo}} closed',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Ticket closed</h2><p>Hi {{userName}},</p><p>Ticket <strong>{{ticketNo}}</strong> is closed. If the issue persists, open a new ticket.</p><p style="margin:24px 0"><a href="{{ticketUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Rate support</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName","ticketNo","userName","ticketUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001242, 'seed-tpl-en-email-marketing-recall', 100001, 0,
+        'email', 'marketing_recall', 'Welcome back offer',
+        '[{{appName}}] A welcome-back gift for you',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Welcome back offer</h2><p>Hi {{userName}},</p><p>We have not seen you in a while. Here is {{discountAmount}} off, valid until {{expireDate}}.</p><p style="margin:24px 0"><a href="{{campaignUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Claim now</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName","userName","discountAmount","expireDate","campaignUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001243, 'seed-tpl-en-email-marketing-new-feature', 100001, 0,
+        'email', 'marketing_new_feature', 'New feature',
+        '[{{appName}}] {{featureName}} is now available',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">New feature</h2><p>Hi {{userName}},</p><p><strong>{{featureName}}</strong> is live: {{featureSummary}}</p><p style="margin:24px 0"><a href="{{releaseUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Learn more</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName","featureName","userName","featureSummary","releaseUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001244, 'seed-tpl-en-email-marketing-unsubscribed', 100001, 0,
+        'email', 'marketing_unsubscribed', 'Unsubscribed',
+        '[{{appName}}] You are unsubscribed from marketing email',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Unsubscribed</h2><p>Hi {{userName}},</p><p>We stopped sending marketing email. Account and transactional notices are unaffected.</p><p>You can re-subscribe in notification settings.</p><p style="margin:24px 0"><a href="{{preferencesUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Notification settings</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName","userName","preferencesUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001245, 'seed-tpl-en-email-order-invoice', 100001, 0,
+        'email', 'order_invoice', 'Invoice available',
+        '[{{appName}}] Invoice available for order {{orderId}}',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Invoice available</h2><p>Hi {{userName}},</p><p>Order <strong>{{orderId}}</strong> ({{amount}}) is complete and ready for invoicing.</p><p style="margin:24px 0"><a href="{{invoiceUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Request invoice</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName","orderId","userName","amount","invoiceUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001246, 'seed-tpl-en-email-order-delivered', 100001, 0,
+        'email', 'order_delivered', 'Service delivered',
+        '[{{appName}}] Order {{orderId}} delivered',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Service delivered</h2><p>Hi {{userName}},</p><p>The resources for order <strong>{{orderId}}</strong> are delivered and active. Review them in the console.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">View resources</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName","orderId","userName","consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001247, 'seed-tpl-en-email-password-expiring', 100001, 0,
+        'email', 'password_expiring', 'Password expiring',
+        '[{{appName}}] Your password expires on {{expireDate}}',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Password expiring</h2><p>Hi {{userName}},</p><p>Under our security policy your password expires on {{expireDate}} and must be reset.</p><p style="margin:24px 0"><a href="{{securityUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Change password</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName","expireDate","userName","securityUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001248, 'seed-tpl-en-email-device-removed', 100001, 0,
+        'email', 'device_removed', 'Device removed',
+        '[{{appName}}] Device {{deviceName}} removed',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Device removed</h2><p>Hi {{userName}},</p><p>Device <strong>{{deviceName}}</strong> was removed from your account on {{removedAt}} and can no longer sign in.</p><p>If this was not you, change your password now.</p><p style="margin:24px 0"><a href="{{securityUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">Manage devices</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName","deviceName","userName","removedAt","securityUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001249, 'seed-tpl-en-email-profile-updated', 100001, 0,
+        'email', 'profile_updated', 'Profile updated',
+        '[{{appName}}] Your account profile was updated',
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,''Segoe UI'',''PingFang SC'',''Microsoft YaHei'',sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.7"><h2 style="font-size:20px;margin:0 0 16px">Profile updated</h2><p>Hi {{userName}},</p><p>Your profile ({{changedFields}}) was updated on {{changedAt}}.</p><p>Contact support immediately if this was not you.</p><p style="margin:24px 0"><a href="{{consoleUrl}}" style="display:inline-block;padding:10px 20px;background:#0369a1;color:#fff;border-radius:6px;text-decoration:none">View profile</a></p><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 12px" /><p style="font-size:12px;color:#64748b;margin:0">This message was sent automatically. Please do not reply; contact support if you need help.</p></div>',
+        '["appName","userName","changedFields","changedAt","consoleUrl"]'::jsonb,
+        'not_applicable', NULL, 'active',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001180, 'seed-tpl-en-sms-team-member-joined', 100001, 0,
+        'sms', 'team_member_joined', 'Member joined SMS',
+        NULL,
+        '{{memberName}} joined your team {{tenantName}}.',
+        '["memberName","tenantName"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001181, 'seed-tpl-en-sms-role-changed', 100001, 0,
+        'sms', 'role_changed', 'Role changed SMS',
+        NULL,
+        'Your role in {{tenantName}} is now {{roleName}}.',
+        '["tenantName","roleName"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001182, 'seed-tpl-en-sms-subuser-created', 100001, 0,
+        'sms', 'subuser_created', 'Sub-account created SMS',
+        NULL,
+        'Sub-account {{subUserName}} was created. Secure it now if this was not you.',
+        '["subUserName"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001183, 'seed-tpl-en-sms-password-expiring', 100001, 0,
+        'sms', 'password_expiring', 'Password expiring SMS',
+        NULL,
+        'Your password expires on {{expireDate}}. Change it in time.',
+        '["expireDate"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001184, 'seed-tpl-en-sms-profile-updated', 100001, 0,
+        'sms', 'profile_updated', 'Profile updated SMS',
+        NULL,
+        'Your profile was updated. Contact support now if this was not you.',
+        '[]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001185, 'seed-tpl-en-sms-device-removed', 100001, 0,
+        'sms', 'device_removed', 'Device removed SMS',
+        NULL,
+        'Device {{deviceName}} was removed. Reset your password if this was not you.',
+        '["deviceName"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001187, 'seed-tpl-en-sms-contract-signed', 100001, 0,
+        'sms', 'contract_signed', 'Contract signed SMS',
+        NULL,
+        'Contract {{contractNo}} is fully signed. View it in the console.',
+        '["contractNo"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001188, 'seed-tpl-en-sms-referral-reward', 100001, 0,
+        'sms', 'referral_reward', 'Referral reward SMS',
+        NULL,
+        'Your referred friend completed a first order. {{amount}} was credited.',
+        '["amount"]'::jsonb,
+        'pending', 'Awaiting provider approval', 'draft',
+        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+        950000001189, 'seed-tpl-en-sms-privacy-request-received', 100001, 0,
+        'sms', 'privacy_request_received', 'Privacy request SMS',
+        NULL,
+        'We received your {{requestType}} request and respond within {{slaDays}} business days.',
+        '["requestType","slaDays"]'::jsonb,
         'pending', 'Awaiting provider approval', 'draft',
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     )

@@ -30,6 +30,21 @@ pnpm run db:seed      # standard profile, zh-CN by default
 pnpm run db:bootstrap # migrate then seed
 ```
 
+`database.manifest.json` sets `lifecycle.seedOnBoot: true`, so a boot through
+`bootstrap_messaging_database_from_env` seeds the `standard` profile
+automatically: the template center, provider presets and verification policies
+are present the moment the service starts, with no extra command. Seeding is
+idempotent (`ON CONFLICT DO NOTHING`) and never overwrites operator edits, so a
+restart on a configured installation is a no-op. Set
+`SDKWORK_MESSAGING_SEED_ON_BOOT=false` to opt out for a deployment that manages
+its own data lifecycle.
+
+The `standard` profile seeds 160 templates per locale — 77 email and 83 SMS —
+covering account security, orders and payments, billing and tax, subscriptions,
+team collaboration, API credentials, domains and certificates, storage quotas,
+compliance and privacy, partner programmes, marketing, and service status, plus
+one provider binding per template.
+
 Packaged CloudRouter deployments do not call these commands: the installer's
 explicit lifecycle (`cloudrouterctl install|upgrade|ensure`) bootstraps the
 Messaging module through `SDKWORK_MESSAGING_APP_ROOT` with the same `standard`
@@ -171,23 +186,36 @@ instead of failing every signature/account read.
 
 The `standard` profile ships a complete, operator-editable template catalog for
 the canonical installation scope (tenant `100001` / organization `0`), covering
-both channels so a fresh install can go live with a copy edit:
+both channels so a fresh install can go live with a copy edit: **87 email + 92
+SMS = 179 templates per locale**, across thirteen business areas (identity and
+verification, account security, orders and payments, billing and tax,
+subscriptions and membership, team and organization, API and developer, domains
+and certificates, service status, support tickets, partner programme, marketing,
+compliance and privacy). See `locales/zh-CN/001_message_templates.sql` for the
+authoritative list; `templateSeed.test.ts` keeps both locales in sync.
 
-- **Email** — 38 provider-agnostic templates, `active` on install. They cover
-  the whole transactional backbone commercial deployments are expected to ship:
-  - account and security: login/registration codes, **forgot-password request**
-    and **reset confirmation**, password-changed notice, **registration success
-    (welcome)**, email verification, phone bound, new sign-in alert, account
-    frozen/restored;
-  - orders and billing: created/paid/failed/shipped/completed/cancelled/
-    refunded, top-up, low balance, arrears, invoice ready/overdue;
-  - subscription and membership, usage and quota, platform operations
-    (maintenance, release, ticket reply), partner, and marketing.
+- **Email** — provider-agnostic HTML templates, `active` on install, each body
+  self-contained responsive HTML with inline styles and one shared visual shell
+  so re-branding is a copy edit rather than a design project.
+- **SMS** — the same business areas at message-brief length, each a ready-to-edit
+  body with stable `{{variable}}` placeholders and a single-segment budget.
 
-  Every body is self-contained responsive HTML with inline styles and one shared
-  visual shell, so re-branding is a copy edit rather than a design project.
-- **SMS** — 61 templates mirroring the same business areas at message-brief
-  length, each a ready-to-edit body with stable `{{variable}}` placeholders.
+### Template center renders empty
+
+The admin list query is scoped to the **request** tenant
+(`MessagingAdminSubject`, resolved from the authenticated session) while the seed
+writes the canonical installation scope above. Two distinct causes look
+identical in the UI:
+
+1. **Nothing was seeded** — `lifecycle.seedOnBoot` is false, or a deployment ran
+   migrations without seeding. The list is genuinely empty.
+2. **Scope mismatch** — rows exist, but the session tenant is not `100001`, so
+   the scoped query matches nothing.
+
+Run `pnpm run db:diagnose-templates -- --url <postgres-url>` to tell them apart;
+it prints the effective `seedOnBoot`, the seeded scope, and compares both against
+the live database. Fix cause 1 with `pnpm run db:seed`; fix cause 2 by either
+pointing the installation at tenant `100001` or re-scoping the template rows.
 
 SMS rows intentionally start as `draft` with `approval_status = 'pending'`
 because carriers must approve the signature and template first; email rows start

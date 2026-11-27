@@ -56,7 +56,8 @@
     "_sdkwork:clean": "cargo clean",
     "_sdkwork:verify": "pnpm run check && pnpm run test",
     "_sdkwork:build": "cargo build --workspace --release && pnpm --dir apps/sdkwork-messaging-pc run build:prod",
-    "check:release-access-token:require-anchor": "node ../sdkwork-specs/tools/check-release-access-token-env.mjs --root . --require-anchor"
+    "check:release-access-token:require-anchor": "node ../sdkwork-specs/tools/check-release-access-token-env.mjs --root . --require-anchor",
+    "db:diagnose-templates": "node scripts/diagnose-template-center.mjs"
   },
   "devDependencies": {
     "@types/node": "^25.5.2",

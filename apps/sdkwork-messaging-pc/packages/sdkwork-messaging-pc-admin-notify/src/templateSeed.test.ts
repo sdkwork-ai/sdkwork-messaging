@@ -174,7 +174,7 @@ const ROWS_BY_LOCALE = new Map(
  * Ordered: `template_code` order is part of the seed contract (ids ascend).
  */
 const EMAIL_CODES = [
-  // Account and security
+  // Ordered template_code catalog; ids ascend in this order (see 001_message_templates.sql).
   "verification_code",
   "register_verification_code",
   "password_reset",
@@ -186,7 +186,6 @@ const EMAIL_CODES = [
   "security_alert",
   "account_frozen",
   "account_unfrozen",
-  // Orders, payments and billing
   "order_created",
   "order_paid",
   "payment_failed",
@@ -199,17 +198,14 @@ const EMAIL_CODES = [
   "arrears_notice",
   "invoice_ready",
   "invoice_overdue",
-  // Subscription and membership
   "subscription_activated",
   "subscription_expiring",
   "subscription_expired",
   "subscription_renewed",
   "subscription_cancelled",
   "membership_expiring",
-  // Usage and quota
   "quota_warning",
   "quota_exhausted",
-  // Platform, partner and marketing
   "maintenance_notice",
   "release_notice",
   "ticket_replied",
@@ -217,6 +213,55 @@ const EMAIL_CODES = [
   "partner_commission_settled",
   "marketing_campaign",
   "marketing_promotion",
+  "api_key_created",
+  "api_key_revoked",
+  "api_deprecation",
+  "api_rate_limited",
+  "team_member_invited",
+  "team_member_joined",
+  "role_changed",
+  "subuser_created",
+  "seat_limit_reached",
+  "domain_verified",
+  "domain_expiring",
+  "ssl_cert_expiring",
+  "storage_quota_warning",
+  "payment_method_added",
+  "recharge_failed",
+  "refund_created",
+  "invoice_issued",
+  "tax_info_required",
+  "contract_signed",
+  "trial_ending",
+  "plan_upgraded",
+  "downgrade_scheduled",
+  "subscription_paused",
+  "cost_alert",
+  "membership_upgraded",
+  "coupon_granted",
+  "points_changed",
+  "referral_reward",
+  "account_deletion_scheduled",
+  "data_export_ready",
+  "privacy_request_received",
+  "mfa_enabled",
+  "mfa_disabled",
+  "security_audit_log",
+  "login_new_region",
+  "service_outage",
+  "service_recovered",
+  "sla_breach",
+  "maintenance_completed",
+  "ticket_created",
+  "ticket_closed",
+  "marketing_recall",
+  "marketing_new_feature",
+  "marketing_unsubscribed",
+  "order_invoice",
+  "order_delivered",
+  "password_expiring",
+  "device_removed",
+  "profile_updated",
 ];
 
 /** Marketing email bodies must offer an unsubscribe path. */
@@ -228,7 +273,7 @@ const EMAIL_MARKETING_CODES = ["marketing_campaign", "marketing_promotion"];
  * `template_code` order is part of the seed contract (ids ascend in this order).
  */
 const SMS_CODES = [
-  // Identity and verification
+  // Ordered template_code catalog; ids ascend in this order (see 001_message_templates.sql).
   "verification_code",
   "register_verification_code",
   "password_reset",
@@ -242,7 +287,6 @@ const SMS_CODES = [
   "login_mfa_code",
   "withdraw_verification_code",
   "payment_verification_code",
-  // Billing, orders and payments
   "order_created",
   "order_paid",
   "payment_failed",
@@ -256,7 +300,6 @@ const SMS_CODES = [
   "service_suspended",
   "invoice_ready",
   "invoice_overdue",
-  // Subscription, membership and pricing
   "subscription_activated",
   "subscription_expiring",
   "subscription_expired",
@@ -265,13 +308,11 @@ const SMS_CODES = [
   "plan_changed",
   "membership_expiring",
   "coupon_expiring",
-  // Quota, usage and rate limiting
   "quota_warning",
   "quota_exhausted",
   "rate_limit_triggered",
   "api_key_exhausted",
   "usage_spike_alert",
-  // Platform operations
   "upstream_failure",
   "node_offline",
   "service_degraded",
@@ -281,22 +322,50 @@ const SMS_CODES = [
   "ticket_created",
   "ticket_replied",
   "ticket_closed",
-  // Partner and distribution
   "partner_approved",
   "partner_rejected",
   "partner_commission_settled",
   "partner_withdraw_success",
   "partner_withdraw_failed",
-  // Marketing and campaigns
   "marketing_campaign",
   "marketing_promotion",
   "marketing_recall",
   "marketing_new_feature",
   "marketing_unsubscribed",
-  // Content and risk
   "content_rejected",
   "account_risk_alert",
   "realname_verified",
+  "login_new_region",
+  "mfa_enabled",
+  "mfa_disabled",
+  "api_key_created",
+  "api_key_revoked",
+  "team_member_invited",
+  "seat_limit_reached",
+  "domain_verified",
+  "domain_expiring",
+  "ssl_cert_expiring",
+  "storage_quota_warning",
+  "payment_method_added",
+  "recharge_failed",
+  "invoice_issued",
+  "trial_ending",
+  "plan_changed_success",
+  "subscription_paused",
+  "cost_alert",
+  "coupon_granted",
+  "account_deletion_scheduled",
+  "service_outage",
+  "service_recovered",
+  "team_member_joined",
+  "role_changed",
+  "subuser_created",
+  "password_expiring",
+  "profile_updated",
+  "device_removed",
+  "contract_signed",
+  "referral_reward",
+  "privacy_request_received",
 ];
 
 /** Marketing bodies must carry a carrier-required opt-out instruction. */
